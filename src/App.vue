@@ -10,25 +10,6 @@
       </div>
 
       <nav class="sidebar-nav">
-        <!-- 分组：Agent 对话 -->
-        <div class="nav-group" v-if="false">
-          <div class="nav-group-title">对话 Agent</div>
-          <div
-            :class="['nav-item', { active: currentPage === 'native' }]"
-            @click="currentPage = 'native'"
-          >
-            <span class="nav-icon">📜</span>
-            <span class="nav-label">原生 fetch + SSE</span>
-          </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'useChat' }]"
-            @click="currentPage = 'useChat'"
-          >
-            <span class="nav-icon">⚡</span>
-            <span class="nav-label">useChat 方案</span>
-          </div>
-        </div>
-
         <!-- 分组：内网大模型 -->
         <div class="nav-group">
           <div class="nav-group-title">内网 hikvision</div>
@@ -162,8 +143,6 @@
         右侧内容区
         ============================================================ -->
     <main class="main-content">
-      <NativeChat v-if="currentPage === 'native'" />
-      <UseChatDemo v-if="currentPage === 'useChat'" />
       <BailianJSChat v-if="currentPage === 'bailian-js'" />
       <BailianPythonChat v-if="currentPage === 'bailian-python'" />
       <InnerModelChat v-if="currentPage === 'inner-js'" />
@@ -183,8 +162,6 @@
 </template>
 
 <script>
-import NativeChat from '@/pages/agent/NativeChat.vue'
-import UseChatDemo from '@/pages/agent/UseChatDemo.vue'
 import BailianJSChat from '@/pages/bailian/BailianJSChat.vue'
 import BailianPythonChat from '@/pages/bailian/BailianPythonChat.vue'
 import InnerModelChat from '@/pages/inner/InnerModelChat.vue'
@@ -204,8 +181,6 @@ export default {
   name: 'App',
 
   components: {
-    NativeChat,
-    UseChatDemo,
     BailianJSChat,
     BailianPythonChat,
     InnerModelChat,
