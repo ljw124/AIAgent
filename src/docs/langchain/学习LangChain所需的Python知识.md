@@ -1747,4 +1747,4 @@ asyncio.run(async_stream_example())
 
 ---
 
-> **提示**：本文档应与 [`langchain-guide.md`](../src/docs/langchain-guide.md) 配合阅读。先确保 Python 基础扎实，再深入学习 LangChain 框架本身。
+> **提示**：本文档应与 [`langchain-guide.md`](langchain-guide.md) 配合阅读。先确保 Python 基础扎实，再深入学习 LangChain 框架本身。

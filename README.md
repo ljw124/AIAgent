@@ -74,28 +74,33 @@
 
 | 阶段 | 主题 | 组件 |
 | --- | --- | --- |
-| 1️⃣ | **Prompt Template** 提示词模板 | [`LangChainStage1Prompt.vue`](src/pages/inner/LangChainStage1Prompt.vue) |
-| 2️⃣ | **Chain 链式调用** | [`LangChainStage2Chain.vue`](src/pages/inner/LangChainStage2Chain.vue) |
-| 3️⃣ | **Streaming 流式输出** | [`LangChainStage6Stream.vue`](src/pages/inner/LangChainStage6Stream.vue) |
-| 4️⃣ | **Structured 结构化输出** | [`LangChainStage7Structured.vue`](src/pages/inner/LangChainStage7Structured.vue) |
-| 5️⃣ | **Tool Calling 工具调用** | [`LangChainStage3Tool.vue`](src/pages/inner/LangChainStage3Tool.vue) |
-| 6️⃣ | **Agent 智能体** | [`LangChainStage4Agent.vue`](src/pages/inner/LangChainStage4Agent.vue) |
-| 7️⃣ | **RAG 检索增强** | [`LangChainStage5RAG.vue`](src/pages/inner/LangChainStage5RAG.vue) |
+| 1️⃣ | **Prompt Template** 提示词模板 | [`LangChainStage1Prompt.vue`](src/pages/langchain/LangChainStage1Prompt.vue) |
+| 2️⃣ | **Chain 链式调用** | [`LangChainStage2Chain.vue`](src/pages/langchain/LangChainStage2Chain.vue) |
+| 3️⃣ | **Streaming 流式输出** | [`LangChainStage6Stream.vue`](src/pages/langchain/LangChainStage6Stream.vue) |
+| 4️⃣ | **Structured 结构化输出** | [`LangChainStage7Structured.vue`](src/pages/langchain/LangChainStage7Structured.vue) |
+| 5️⃣ | **Tool Calling 工具调用** | [`LangChainStage3Tool.vue`](src/pages/langchain/LangChainStage3Tool.vue) |
+| 6️⃣ | **Agent 智能体** | [`LangChainStage4Agent.vue`](src/pages/langchain/LangChainStage4Agent.vue) |
+| 7️⃣ | **RAG 检索增强** | [`LangChainStage5RAG.vue`](src/pages/langchain/LangChainStage5RAG.vue) |
 
 ### 📄 配套学习文档
 
 项目在 [`src/docs/`](src/docs) 目录下整理了丰富的学习资料：
 
-- [什么是AI-Agent-三层模型演进之路.md](src/docs/什么是AI-Agent-三层模型演进之路.md)
-- [AI-Agent三种核心模式详解.md](src/docs/AI-Agent三种核心模式详解.md)
-- [构建高效的AI-Agent.md](src/docs/构建高效的AI-Agent.md)
-- [LangChain-Agent集成完整流程.md](src/docs/LangChain-Agent集成完整流程.md)
-- [LangChain详细指南.md](src/docs/LangChain详细指南.md)
-- [LangChain.js前端学习路径.md](src/docs/LangChain.js前端学习路径.md)
-- [LangChain.js深入学习路线.md](src/docs/LangChain.js深入学习路线.md)
-- [学习LangChain所需的Python知识.md](src/docs/学习LangChain所需的Python知识.md)
-- [LangSmith追踪集成总结.md](src/docs/LangSmith追踪集成总结.md)
-- [Vercel-AI-SDK详细指南.md](src/docs/Vercel-AI-SDK详细指南.md)
+**AI-Agent 文档**（位于 [`src/docs/agent/`](src/docs/agent)）：
+
+- [什么是AI-Agent-三层模型演进之路.md](src/docs/agent/什么是AI-Agent-三层模型演进之路.md)
+- [AI-Agent三种核心模式详解.md](src/docs/agent/AI-Agent三种核心模式详解.md)
+- [构建高效的AI-Agent.md](src/docs/agent/构建高效的AI-Agent.md)
+
+**LangChain 学习文档**（位于 [`src/docs/langchain/`](src/docs/langchain)）：
+
+- [LangChain-Agent集成完整流程.md](src/docs/langchain/LangChain-Agent集成完整流程.md)
+- [LangChain详细指南.md](src/docs/langchain/LangChain详细指南.md)
+- [LangChain.js前端学习路径.md](src/docs/langchain/LangChain.js前端学习路径.md)
+- [LangChain.js深入学习路线.md](src/docs/langchain/LangChain.js深入学习路线.md)
+- [学习LangChain所需的Python知识.md](src/docs/langchain/学习LangChain所需的Python知识.md)
+- [LangSmith追踪集成总结.md](src/docs/langchain/LangSmith追踪集成总结.md)
+- [Vercel-AI-SDK详细指南.md](src/docs/langchain/Vercel-AI-SDK详细指南.md)
 
 ---
 
@@ -119,10 +124,11 @@
     │   └── OllamaModel.py    # Ollama 模型 Python 脚本
     ├── docs/                 # 学习文档
     └── pages/                # 页面组件
-        ├── bailian/          # 百炼 DashScope
-        ├── inner/            # 内网大模型 + LangChain 学习阶段
-        ├── modelscope/       # 魔塔 ModelScope
-        └── ollama/           # 本地 Ollama
+        ├── bailian/          # 百炼 DashScope（平台）
+        ├── inner/            # 内网大模型（平台）
+        ├── langchain/        # LangChain.js 知识体系（学习）
+        ├── modelscope/       # 魔塔 ModelScope（平台）
+        └── ollama/           # 本地 Ollama（平台）
 ```
 
 ---
@@ -240,7 +246,7 @@ pnpm run lint
 - 浏览器端 LangSmith SDK 的请求被拦截并替换为 `/langsmith-proxy`，经 devServer 代理到后端 `server.js`，再转发到 `api.smith.langchain.com`。
 - Python 后端直接使用 `.env` 中的真实地址。
 
-> 详细集成过程可参考 [LangSmith追踪集成总结.md](src/docs/LangSmith追踪集成总结.md)。
+> 详细集成过程可参考 [LangSmith追踪集成总结.md](src/docs/langchain/LangSmith追踪集成总结.md)。
 
 ---
 

@@ -58,8 +58,8 @@
 
 | 现有组件 | 集成后的变化 |
 |----------|-------------|
-| [`useAIChat.js`](../composables/useAIChat.js) | **无需修改** — 只需改 `endpoint` 指向新的 Agent API |
-| [`AISDKChat.vue`](../pages/AISDKChat.vue) | **无需修改** — segments 结构保持不变 |
+| [`useAIChat.js`](../../composables/useAIChat.js) | **无需修改** — 只需改 `endpoint` 指向新的 Agent API |
+| [`AISDKChat.vue`](../../pages/AISDKChat.vue) | **无需修改** — segments 结构保持不变 |
 | 现有 API `/api/text2db/chatbi/chatbot/dataAnalysis` | **保留** — 新 Agent API 作为独立端点 |
 | SSE 消息格式 (`thinking`/`tool_use`/`tool_result`/`text`) | **完全兼容** — Agent 输出适配为相同格式 |
 
@@ -846,7 +846,7 @@ on_chain_end (output)                 → text (last: true)         纯文本 �
 
 ### 4.2 前端无需修改的原因
 
-现有的 [`useAIChat.js`](../composables/useAIChat.js) 中 `processChunk` 函数已经处理了四种 `messageType`：
+现有的 [`useAIChat.js`](../../composables/useAIChat.js) 中 `processChunk` 函数已经处理了四种 `messageType`：
 
 ```javascript
 // useAIChat.js 第 96-146 行 — 已支持的 messageType
@@ -911,7 +911,7 @@ export default {
 
 ### 5.2 方式二：切换现有页面（快速验证）
 
-修改 [`useAIChat.js`](../composables/useAIChat.js) 的默认配置：
+修改 [`useAIChat.js`](../../composables/useAIChat.js) 的默认配置：
 
 ```javascript
 // useAIChat.js 第 28-36 行

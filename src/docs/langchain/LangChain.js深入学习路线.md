@@ -1,6 +1,6 @@
 # LangChain.js 深入学习路线（基于内网大模型实战）
 
-> 前置条件：已完成 [`InnerModelChat.vue`](../pages/inner/InnerModelChat.vue) 的 LangChain.js 改造，能通过 `ChatOpenAI` + `invoke()` 正常调用内网大模型。
+> 前置条件：已完成 [`InnerModelChat.vue`](../../pages/inner/InnerModelChat.vue) 的 LangChain.js 改造，能通过 `ChatOpenAI` + `invoke()` 正常调用内网大模型。
 >
 > 目标：从「会用」到「精通」，系统掌握 LangChain.js 的核心能力，能独立构建 LLM 驱动的 Agent 应用。
 
@@ -78,7 +78,7 @@ src/pages/inner/
 
 ### 2.1 概念
 
-当前 [`InnerModelChat.vue`](../pages/inner/InnerModelChat.vue) 中，System Prompt 是硬编码的字符串：
+当前 [`InnerModelChat.vue`](../../pages/inner/InnerModelChat.vue) 中，System Prompt 是硬编码的字符串：
 
 ```javascript
 const langChainMessages = [
@@ -100,7 +100,7 @@ const langChainMessages = [
 
 ### 2.3 示例代码
 
-→ [`LangChainStage1Prompt.vue`](../pages/inner/LangChainStage1Prompt.vue)
+→ [`LangChainStage1Prompt.vue`](../../pages/langchain/LangChainStage1Prompt.vue)
 
 **学习要点：**
 - 如何用 `ChatPromptTemplate` 替代硬编码 System Prompt
@@ -132,7 +132,7 @@ PromptTemplate → ChatOpenAI → OutputParser
 
 ### 3.3 示例代码
 
-→ [`LangChainStage2Chain.vue`](../pages/inner/LangChainStage2Chain.vue)
+→ [`LangChainStage2Chain.vue`](../../pages/langchain/LangChainStage2Chain.vue)
 
 **学习要点：**
 - LCEL `.pipe()` 管道模式的威力
@@ -165,7 +165,7 @@ Tool Calling 让 LLM 能够调用外部函数/API，获取实时数据或执行�
 
 ### 4.3 示例代码
 
-→ [`LangChainStage3Tool.vue`](../pages/inner/LangChainStage3Tool.vue)
+→ [`LangChainStage3Tool.vue`](../../pages/langchain/LangChainStage3Tool.vue)
 
 **学习要点：**
 - 用 `tool()` 定义工具，Zod schema 描述参数
@@ -204,7 +204,7 @@ Agent 是 Tool Calling 的自动化版本。它自动处理「思考→调用工
 
 ### 5.3 示例代码
 
-→ [`LangChainStage4Agent.vue`](../pages/inner/LangChainStage4Agent.vue)
+→ [`LangChainStage4Agent.vue`](../../pages/langchain/LangChainStage4Agent.vue)
 
 **学习要点：**
 - Agent 与手动 Tool Calling 的区别——自动化循环
@@ -236,7 +236,7 @@ RAG（Retrieval-Augmented Generation）让 LLM 能够基于外部知识库回答
 
 ### 6.3 示例代码
 
-→ [`LangChainStage5RAG.vue`](../pages/inner/LangChainStage5RAG.vue)
+→ [`LangChainStage5RAG.vue`](../../pages/langchain/LangChainStage5RAG.vue)
 
 **学习要点：**
 - 文档加载 → 分割 → 向量化 → 存储 → 检索的完整流程
@@ -263,7 +263,7 @@ RAG（Retrieval-Augmented Generation）让 LLM 能够基于外部知识库回答
 
 ### 7.3 示例代码
 
-→ [`LangChainStage6Stream.vue`](../pages/inner/LangChainStage6Stream.vue)
+→ [`LangChainStage6Stream.vue`](../../pages/langchain/LangChainStage6Stream.vue)
 
 **学习要点：**
 - `stream()` vs `invoke()` 的区别
@@ -308,7 +308,7 @@ LangChain.js 提供三种方式实现结构化输出：
 
 ### 8.3 示例代码
 
-→ [`LangChainStage7Structured.vue`](../pages/inner/LangChainStage7Structured.vue)
+→ [`LangChainStage7Structured.vue`](../../pages/langchain/LangChainStage7Structured.vue)
 
 **学习要点：**
 - 用 Zod 定义输出 schema——`z.object()`、`z.enum()`、`z.array()`、`.describe()`

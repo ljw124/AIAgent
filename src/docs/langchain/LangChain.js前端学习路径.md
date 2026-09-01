@@ -45,7 +45,7 @@
 
 | 层级 | 技术 | 你的现状 |
 |------|------|----------|
-| 前端 UI | Vue 2 + [`useAIChat`](../composables/useAIChat.js) composable | ✅ 已有 |
+| 前端 UI | Vue 2 + [`useAIChat`](../../composables/useAIChat.js) composable | ✅ 已有 |
 | AI 交互 | Vercel AI SDK（[`vercel-ai-sdk-guide.md`](vercel-ai-sdk-guide.md)） | ✅ 已有文档 |
 | Agent 编排 | **LangChain.js** ← 本次学习目标 | 🔲 待学习 |
 | 概念参考 | LangChain Python 版（[`langchain-guide.md`](langchain-guide.md)） | ✅ 已有文档 |
