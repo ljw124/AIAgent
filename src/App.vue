@@ -6,7 +6,7 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <h2>🤖 AI Agent</h2>
-        <span class="sidebar-subtitle">大模型调用演示</span>
+        <span class="sidebar-subtitle">基于LangChain.js的AIAgent</span>
       </div>
 
       <nav class="sidebar-nav">
@@ -74,14 +74,14 @@
             :class="['nav-item', { active: currentPage === 'modelscope-js' }]"
             @click="currentPage = 'modelscope-js'"
           >
-            <span class="nav-icon">🏔️</span>
+            <span class="nav-icon">🇯🇸</span>
             <span class="nav-label">JS 调用</span>
           </div>
         </div>
 
         <!-- 分组：LangChain.js 学习 -->
         <div class="nav-group">
-          <div class="nav-group-title">📚 LangChain.js 学习</div>
+          <div class="nav-group-title">📚 LangChain.js 知识体系</div>
           <div
             :class="['nav-item', { active: currentPage === 'lc-stage1' }]"
             @click="currentPage = 'lc-stage1'"
@@ -97,39 +97,39 @@
             <span class="nav-label">Chain 链式调用</span>
           </div>
           <div
-            :class="['nav-item', { active: currentPage === 'lc-stage3' }]"
-            @click="currentPage = 'lc-stage3'"
-          >
-            <span class="nav-icon">3️⃣</span>
-            <span class="nav-label">Tool Calling</span>
-          </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'lc-stage4' }]"
-            @click="currentPage = 'lc-stage4'"
-          >
-            <span class="nav-icon">4️⃣</span>
-            <span class="nav-label">Agent 智能体</span>
-          </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'lc-stage5' }]"
-            @click="currentPage = 'lc-stage5'"
-          >
-            <span class="nav-icon">5️⃣</span>
-            <span class="nav-label">RAG 检索增强</span>
-          </div>
-          <div
             :class="['nav-item', { active: currentPage === 'lc-stage6' }]"
             @click="currentPage = 'lc-stage6'"
           >
-            <span class="nav-icon">6️⃣</span>
+            <span class="nav-icon">3️⃣</span>
             <span class="nav-label">Streaming 流式</span>
           </div>
           <div
             :class="['nav-item', { active: currentPage === 'lc-stage7' }]"
             @click="currentPage = 'lc-stage7'"
           >
-            <span class="nav-icon">7️⃣</span>
+            <span class="nav-icon">4️⃣</span>
             <span class="nav-label">Structured 结构化</span>
+          </div>
+          <div
+            :class="['nav-item', { active: currentPage === 'lc-stage3' }]"
+            @click="currentPage = 'lc-stage3'"
+          >
+            <span class="nav-icon">5️⃣</span>
+            <span class="nav-label">Tool Calling</span>
+          </div>
+          <div
+            :class="['nav-item', { active: currentPage === 'lc-stage4' }]"
+            @click="currentPage = 'lc-stage4'"
+          >
+            <span class="nav-icon">6️⃣</span>
+            <span class="nav-label">Agent 智能体</span>
+          </div>
+          <div
+            :class="['nav-item', { active: currentPage === 'lc-stage5' }]"
+            @click="currentPage = 'lc-stage5'"
+          >
+            <span class="nav-icon">7️⃣</span>
+            <span class="nav-label">RAG 检索增强</span>
           </div>
         </div>
       </nav>
@@ -150,11 +150,11 @@
       <ModelScopeChat v-if="currentPage === 'modelscope-js'" />
       <LangChainStage1Prompt v-if="currentPage === 'lc-stage1'" />
       <LangChainStage2Chain v-if="currentPage === 'lc-stage2'" />
+      <LangChainStage6Stream v-if="currentPage === 'lc-stage6'" />
+      <LangChainStage7Structured v-if="currentPage === 'lc-stage7'" />
       <LangChainStage3Tool v-if="currentPage === 'lc-stage3'" />
       <LangChainStage4Agent v-if="currentPage === 'lc-stage4'" />
       <LangChainStage5RAG v-if="currentPage === 'lc-stage5'" />
-      <LangChainStage6Stream v-if="currentPage === 'lc-stage6'" />
-      <LangChainStage7Structured v-if="currentPage === 'lc-stage7'" />
       <OllamaChat v-if="currentPage === 'ollama-chat'" />
       <OllamaPythonChat v-if="currentPage === 'ollama-python'" />
     </main>
