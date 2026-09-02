@@ -77,6 +77,13 @@
             <span class="nav-icon">🇯🇸</span>
             <span class="nav-label">JS 调用</span>
           </div>
+          <div
+            :class="['nav-item', { active: currentPage === 'modelscope-python' }]"
+            @click="currentPage = 'modelscope-python'"
+          >
+            <span class="nav-icon">🇵🇾</span>
+            <span class="nav-label">Python 调用</span>
+          </div>
         </div>
 
         <!-- 分组：LangChain.js 学习 -->
@@ -148,6 +155,7 @@
       <InnerModelChat v-if="currentPage === 'inner-js'" />
       <InnerModelPythonChat v-if="currentPage === 'inner-python'" />
       <ModelScopeChat v-if="currentPage === 'modelscope-js'" />
+      <ModelScopePythonChat v-if="currentPage === 'modelscope-python'" />
       <LangChainStage1Prompt v-if="currentPage === 'lc-stage1'" />
       <LangChainStage2Chain v-if="currentPage === 'lc-stage2'" />
       <LangChainStage6Stream v-if="currentPage === 'lc-stage6'" />
@@ -167,6 +175,7 @@ import BailianPythonChat from '@/pages/bailian/BailianPythonChat.vue'
 import InnerModelChat from '@/pages/inner/InnerModelChat.vue'
 import InnerModelPythonChat from '@/pages/inner/InnerModelPythonChat.vue'
 import ModelScopeChat from '@/pages/modelscope/ModelScopeChat.vue'
+import ModelScopePythonChat from '@/pages/modelscope/ModelScopePythonChat.vue'
 import LangChainStage1Prompt from '@/pages/langchain/LangChainStage1Prompt.vue'
 import LangChainStage2Chain from '@/pages/langchain/LangChainStage2Chain.vue'
 import LangChainStage3Tool from '@/pages/langchain/LangChainStage3Tool.vue'
@@ -186,6 +195,7 @@ export default {
     InnerModelChat,
     InnerModelPythonChat,
     ModelScopeChat,
+    ModelScopePythonChat,
     LangChainStage1Prompt,
     LangChainStage2Chain,
     LangChainStage3Tool,

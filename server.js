@@ -22,6 +22,7 @@ require('dotenv').config()
 const PORT = 22223
 const PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'InnerModel.py')
 const OLLAMA_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'OllamaModel.py')
+const MODELSCOPE_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'ModelScopeModel.py')
 
 /**
  * 调用 Python 脚本并返回结果
@@ -142,6 +143,67 @@ function callPythonScriptOllama(message, temperature = 0.7) {
 
     python.on('error', (err) => {
       console.error(`[Ollama Python] 启动失败:`, err.message)
+      reject(new Error(`无法启动 Python: ${err.message}`))
+    })
+  })
+}
+
+/**
+ * 调用魔塔 ModelScope Python 脚本并返回结果
+ * @param {string} message - 用户消息
+ * @param {number} temperature - 温度参数
+ * @returns {Promise<{content?: string, error?: string}>}
+ */
+function callPythonScriptModelScope(message, temperature = 0.7) {
+  return new Promise((resolve, reject) => {
+    const params = JSON.stringify({ message, temperature })
+    const pythonPath = process.platform === 'win32'
+      ? 'C:\\Users\\lujinwei\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
+      : 'python3'
+    const python = spawn(pythonPath, [MODELSCOPE_PYTHON_SCRIPT, '--json', params], {
+      timeout: 120000, // 120 秒超时（云端模型推理）
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+    })
+
+    let stdout = ''
+    let stderr = ''
+
+    python.stdout.on('data', (data) => {
+      stdout += data.toString()
+    })
+
+    python.stderr.on('data', (data) => {
+      stderr += data.toString()
+    })
+
+    python.on('close', (code) => {
+      if (code !== 0) {
+        console.error(`[ModelScope Python] 进程退出码: ${code}, stderr: ${stderr}`)
+        try {
+          const errResult = JSON.parse(stdout.trim())
+          if (errResult.error) {
+            reject(new Error(errResult.error))
+            return
+          }
+        } catch (_) { /* stdout 不是 JSON，使用 stderr */ }
+        reject(new Error(stderr || stdout.trim() || `Python 进程退出码: ${code}`))
+        return
+      }
+      try {
+        const result = JSON.parse(stdout.trim())
+        if (result.error) {
+          reject(new Error(result.error))
+          return
+        }
+        resolve(result)
+      } catch (e) {
+        console.error(`[ModelScope Python] JSON 解析失败, stdout: ${stdout}`)
+        reject(new Error(`Python 输出解析失败: ${stdout.substring(0, 200)}`))
+      }
+    })
+
+    python.on('error', (err) => {
+      console.error(`[ModelScope Python] 启动失败:`, err.message)
       reject(new Error(`无法启动 Python: ${err.message}`))
     })
   })
@@ -299,6 +361,25 @@ const server = http.createServer(async (req, res) => {
       console.log(`[Ollama Chat] 收到消息: "${message.substring(0, 50)}..."`)
       const result = await callPythonScriptOllama(message, temperature)
       console.log(`[Ollama Chat] 回复: "${(result.content || '').substring(0, 50)}..."`)
+      sendJSON(res, 200, result)
+      return
+    }
+
+    // ============================================================
+    // POST /api/modelscope/chat — 魔塔 ModelScope Python 调用
+    // ============================================================
+    if (method === 'POST' && (url === '/api/modelscope/chat' || url === '/modelscope/chat')) {
+      const body = await parseBody(req)
+      const { message, temperature } = body
+
+      if (!message || !message.trim()) {
+        sendJSON(res, 400, { error: 'message 参数不能为空' })
+        return
+      }
+
+      console.log(`[ModelScope Chat] 收到消息: "${message.substring(0, 50)}..."`)
+      const result = await callPythonScriptModelScope(message, temperature)
+      console.log(`[ModelScope Chat] 回复: "${(result.content || '').substring(0, 50)}..."`)
       sendJSON(res, 200, result)
       return
     }

@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-28 10:50:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-08-28 11:01:12
+ * @LastEditTime: 2026-09-01 20:32:46
  * @Description: 本地 Ollama 大模型调用 — 使用 LangChain.js ChatOpenAI
 -->
 <template>
@@ -78,7 +78,7 @@ export default {
       try {
         // 将历史消息转换为 LangChain 消息类型
         const historyMessages = this.messages
-          .splice(0, -1) // 不含刚添加的空 assistant 占位
+          .slice(0, -1) // 不含刚添加的空 assistant 占位
           .map((msg) => {
             if (msg.role === 'user') return new HumanMessage(msg.content)
             if (msg.role === 'assistant') return new AIMessage(msg.content)
