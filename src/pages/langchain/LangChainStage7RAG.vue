@@ -2,15 +2,15 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:50:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-08-27 18:50:00
- * @Description: 阶段五：RAG — 检索增强生成
+ * @LastEditTime: 2026-09-02 17:15:32
+ * @Description: 阶段七：RAG — 检索增强生成
  *   学习目标：基于外部知识库回答问题
  *   核心 API：RecursiveCharacterTextSplitter、MemoryVectorStore、createRetrievalChain
  *   注意：内网模型的 embedding API 可能与 OpenAI 不同，此处使用模拟向量存储演示流程
 -->
 <template>
   <div>
-    <h1>阶段五：RAG 检索增强生成 <span class="badge stage">学习</span></h1>
+    <h1>阶段七：RAG 检索增强生成 <span class="badge stage">学习</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>基于外部知识库回答问题，解决「训练数据过时」和「幻觉」问题<br />
       <strong>核心 API：</strong><code>RecursiveCharacterTextSplitter</code>、<code>MemoryVectorStore</code>、检索链<br />
@@ -79,7 +79,7 @@ import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters'
 
 export default {
-  name: 'LangChainStage5RAG',
+  name: 'LangChainStage7RAG',
 
   data() {
     return {
@@ -229,7 +229,7 @@ export default {
 
       try {
         // ============================================================
-        // 阶段五核心：RAG 检索增强生成
+        // 阶段七核心：RAG 检索增强生成
         // ============================================================
 
         // 1. 检索相关文档

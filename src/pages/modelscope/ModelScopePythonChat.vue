@@ -3,15 +3,15 @@
  * @Date: 2026-09-01 12:45:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
  * @LastEditTime: 2026-09-02 09:37:33
- * @Description: 魔塔 ModelScope 大模型 Python 调用
+ * @Description: 魔搭 ModelScope 大模型 Python 调用
 -->
 <template>
   <div>
-    <h1>魔塔大模型 <span class="badge modelscope">Python 调用</span></h1>
+    <h1>魔搭大模型 <span class="badge modelscope">Python 调用</span></h1>
     <div class="info-box">
-      <strong>调用方式：</strong>Python 脚本（LangChain + OpenAI 兼容模式）→ 魔塔 ModelScope API<br />
+      <strong>调用方式：</strong>Python 脚本（LangChain + OpenAI 兼容模式）→ 魔搭 ModelScope API<br />
       <strong>模型：</strong>deepseek-ai/DeepSeek-V4-Flash-0731<br />
-      <strong>说明：</strong>Python 脚本位于 <code>src/composables/ModelScopeModel.py</code>，通过 LangChain 的 ChatOpenAI 调用魔塔社区 API
+      <strong>说明：</strong>Python 脚本位于 <code>src/composables/ModelScopeModel.py</code>，通过 LangChain 的 ChatOpenAI 调用魔搭社区 API
     </div>
 
     <div class="config-section">
@@ -64,7 +64,7 @@ export default {
       config: {
         temperature: 0.7,
       },
-      codeExample: `# ModelScopeModel.py — 魔塔社区大模型调用示例
+      codeExample: `# ModelScopeModel.py — 魔搭社区大模型调用示例
         # 安装依赖：pip install langchain langchain-openai langchain-core python-dotenv
 
         import os
@@ -80,7 +80,7 @@ export default {
         MODELSCOPE_MODEL = "deepseek-ai/DeepSeek-V4-Flash-0731"
 
         def chat(message, temperature=0.7):
-            # 使用 LangChain 的 ChatOpenAI 调用魔塔 API（OpenAI 兼容模式）
+            # 使用 LangChain 的 ChatOpenAI 调用魔搭 API（OpenAI 兼容模式）
             # LangSmith 会自动追踪每次调用（无需额外代码）
             llm = ChatOpenAI(
                 model=MODELSCOPE_MODEL,

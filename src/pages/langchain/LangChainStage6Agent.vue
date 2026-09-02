@@ -2,19 +2,19 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:45:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-08-27 19:09:27
- * @Description: 阶段四：Agent — 智能体
+ * @LastEditTime: 2026-09-02 17:15:23
+ * @Description: 阶段六：Agent — 智能体
  *   学习目标：用 createReactAgent 自动处理工具调用循环
  *   核心 API：createReactAgent()、Agent 自动循环
- *   对比阶段三：不再手动 while 循环处理 tool_calls
+ *   对比阶段五：不再手动 while 循环处理 tool_calls
 -->
 <template>
   <div>
-    <h1>阶段四：Agent 智能体 <span class="badge stage">学习</span></h1>
+    <h1>阶段六：Agent 智能体 <span class="badge stage">学习</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>用 <code>createReactAgent()</code> 自动处理工具调用循环<br />
       <strong>核心 API：</strong><code>createReactAgent()</code>、Agent 自动 Think→Act→Observe 循环<br />
-      <strong>对比阶段三：</strong>不再手动 <code>while</code> 循环处理 tool_calls，Agent 自动完成
+      <strong>对比阶段五：</strong>不再手动 <code>while</code> 循环处理 tool_calls，Agent 自动完成
     </div>
 
     <div class="input-section">
@@ -61,7 +61,7 @@ import { createReactAgent } from '@langchain/langgraph/prebuilt'
 import { z } from 'zod'
 
 export default {
-  name: 'LangChainStage4Agent',
+  name: 'LangChainStage6Agent',
 
   data() {
     return {
@@ -82,7 +82,7 @@ export default {
 
   methods: {
     // ============================================================
-    // 定义工具（与阶段三相同的工具）
+    // 定义工具（与阶段五相同的工具）
     // ============================================================
 
     createCalculatorTool() {
@@ -162,7 +162,7 @@ export default {
 
       try {
         // ============================================================
-        // 阶段四核心：使用 createReactAgent 自动处理工具循环
+        // 阶段六核心：使用 createReactAgent 自动处理工具循环
         // ============================================================
 
         const tools = [

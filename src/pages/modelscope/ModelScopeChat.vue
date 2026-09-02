@@ -3,13 +3,13 @@
  * @Date: 2026-08-27 11:48:57
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
  * @LastEditTime: 2026-09-02 10:05:53
- * @Description: 魔塔大模型 LangChain.js 调用（适配 API 不稳定）
+ * @Description: 魔搭大模型 LangChain.js 调用（适配 API 不稳定）
 -->
 <template>
   <div>
-    <h1>魔塔大模型 <span class="badge modelscope">LangChain.js 调用</span></h1>
+    <h1>魔搭大模型 <span class="badge modelscope">LangChain.js 调用</span></h1>
     <div class="info-box">
-      <strong>调用方式：</strong>LangChain.js（ChatOpenAI）→ 魔塔 ModelScope API<br />
+      <strong>调用方式：</strong>LangChain.js（ChatOpenAI）→ 魔搭 ModelScope API<br />
       <strong>模型：</strong>deepseek-ai/DeepSeek-V4-Flash-0731<br />
       <strong>说明：</strong>使用 <code>@langchain/openai</code> 的 ChatOpenAI 类调用，支持多轮对话历史，并内置重试机制适配 API 不稳定
     </div>
@@ -44,7 +44,7 @@ import { ChatOpenAI } from '@langchain/openai'
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages'
 
 const MODELSCOPE_MODEL = 'deepseek-ai/DeepSeek-V4-Flash-0731'
-// 魔塔 API 间歇性不稳定，返回空响应（choices: null），需要重试
+// 魔搭 API 间歇性不稳定，返回空响应（choices: null），需要重试
 const MAX_RETRIES = 5
 
 export default {
@@ -124,7 +124,7 @@ export default {
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
           try {
             response = await llm.invoke(langChainMessages)
-            // 校验响应是否有效（魔塔 API 不稳定时可能返回空 choices）
+            // 校验响应是否有效（魔搭 API 不稳定时可能返回空 choices）
             if (response && response.content) {
               break
             }
@@ -132,7 +132,7 @@ export default {
           } catch (err) {
             // 空响应异常（choices 为 null）走重试逻辑，其他错误直接抛出
             const errMsg = err && err.message ? String(err.message) : String(err || '')
-            // 魔塔 API 不稳定时，OpenAI SDK 解析空响应会抛出
+            // 魔搭 API 不稳定时，OpenAI SDK 解析空响应会抛出
             // "Cannot read properties of undefined (reading 'message')" 等 TypeError，
             // 这类错误同样视为空响应，走重试逻辑
             if (/choices|null value|Cannot read properties of undefined/i.test(errMsg)) {
@@ -150,7 +150,7 @@ export default {
         }
 
         if (!response || !response.content) {
-          throw new Error('魔塔 API 多次返回空响应，请稍后重试')
+          throw new Error('魔搭 API 多次返回空响应，请稍后重试')
         }
 
         this.messages[aiMsgIndex].content = response.content

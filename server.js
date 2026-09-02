@@ -149,7 +149,7 @@ function callPythonScriptOllama(message, temperature = 0.7) {
 }
 
 /**
- * 调用魔塔 ModelScope Python 脚本并返回结果
+ * 调用魔搭 ModelScope Python 脚本并返回结果
  * @param {string} message - 用户消息
  * @param {number} temperature - 温度参数
  * @returns {Promise<{content?: string, error?: string}>}
@@ -366,7 +366,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ============================================================
-    // POST /api/modelscope/chat — 魔塔 ModelScope Python 调用
+    // POST /api/modelscope/chat — 魔搭 ModelScope Python 调用
     // ============================================================
     if (method === 'POST' && (url === '/api/modelscope/chat' || url === '/modelscope/chat')) {
       const body = await parseBody(req)

@@ -2,15 +2,15 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:40:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-08-27 18:40:00
- * @Description: 阶段三：Tool Calling — 工具调用
+ * @LastEditTime: 2026-09-02 17:15:11
+ * @Description: 阶段五：Tool Calling — 工具调用
  *   学习目标：让 LLM 调用外部函数获取实时数据
  *   核心 API：tool()、bindTools()、AIMessage.tool_calls、ToolMessage
- *   注意：这是手动处理 tool_calls 循环，阶段四 Agent 会自动处理
+ *   注意：这是手动处理 tool_calls 循环，阶段六 Agent 会自动处理
 -->
 <template>
   <div>
-    <h1>阶段三：Tool Calling <span class="badge stage">学习</span></h1>
+    <h1>阶段五：Tool Calling <span class="badge stage">学习</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>让 LLM 调用外部函数（计算器、天气查询等）<br />
       <strong>核心 API：</strong><code>tool()</code>、<code>bindTools()</code>、<code>ToolMessage</code><br />
@@ -59,7 +59,7 @@ import { tool } from '@langchain/core/tools'
 import { z } from 'zod'
 
 export default {
-  name: 'LangChainStage3Tool',
+  name: 'LangChainStage5Tool',
 
   data() {
     return {
@@ -172,7 +172,7 @@ export default {
 
       try {
         // ============================================================
-        // 阶段三核心：Tool Calling 手动循环
+        // 阶段五核心：Tool Calling 手动循环
         // ============================================================
 
         // 1. 创建工具列表

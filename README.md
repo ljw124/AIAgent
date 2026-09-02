@@ -1,6 +1,6 @@
 # 🤖 AI Agent
 
-> 基于 **LangChain.js** 与 **Vue 2** 构建的多模型 AI Agent 交互平台，支持内网大模型、本地 Ollama、百炼 DashScope、魔塔 ModelScope 等多种大模型接入，并内置完整的 LangChain.js 知识体系学习模块。
+> 基于 **LangChain.js** 与 **Vue 2** 构建的多模型 AI Agent 交互平台，支持内网大模型、本地 Ollama、百炼 DashScope、魔搭 ModelScope 等多种大模型接入，并内置完整的 LangChain.js 知识体系学习模块。
 
 ---
 
@@ -31,7 +31,7 @@
 
 ## ✨ 核心特性
 
-- **多模型平台接入**：内网 hikvision、本地 Ollama、百炼 DashScope、魔塔 ModelScope 四大平台统一接入。
+- **多模型平台接入**：内网 hikvision、本地 Ollama、百炼 DashScope、魔搭 ModelScope 四大平台统一接入。
 - **双语言调用**：每个模型平台均提供 JS 与 Python 两种调用示例，便于对比学习。
 - **LangChain.js 七阶段学习**：从 Prompt Template 到 RAG 检索增强的完整进阶路线。
 - **流式输出**：支持 Streaming 流式响应，实时展示模型输出。
@@ -64,7 +64,7 @@
 | **内网 hikvision** | 公司内网部署的大模型 | JS / Python | [`InnerModelChat.vue`](src/pages/inner/InnerModelChat.vue)、[`InnerModelPythonChat.vue`](src/pages/inner/InnerModelPythonChat.vue)、[`InnerModel.py`](src/composables/InnerModel.py) |
 | **本地 Ollama** | 本地部署的开源模型 | JS / Python | [`OllamaChat.vue`](src/pages/ollama/OllamaChat.vue)、[`OllamaPythonChat.vue`](src/pages/ollama/OllamaPythonChat.vue)、[`OllamaModel.py`](src/composables/OllamaModel.py) |
 | **百炼 DashScope** | 阿里云百炼大模型平台 | JS / Python | [`BailianJSChat.vue`](src/pages/bailian/BailianJSChat.vue)、[`BailianPythonChat.vue`](src/pages/bailian/BailianPythonChat.vue)、[`BaiLianModel.js`](src/composables/BaiLianModel.js)、[`bailian_demo.py`](src/pages/bailian/bailian_demo.py) |
-| **魔塔 ModelScope** | 阿里魔塔社区大模型 | JS | [`ModelScopeChat.vue`](src/pages/modelscope/ModelScopeChat.vue) |
+| **魔搭 ModelScope** | 阿里魔搭社区大模型 | JS / Python | [`ModelScopeChat.vue`](src/pages/modelscope/ModelScopeChat.vue)、[`ModelScopePythonChat.vue`](src/pages/modelscope/ModelScopePythonChat.vue)、[`ModelScopeModel.py`](src/composables/ModelScopeModel.py) |
 
 ---
 
@@ -76,11 +76,11 @@
 | --- | --- | --- |
 | 1️⃣ | **Prompt Template** 提示词模板 | [`LangChainStage1Prompt.vue`](src/pages/langchain/LangChainStage1Prompt.vue) |
 | 2️⃣ | **Chain 链式调用** | [`LangChainStage2Chain.vue`](src/pages/langchain/LangChainStage2Chain.vue) |
-| 3️⃣ | **Streaming 流式输出** | [`LangChainStage6Stream.vue`](src/pages/langchain/LangChainStage6Stream.vue) |
-| 4️⃣ | **Structured 结构化输出** | [`LangChainStage7Structured.vue`](src/pages/langchain/LangChainStage7Structured.vue) |
-| 5️⃣ | **Tool Calling 工具调用** | [`LangChainStage3Tool.vue`](src/pages/langchain/LangChainStage3Tool.vue) |
-| 6️⃣ | **Agent 智能体** | [`LangChainStage4Agent.vue`](src/pages/langchain/LangChainStage4Agent.vue) |
-| 7️⃣ | **RAG 检索增强** | [`LangChainStage5RAG.vue`](src/pages/langchain/LangChainStage5RAG.vue) |
+| 3️⃣ | **Streaming 流式输出** | [`LangChainStage3Stream.vue`](src/pages/langchain/LangChainStage3Stream.vue) |
+| 4️⃣ | **Structured 结构化输出** | [`LangChainStage4Structured.vue`](src/pages/langchain/LangChainStage4Structured.vue) |
+| 5️⃣ | **Tool Calling 工具调用** | [`LangChainStage5Tool.vue`](src/pages/langchain/LangChainStage5Tool.vue) |
+| 6️⃣ | **Agent 智能体** | [`LangChainStage6Agent.vue`](src/pages/langchain/LangChainStage6Agent.vue) |
+| 7️⃣ | **RAG 检索增强** | [`LangChainStage7RAG.vue`](src/pages/langchain/LangChainStage7RAG.vue) |
 
 ### 📄 配套学习文档
 
@@ -121,13 +121,14 @@
     │   ├── BaiLianModel.js   # 百炼模型 JS 封装
     │   ├── BaiLianModel.py   # 百炼模型 Python 脚本
     │   ├── InnerModel.py     # 内网模型 Python 脚本
+    │   ├── ModelScopeModel.py # 魔搭 ModelScope 模型 Python 脚本
     │   └── OllamaModel.py    # Ollama 模型 Python 脚本
     ├── docs/                 # 学习文档
     └── pages/                # 页面组件
         ├── bailian/          # 百炼 DashScope（平台）
         ├── inner/            # 内网大模型（平台）
         ├── langchain/        # LangChain.js 知识体系（学习）
-        ├── modelscope/       # 魔塔 ModelScope（平台）
+        ├── modelscope/       # 魔搭 ModelScope（平台）
         └── ollama/           # 本地 Ollama（平台）
 ```
 
@@ -142,7 +143,7 @@
 DASHSCOPE_API_KEY="your-dashscope-api-key"
 DASHSCOPE_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
 
-# 魔塔社区大模型
+# 魔搭社区大模型
 MODELSCOPE_API_KEY="your-modelscope-api-key"
 MODELSCOPE_BASE_URL="https://api-inference.modelscope.cn/v1"
 
@@ -216,7 +217,7 @@ pnpm run lint
 
 [`server.js`](server.js) 是一个基于 Node.js 原生 `http` 模块的轻量后端服务，主要职责：
 
-- **调用 Python 脚本**：通过 `spawn` 启动 Python 子进程，执行内网模型（[`InnerModel.py`](src/composables/InnerModel.py)）与本地模型（[`OllamaModel.py`](src/composables/OllamaModel.py)）的推理，并解析 JSON 结果返回。
+- **调用 Python 脚本**：通过 `spawn` 启动 Python 子进程，执行内网模型（[`InnerModel.py`](src/composables/InnerModel.py)）、本地模型（[`OllamaModel.py`](src/composables/OllamaModel.py)）与魔搭模型（[`ModelScopeModel.py`](src/composables/ModelScopeModel.py)）的推理，并解析 JSON 结果返回。
 - **LangSmith 代理**：将浏览器端无法直连的 `api.smith.langchain.com` 请求转发到真实地址，解决公司网络 ALPN 协商失败问题。
 
 > **注意**：`server.js` 中硬编码了 Windows 下的 Python 路径（`C:\Users\lujinwei\AppData\Local\Programs\Python\Python313\python.exe`），如环境不同请自行修改。
@@ -231,7 +232,7 @@ pnpm run lint
 | --- | --- | --- |
 | `/api` | `http://localhost:22223` | 转发到后端服务（Python 调用） |
 | `/dashscope` | `https://dashscope.aliyuncs.com` | 百炼 API（解决 CORS） |
-| `/modelscope` | `https://api-inference.modelscope.cn` | 魔塔 API（备选方案） |
+| `/modelscope` | `https://api-inference.modelscope.cn` | 魔搭 API（备选方案） |
 | `/inner` | 内网大模型地址 | 内网模型 API |
 | `/ollama` | `http://127.0.0.1:11434` | 本地 Ollama（OpenAI 兼容模式） |
 | `/langsmith-proxy` | `http://localhost:22223` | LangSmith 代理链路 |

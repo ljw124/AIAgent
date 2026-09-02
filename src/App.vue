@@ -67,9 +67,9 @@
           </div>
         </div>
 
-        <!-- 分组：魔塔社区 -->
+        <!-- 分组：魔搭社区 -->
         <div class="nav-group">
-          <div class="nav-group-title">魔塔 ModelScope</div>
+          <div class="nav-group-title">魔搭 ModelScope</div>
           <div
             :class="['nav-item', { active: currentPage === 'modelscope-js' }]"
             @click="currentPage = 'modelscope-js'"
@@ -158,11 +158,11 @@
       <ModelScopePythonChat v-if="currentPage === 'modelscope-python'" />
       <LangChainStage1Prompt v-if="currentPage === 'lc-stage1'" />
       <LangChainStage2Chain v-if="currentPage === 'lc-stage2'" />
-      <LangChainStage6Stream v-if="currentPage === 'lc-stage6'" />
-      <LangChainStage7Structured v-if="currentPage === 'lc-stage7'" />
-      <LangChainStage3Tool v-if="currentPage === 'lc-stage3'" />
-      <LangChainStage4Agent v-if="currentPage === 'lc-stage4'" />
-      <LangChainStage5RAG v-if="currentPage === 'lc-stage5'" />
+      <LangChainStage3Stream v-if="currentPage === 'lc-stage6'" />
+      <LangChainStage4Structured v-if="currentPage === 'lc-stage7'" />
+      <LangChainStage5Tool v-if="currentPage === 'lc-stage3'" />
+      <LangChainStage6Agent v-if="currentPage === 'lc-stage4'" />
+      <LangChainStage7RAG v-if="currentPage === 'lc-stage5'" />
       <OllamaChat v-if="currentPage === 'ollama-chat'" />
       <OllamaPythonChat v-if="currentPage === 'ollama-python'" />
     </main>
@@ -178,11 +178,11 @@ import ModelScopeChat from '@/pages/modelscope/ModelScopeChat.vue'
 import ModelScopePythonChat from '@/pages/modelscope/ModelScopePythonChat.vue'
 import LangChainStage1Prompt from '@/pages/langchain/LangChainStage1Prompt.vue'
 import LangChainStage2Chain from '@/pages/langchain/LangChainStage2Chain.vue'
-import LangChainStage3Tool from '@/pages/langchain/LangChainStage3Tool.vue'
-import LangChainStage4Agent from '@/pages/langchain/LangChainStage4Agent.vue'
-import LangChainStage5RAG from '@/pages/langchain/LangChainStage5RAG.vue'
-import LangChainStage6Stream from '@/pages/langchain/LangChainStage6Stream.vue'
-import LangChainStage7Structured from '@/pages/langchain/LangChainStage7Structured.vue'
+import LangChainStage3Stream from '@/pages/langchain/LangChainStage3Stream.vue'
+import LangChainStage4Structured from '@/pages/langchain/LangChainStage4Structured.vue'
+import LangChainStage5Tool from '@/pages/langchain/LangChainStage5Tool.vue'
+import LangChainStage6Agent from '@/pages/langchain/LangChainStage6Agent.vue'
+import LangChainStage7RAG from '@/pages/langchain/LangChainStage7RAG.vue'
 import OllamaChat from '@/pages/ollama/OllamaChat.vue'
 import OllamaPythonChat from '@/pages/ollama/OllamaPythonChat.vue'
 
@@ -198,11 +198,11 @@ export default {
     ModelScopePythonChat,
     LangChainStage1Prompt,
     LangChainStage2Chain,
-    LangChainStage3Tool,
-    LangChainStage4Agent,
-    LangChainStage5RAG,
-    LangChainStage6Stream,
-    LangChainStage7Structured,
+    LangChainStage3Stream,
+    LangChainStage4Structured,
+    LangChainStage5Tool,
+    LangChainStage6Agent,
+    LangChainStage7RAG,
     OllamaChat,
     OllamaPythonChat,
   },

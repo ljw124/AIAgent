@@ -11,11 +11,11 @@
 1. [学习路线总览](#1-学习路线总览)
 2. [阶段一：Prompt Template — 提示词模板](#2-阶段一prompt-template--提示词模板)
 3. [阶段二：Chain — 链式调用](#3-阶段二chain--链式调用)
-4. [阶段三：Tool Calling — 工具调用](#4-阶段三tool-calling--工具调用)
-5. [阶段四：Agent — 智能体](#5-阶段四agent--智能体)
-6. [阶段五：RAG — 检索增强生成](#6-阶段五rag--检索增强生成)
-7. [阶段六：Streaming — 流式输出](#7-阶段六streaming--流式输出)
-8. [阶段七：Structured Output — 结构化输出](#8-阶段七structured-output--结构化输出)
+4. [阶段三：Streaming — 流式输出](#4-阶段三streaming--流式输出)
+5. [阶段四：Structured Output — 结构化输出](#5-阶段四structured-output--结构化输出)
+6. [阶段五：Tool Calling — 工具调用](#6-阶段五tool-calling--工具调用)
+7. [阶段六：Agent — 智能体](#7-阶段六agent--智能体)
+8. [阶段七：RAG — 检索增强生成](#8-阶段七rag--检索增强生成)
 9. [进阶主题](#9-进阶主题)
 
 ---
@@ -28,16 +28,16 @@
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  起点              阶段一          阶段二         阶段三         阶段四    │
-│  ┌────────┐     ┌──────────┐   ┌────────┐   ┌────────┐   ┌────────┐   │
-│  │ 当前   │ ──→ │ Prompt   │ → │ Chain  │ → │ Tool   │ → │ Agent  │   │
-│  │ invoke │     │ Template │   │ 链式   │   │ Calling│   │ 智能体 │   │
-│  └────────┘     └──────────┘   └────────┘   └────────┘   └────────┘   │
+│  ┌────────┐     ┌──────────┐   ┌────────┐   ┌──────────┐   ┌──────────┐ │
+│  │ 当前   │ ──→ │ Prompt   │ → │ Chain  │ → │ Streaming│ → │ Structured│ │
+│  │ invoke │     │ Template │   │ 链式   │   │ 流式输出 │   │ 结构化输出│ │
+│  └────────┘     └──────────┘   └────────┘   └──────────┘   └──────────┘ │
 │                                                                          │
 │  阶段五          阶段六          阶段七                                    │
-│  ┌────────┐     ┌──────────┐   ┌──────────────┐                        │
-│  │  RAG   │     │ Streaming│   │ Structured   │                        │
-│  │ 检索增强│     │ 流式输出 │   │ Output 结构化 │                        │
-│  └────────┘     └──────────┘   └──────────────┘                        │
+│  ┌────────┐     ┌────────┐   ┌──────────────┐                          │
+│  │  Tool  │     │ Agent  │   │     RAG      │                          │
+│  │ Calling│     │ 智能体 │   │  检索增强生成 │                          │
+│  └────────┘     └────────┘   └──────────────┘                          │
 │                                                                          │
 │  每个阶段 = 概念讲解 + 可运行示例代码（Vue 组件）                             │
 │                                                                          │
@@ -65,11 +65,11 @@ src/pages/inner/
 ├── InnerModelPythonChat.vue    ← Python 调用
 ├── LangChainStage1Prompt.vue   ← 阶段一：Prompt Template
 ├── LangChainStage2Chain.vue    ← 阶段二：Chain 链式调用
-├── LangChainStage3Tool.vue     ← 阶段三：Tool Calling
-├── LangChainStage4Agent.vue    ← 阶段四：Agent
-├── LangChainStage5RAG.vue      ← 阶段五：RAG
-├── LangChainStage6Stream.vue   ← 阶段六：Streaming
-└── LangChainStage7Structured.vue ← 阶段七：Structured Output
+├── LangChainStage3Stream.vue   ← 阶段三：Streaming 流式输出
+├── LangChainStage4Structured.vue ← 阶段四：Structured Output 结构化输出
+├── LangChainStage5Tool.vue     ← 阶段五：Tool Calling 工具调用
+├── LangChainStage6Agent.vue    ← 阶段六：Agent 智能体
+└── LangChainStage7RAG.vue      ← 阶段七：RAG 检索增强生成
 ```
 
 ---
@@ -117,7 +117,7 @@ const langChainMessages = [
 
 LCEL（LangChain Expression Language）使用 `.pipe()` 方法串联组件：
 
-```
+```typescript
 PromptTemplate → ChatOpenAI → OutputParser
 ```
 
@@ -142,117 +142,13 @@ PromptTemplate → ChatOpenAI → OutputParser
 
 ---
 
-## 4. 阶段三：Tool Calling — 工具调用
+## 4. 阶段三：Streaming — 流式输出
 
 ### 4.1 概念
 
-Tool Calling 让 LLM 能够调用外部函数/API，获取实时数据或执行操作。这是 Agent 的基础能力。
-
-流程：
-```
-用户问题 → LLM 决定调用哪个工具 → 执行工具 → 将结果返回 LLM → LLM 生成最终回复
-```
-
-### 4.2 核心 API
-
-| API | 说明 |
-|-----|------|
-| `llm.bindTools([...tools])` | 将工具绑定到模型 |
-| `tool()` from `@langchain/core/tools` | 定义工具函数 |
-| `zod` schema | 定义工具参数的类型和描述 |
-| `AIMessage.tool_calls` | LLM 返回的工具调用请求 |
-| `ToolMessage` | 工具执行结果消息 |
-
-### 4.3 示例代码
-
-→ [`LangChainStage3Tool.vue`](../../pages/langchain/LangChainStage3Tool.vue)
-
-**学习要点：**
-- 用 `tool()` 定义工具，Zod schema 描述参数
-- `bindTools()` 让模型知道有哪些工具可用
-- 手动处理 tool_calls 循环（调用工具 → 返回结果 → LLM 再生成）
-- 这是理解 Agent 的前置知识
-
----
-
-## 5. 阶段四：Agent — 智能体
-
-### 5.1 概念
-
-Agent 是 Tool Calling 的自动化版本。它自动处理「思考→调用工具→观察结果→再思考」的循环，直到得出最终答案。
-
-```
-┌──────────────────────────────────────────┐
-│                  Agent                    │
-│  ┌────────┐   ┌────────┐   ┌─────────┐  │
-│  │ Think  │ → │  Act   │ → │ Observe │  │
-│  │ 思考   │   │ 执行工具│   │ 观察结果│  │
-│  └────────┘   └────────┘   └─────────┘  │
-│       ↑                         │        │
-│       └─────────────────────────┘        │
-│              循环直到完成                  │
-└──────────────────────────────────────────┘
-```
-
-### 5.2 核心 API
-
-| API | 说明 |
-|-----|------|
-| `createReactAgent()` | 创建 ReAct 模式 Agent |
-| `AgentExecutor` | Agent 执行器（旧版 API） |
-| `agent.invoke()` | 执行 Agent，自动处理工具循环 |
-
-### 5.3 示例代码
-
-→ [`LangChainStage4Agent.vue`](../../pages/langchain/LangChainStage4Agent.vue)
-
-**学习要点：**
-- Agent 与手动 Tool Calling 的区别——自动化循环
-- ReAct（Reasoning + Acting）模式
-- Agent 的中间步骤（intermediateSteps）——可观察思考过程
-- 与阶段三代码的对比
-
----
-
-## 6. 阶段五：RAG — 检索增强生成
-
-### 6.1 概念
-
-RAG（Retrieval-Augmented Generation）让 LLM 能够基于外部知识库回答问题，解决「模型训练数据过时」和「幻觉」问题。
-
-```
-用户问题 → 检索相关文档 → 将文档注入 Prompt → LLM 基于文档回答
-```
-
-### 6.2 核心 API
-
-| API | 说明 |
-|-----|------|
-| `RecursiveCharacterTextSplitter` | 文档分割器 |
-| `MemoryVectorStore` | 内存向量存储（无需外部数据库） |
-| `OpenAIEmbeddings` | 文本嵌入（向量化） |
-| `createStuffDocumentsChain()` | 创建文档填充链 |
-| `createRetrievalChain()` | 创建检索链 |
-
-### 6.3 示例代码
-
-→ [`LangChainStage5RAG.vue`](../../pages/langchain/LangChainStage5RAG.vue)
-
-**学习要点：**
-- 文档加载 → 分割 → 向量化 → 存储 → 检索的完整流程
-- `MemoryVectorStore` 用于演示（生产环境用 Pinecone/Chroma 等）
-- 检索到的文档如何注入 Prompt
-- 注意：内网模型的 embedding API 可能与 OpenAI 不同，需要适配
-
----
-
-## 7. 阶段六：Streaming — 流式输出
-
-### 7.1 概念
-
 当前 `invoke()` 是等待完整响应后一次性返回。`stream()` 可以逐 token 返回，实现打字机效果，提升用户体验。
 
-### 7.2 核心 API
+### 4.2 核心 API
 
 | API | 说明 |
 |-----|------|
@@ -261,9 +157,9 @@ RAG（Retrieval-Augmented Generation）让 LLM 能够基于外部知识库回答
 | `AIMessageChunk` | 流式响应的消息块类型 |
 | `chain.stream()` | 链也自动支持流式（LCEL 的优势） |
 
-### 7.3 示例代码
+### 4.3 示例代码
 
-→ [`LangChainStage6Stream.vue`](../../pages/langchain/LangChainStage6Stream.vue)
+→ [`LangChainStage3Stream.vue`](../../pages/langchain/LangChainStage3Stream.vue)
 
 **学习要点：**
 - `stream()` vs `invoke()` 的区别
@@ -273,9 +169,9 @@ RAG（Retrieval-Augmented Generation）让 LLM 能够基于外部知识库回答
 
 ---
 
-## 8. 阶段七：Structured Output — 结构化输出
+## 5. 阶段四：Structured Output — 结构化输出
 
-### 8.1 概念
+### 5.1 概念
 
 默认情况下，LLM 返回的是自由文本。但在很多场景中，我们需要 LLM 输出**符合预定义结构的数据**（如 JSON），以便程序直接解析和使用。
 
@@ -293,7 +189,7 @@ LangChain.js 提供三种方式实现结构化输出：
 | `StructuredOutputParser` | ⭐⭐ 中 | 需要自定义格式指令时 |
 | `response_format: json_object` | ⭐⭐⭐ 高 | 模型原生支持 JSON Mode 时 |
 
-### 8.2 核心 API
+### 5.2 核心 API
 
 | API | 说明 |
 |-----|------|
@@ -306,9 +202,9 @@ LangChain.js 提供三种方式实现结构化输出：
 | `parser.parse(text)` | 将 LLM 文本输出解析为 JS 对象 |
 | `modelKwargs.response_format` | OpenAI 兼容的 JSON Mode 参数 |
 
-### 8.3 示例代码
+### 5.3 示例代码
 
-→ [`LangChainStage7Structured.vue`](../../pages/langchain/LangChainStage7Structured.vue)
+→ [`LangChainStage4Structured.vue`](../../pages/langchain/LangChainStage4Structured.vue)
 
 **学习要点：**
 - 用 Zod 定义输出 schema——`z.object()`、`z.enum()`、`z.array()`、`.describe()`
@@ -317,6 +213,110 @@ LangChain.js 提供三种方式实现结构化输出：
 - `response_format: { type: 'json_object' }` 的 OpenAI 兼容用法
 - 结构化输出建议设置 `temperature: 0` 以提高输出稳定性
 - 三种方式的对比：代码量、灵活性、模型兼容性
+
+---
+
+## 6. 阶段五：Tool Calling — 工具调用
+
+### 6.1 概念
+
+Tool Calling 让 LLM 能够调用外部函数/API，获取实时数据或执行操作。这是 Agent 的基础能力。
+
+流程：
+```
+用户问题 → LLM 决定调用哪个工具 → 执行工具 → 将结果返回 LLM → LLM 生成最终回复
+```
+
+### 6.2 核心 API
+
+| API | 说明 |
+|-----|------|
+| `llm.bindTools([...tools])` | 将工具绑定到模型 |
+| `tool()` from `@langchain/core/tools` | 定义工具函数 |
+| `zod` schema | 定义工具参数的类型和描述 |
+| `AIMessage.tool_calls` | LLM 返回的工具调用请求 |
+| `ToolMessage` | 工具执行结果消息 |
+
+### 6.3 示例代码
+
+→ [`LangChainStage5Tool.vue`](../../pages/langchain/LangChainStage5Tool.vue)
+
+**学习要点：**
+- 用 `tool()` 定义工具，Zod schema 描述参数
+- `bindTools()` 让模型知道有哪些工具可用
+- 手动处理 tool_calls 循环（调用工具 → 返回结果 → LLM 再生成）
+- 这是理解 Agent 的前置知识
+
+---
+
+## 7. 阶段六：Agent — 智能体
+
+### 7.1 概念
+
+Agent 是 Tool Calling 的自动化版本。它自动处理「思考→调用工具→观察结果→再思考」的循环，直到得出最终答案。
+
+```
+┌──────────────────────────────────────────┐
+│                  Agent                    │
+│  ┌────────┐   ┌────────┐   ┌─────────┐  │
+│  │ Think  │ → │  Act   │ → │ Observe │  │
+│  │ 思考   │   │ 执行工具│   │ 观察结果│  │
+│  └────────┘   └────────┘   └─────────┘  │
+│       ↑                         │        │
+│       └─────────────────────────┘        │
+│              循环直到完成                  │
+└──────────────────────────────────────────┘
+```
+
+### 7.2 核心 API
+
+| API | 说明 |
+|-----|------|
+| `createReactAgent()` | 创建 ReAct 模式 Agent |
+| `AgentExecutor` | Agent 执行器（旧版 API） |
+| `agent.invoke()` | 执行 Agent，自动处理工具循环 |
+
+### 7.3 示例代码
+
+→ [`LangChainStage6Agent.vue`](../../pages/langchain/LangChainStage6Agent.vue)
+
+**学习要点：**
+- Agent 与手动 Tool Calling 的区别——自动化循环
+- ReAct（Reasoning + Acting）模式
+- Agent 的中间步骤（intermediateSteps）——可观察思考过程
+- 与阶段五代码的对比
+
+---
+
+## 8. 阶段七：RAG — 检索增强生成
+
+### 8.1 概念
+
+RAG（Retrieval-Augmented Generation）让 LLM 能够基于外部知识库回答问题，解决「模型训练数据过时」和「幻觉」问题。
+
+```
+用户问题 → 检索相关文档 → 将文档注入 Prompt → LLM 基于文档回答
+```
+
+### 8.2 核心 API
+
+| API | 说明 |
+|-----|------|
+| `RecursiveCharacterTextSplitter` | 文档分割器 |
+| `MemoryVectorStore` | 内存向量存储（无需外部数据库） |
+| `OpenAIEmbeddings` | 文本嵌入（向量化） |
+| `createStuffDocumentsChain()` | 创建文档填充链 |
+| `createRetrievalChain()` | 创建检索链 |
+
+### 8.3 示例代码
+
+→ [`LangChainStage7RAG.vue`](../../pages/langchain/LangChainStage7RAG.vue)
+
+**学习要点：**
+- 文档加载 → 分割 → 向量化 → 存储 → 检索的完整流程
+- `MemoryVectorStore` 用于演示（生产环境用 Pinecone/Chroma 等）
+- 检索到的文档如何注入 Prompt
+- 注意：内网模型的 embedding API 可能与 OpenAI 不同，需要适配
 
 ---
 

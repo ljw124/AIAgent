@@ -31,7 +31,7 @@ module.exports = defineConfig({
       if (envConfig.INNER_API_KEY) {
         envVars.INNER_API_KEY = JSON.stringify(envConfig.INNER_API_KEY)
       }
-      // 魔塔社区大模型（供 LangChain.js 前端调用使用）
+      // 魔搭社区大模型（供 LangChain.js 前端调用使用）
       // ChatOpenAI 客户端会校验 apiKey 必须存在，否则报 Missing credentials
       // 实际请求头由 /modelscope 代理的 onProxyReq 注入，这里仅用于通过校验
       if (envConfig.MODELSCOPE_API_KEY) {
@@ -127,7 +127,7 @@ module.exports = defineConfig({
         })
       )
 
-      // 代理：/modelscope → 魔塔社区 API（备选方案，解决公司网络限制）
+      // 代理：/modelscope → 魔搭社区 API（备选方案，解决公司网络限制）
       devServer.app.use(
         '/modelscope',
         createProxyMiddleware({

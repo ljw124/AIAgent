@@ -2,15 +2,15 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:55:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-08-27 18:34:03
- * @Description: 阶段六：Streaming — 流式输出
+ * @LastEditTime: 2026-09-02 17:14:50
+ * @Description: 阶段三：Streaming — 流式输出
  *   学习目标：用 stream() 实现打字机效果
  *   核心 API：llm.stream()、for await...of、AIMessageChunk
  *   对比：invoke() 等待完整响应 vs stream() 逐 token 返回
 -->
 <template>
   <div>
-    <h1>阶段六：Streaming 流式输出 <span class="badge stage">学习</span></h1>
+    <h1>阶段三：Streaming 流式输出 <span class="badge stage">学习</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>用 <code>stream()</code> 实现打字机效果，逐 token 显示回复<br />
       <strong>核心 API：</strong><code>llm.stream()</code>、<code>for await...of</code>、<code>AIMessageChunk</code><br />
@@ -70,7 +70,7 @@ import { ChatOpenAI } from '@langchain/openai'
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages'
 
 export default {
-  name: 'LangChainStage6Stream',
+  name: 'LangChainStage3Stream',
 
   data() {
     return {
@@ -131,7 +131,7 @@ export default {
 
         if (this.mode === 'stream') {
           // ============================================================
-          // 阶段六核心：stream() 流式调用
+          // 阶段三核心：stream() 流式调用
           // ============================================================
 
           const startTime = Date.now()

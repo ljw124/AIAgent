@@ -6,7 +6,7 @@ LastEditTime: 2026-09-02 09:35:33
 Description: 
 '''
 """
-ModelScopeModel.py — 魔塔社区大模型调用（Python 方式）
+ModelScopeModel.py — 魔搭社区大模型调用（Python 方式）
 ============================================================
 安装依赖：
     pip install langchain langchain-openai langchain-core python-dotenv
@@ -42,20 +42,20 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
-# 魔塔社区 API 配置（OpenAI 兼容模式）
+# 魔搭社区 API 配置（OpenAI 兼容模式）
 MODELSCOPE_API_KEY = os.getenv("MODELSCOPE_API_KEY")
 MODELSCOPE_BASE_URL = os.getenv("MODELSCOPE_BASE_URL", "https://api-inference.modelscope.cn/v1")
 MODELSCOPE_MODEL = "deepseek-ai/DeepSeek-V4-Flash-0731"
 
 
 def chat(message, temperature=0.7, max_retries=5):
-    """调用魔塔社区大模型并返回回复"""
+    """调用魔搭社区大模型并返回回复"""
     if not MODELSCOPE_API_KEY:
         raise ValueError("未找到 MODELSCOPE_API_KEY，请检查 .env 文件")
 
-    # 使用 LangChain 的 ChatOpenAI 调用魔塔 API（OpenAI 兼容模式）。
+    # 使用 LangChain 的 ChatOpenAI 调用魔搭 API（OpenAI 兼容模式）。
     # 这样 LangSmith 会自动追踪每次调用（无需额外代码）。
-    # 注意：不传 max_tokens，魔塔 API 不强制要求该参数。
+    # 注意：不传 max_tokens，魔搭 API 不强制要求该参数。
     llm = ChatOpenAI(
         model=MODELSCOPE_MODEL,
         api_key=MODELSCOPE_API_KEY,
@@ -63,7 +63,7 @@ def chat(message, temperature=0.7, max_retries=5):
         temperature=temperature,
     )
 
-    # 魔塔 API 偶发返回空响应（choices 为 null），且连续快速请求时容易触发限流。
+    # 魔搭 API 偶发返回空响应（choices 为 null），且连续快速请求时容易触发限流。
     # 因此采用「递增退避」重试策略：每次失败后等待时间逐渐加长，给 API 恢复时间。
     for attempt in range(1, max_retries + 1):
         try:
@@ -75,7 +75,7 @@ def chat(message, temperature=0.7, max_retries=5):
             if response and response.content:
                 return response.content
         except Exception as e:
-            # 魔塔 API 偶发返回空响应（choices 为 null），LangChain 会抛出 TypeError
+            # 魔搭 API 偶发返回空响应（choices 为 null），LangChain 会抛出 TypeError
             if "null value for 'choices'" in str(e) or "choices" in str(e):
                 pass  # 空响应，走重试逻辑
             else:
@@ -87,7 +87,7 @@ def chat(message, temperature=0.7, max_retries=5):
             print(f"[ModelScope] 第 {attempt} 次请求返回空响应，{backoff} 秒后重试...", file=sys.stderr)
             time.sleep(backoff)
 
-    raise ValueError("魔塔 API 多次返回空响应，请稍后重试")
+    raise ValueError("魔搭 API 多次返回空响应，请稍后重试")
 
 
 if __name__ == "__main__":

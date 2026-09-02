@@ -2,15 +2,15 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-01 11:30:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-01 12:17:56
- * @Description: 阶段七：Structured Output — 结构化输出
+ * @LastEditTime: 2026-09-02 17:15:01
+ * @Description: 阶段四：Structured Output — 结构化输出
  *   学习目标：让 LLM 输出符合预定义结构的数据（JSON Schema）
  *   核心 API：withStructuredOutput()、zod、StructuredOutputParser
  *   三种方式：① withStructuredOutput + Zod（推荐）② StructuredOutputParser ③ response_format
 -->
 <template>
   <div>
-    <h1>阶段七：Structured Output 结构化输出 <span class="badge stage">学习</span></h1>
+    <h1>阶段四：Structured Output 结构化输出 <span class="badge stage">学习</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>让 LLM 输出符合预定义 JSON 结构的数据，而非自由文本<br />
       <strong>核心 API：</strong><code>withStructuredOutput()</code>、<code>zod</code>、<code>StructuredOutputParser</code><br />
@@ -132,7 +132,7 @@ const SCHEMA_NAMES = {
 }
 
 export default {
-  name: 'LangChainStage7Structured',
+  name: 'LangChainStage4Structured',
 
   data() {
     return {
