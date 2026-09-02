@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-25 09:21:33
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-01 09:19:29
+ * @LastEditTime: 2026-09-02 09:52:06
  * @Description:
  */
 const { defineConfig } = require('@vue/cli-service')
@@ -30,6 +30,12 @@ module.exports = defineConfig({
       // 内网大模型（供 LangChain.js 前端调用使用）
       if (envConfig.INNER_API_KEY) {
         envVars.INNER_API_KEY = JSON.stringify(envConfig.INNER_API_KEY)
+      }
+      // 魔塔社区大模型（供 LangChain.js 前端调用使用）
+      // ChatOpenAI 客户端会校验 apiKey 必须存在，否则报 Missing credentials
+      // 实际请求头由 /modelscope 代理的 onProxyReq 注入，这里仅用于通过校验
+      if (envConfig.MODELSCOPE_API_KEY) {
+        envVars.MODELSCOPE_API_KEY = JSON.stringify(envConfig.MODELSCOPE_API_KEY)
       }
       // LangSmith 配置：直接定义 process.env.LANGSMITH_* 变量
       // 因为 langsmith 和 @langchain/core 包中的 getEnvironmentVariable()
