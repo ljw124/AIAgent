@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-25 09:21:33
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-02 09:52:06
+ * @LastEditTime: 2026-09-02 19:50:28
  * @Description:
  */
 const { defineConfig } = require('@vue/cli-service')
@@ -108,8 +108,11 @@ module.exports = defineConfig({
       devServer.app.use(
         '/dashscope',
         createProxyMiddleware({
-          target: 'https://dashscope.aliyuncs.com',
+          target: 'https://ws-j6nf3ofbsu23jbhk.cn-beijing.maas.aliyuncs.com',
           changeOrigin: true,
+          // 公司网络环境使用中间人证书，Node.js 无法验证 SSL 证书，
+          // 关闭证书校验以避免 UNABLE_TO_VERIFY_LEAF_SIGNATURE 错误
+          secure: false,
           pathRewrite: { '^/dashscope': '' },
           onProxyReq(proxyReq) {
             if (envConfig.DASHSCOPE_API_KEY) {

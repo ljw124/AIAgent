@@ -52,15 +52,15 @@
         <div class="nav-group">
           <div class="nav-group-title">百炼 DashScope</div>
           <div
-            :class="['nav-item', { active: currentPage === 'bailian-js' }]"
-            @click="currentPage = 'bailian-js'"
+            :class="['nav-item', { active: currentPage === 'DashScope-js' }]"
+            @click="currentPage = 'DashScope-js'"
           >
             <span class="nav-icon">🇯🇸</span>
             <span class="nav-label">JS 调用</span>
           </div>
           <div
-            :class="['nav-item', { active: currentPage === 'bailian-python' }]"
-            @click="currentPage = 'bailian-python'"
+            :class="['nav-item', { active: currentPage === 'DashScope-python' }]"
+            @click="currentPage = 'DashScope-python'"
           >
             <span class="nav-icon">🇵🇾</span>
             <span class="nav-label">Python 调用</span>
@@ -150,8 +150,8 @@
         右侧内容区
         ============================================================ -->
     <main class="main-content">
-      <BailianJSChat v-if="currentPage === 'bailian-js'" />
-      <BailianPythonChat v-if="currentPage === 'bailian-python'" />
+      <DashScopeModelChat v-if="currentPage === 'DashScope-js'" />
+      <DashScopePythonChat v-if="currentPage === 'DashScope-python'" />
       <InnerModelChat v-if="currentPage === 'inner-js'" />
       <InnerModelPythonChat v-if="currentPage === 'inner-python'" />
       <ModelScopeChat v-if="currentPage === 'modelscope-js'" />
@@ -170,8 +170,8 @@
 </template>
 
 <script>
-import BailianJSChat from '@/pages/bailian/BailianJSChat.vue'
-import BailianPythonChat from '@/pages/bailian/BailianPythonChat.vue'
+import DashScopeModelChat from '@/pages/DashScope/DashScopeModelChat.vue'
+import DashScopePythonChat from '@/pages/DashScope/DashScopePythonChat.vue'
 import InnerModelChat from '@/pages/inner/InnerModelChat.vue'
 import InnerModelPythonChat from '@/pages/inner/InnerModelPythonChat.vue'
 import ModelScopeChat from '@/pages/modelscope/ModelScopeChat.vue'
@@ -190,8 +190,8 @@ export default {
   name: 'App',
 
   components: {
-    BailianJSChat,
-    BailianPythonChat,
+    DashScopeModelChat,
+    DashScopePythonChat,
     InnerModelChat,
     InnerModelPythonChat,
     ModelScopeChat,
@@ -369,7 +369,7 @@ h1 {
   margin-left: 8px;
 }
 
-.badge.bailian {
+.badge.DashScope {
   background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
   color: #fff;
 }

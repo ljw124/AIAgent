@@ -63,7 +63,7 @@
 | --- | --- | --- | --- |
 | **内网 hikvision** | 公司内网部署的大模型 | JS / Python | [`InnerModelChat.vue`](src/pages/inner/InnerModelChat.vue)、[`InnerModelPythonChat.vue`](src/pages/inner/InnerModelPythonChat.vue)、[`InnerModel.py`](src/composables/InnerModel.py) |
 | **本地 Ollama** | 本地部署的开源模型 | JS / Python | [`OllamaChat.vue`](src/pages/ollama/OllamaChat.vue)、[`OllamaPythonChat.vue`](src/pages/ollama/OllamaPythonChat.vue)、[`OllamaModel.py`](src/composables/OllamaModel.py) |
-| **百炼 DashScope** | 阿里云百炼大模型平台 | JS / Python | [`BailianJSChat.vue`](src/pages/bailian/BailianJSChat.vue)、[`BailianPythonChat.vue`](src/pages/bailian/BailianPythonChat.vue)、[`BaiLianModel.js`](src/composables/BaiLianModel.js)、[`bailian_demo.py`](src/pages/bailian/bailian_demo.py) |
+| **百炼 DashScope** | 阿里云百炼大模型平台 | JS / Python | [`DashScopeModelChat.vue`](src/pages/DashScope/DashScopeModelChat.vue)、[`DashScopePythonChat.vue`](src/pages/DashScope/DashScopePythonChat.vue)、[`DashScopeModel.js`](src/composables/DashScopeModel.js)、[`DashScope_demo.py`](src/pages/DashScope/DashScope_demo.py) |
 | **魔搭 ModelScope** | 阿里魔搭社区大模型 | JS / Python | [`ModelScopeChat.vue`](src/pages/modelscope/ModelScopeChat.vue)、[`ModelScopePythonChat.vue`](src/pages/modelscope/ModelScopePythonChat.vue)、[`ModelScopeModel.py`](src/composables/ModelScopeModel.py) |
 
 ---
@@ -118,14 +118,14 @@
     ├── main.js               # 应用入口
     ├── assets/               # 静态资源（logo 等）
     ├── composables/          # 模型调用封装（JS / Python）
-    │   ├── BaiLianModel.js   # 百炼模型 JS 封装
-    │   ├── BaiLianModel.py   # 百炼模型 Python 脚本
+    │   ├── DashScopeModel.js   # 百炼模型 JS 封装
+    │   ├── DashScopeModel.py   # 百炼模型 Python 脚本
     │   ├── InnerModel.py     # 内网模型 Python 脚本
     │   ├── ModelScopeModel.py # 魔搭 ModelScope 模型 Python 脚本
     │   └── OllamaModel.py    # Ollama 模型 Python 脚本
     ├── docs/                 # 学习文档
     └── pages/                # 页面组件
-        ├── bailian/          # 百炼 DashScope（平台）
+        ├── DashScope/          # 百炼 DashScope（平台）
         ├── inner/            # 内网大模型（平台）
         ├── langchain/        # LangChain.js 知识体系（学习）
         ├── modelscope/       # 魔搭 ModelScope（平台）

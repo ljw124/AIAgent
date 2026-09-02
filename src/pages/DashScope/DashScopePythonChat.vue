@@ -1,10 +1,10 @@
 <template>
   <div>
-    <h1>百炼大模型 <span class="badge bailian">Python 调用</span></h1>
+    <h1>百炼大模型 <span class="badge DashScope">Python 调用</span></h1>
     <div class="info-box">
       <strong>调用方式：</strong>Python 脚本（LangChain + OpenAI 兼容模式）→ 百炼 DashScope API<br />
       <strong>模型：</strong>qwen-plus / qwen-max / qwen-turbo<br />
-      <strong>说明：</strong>Python 脚本位于 <code>src/pages/bailian_demo.py</code>，通过 LangChain 的 ChatOpenAI 调用百炼
+      <strong>说明：</strong>Python 脚本位于 <code>src/pages/DashScope_demo.py</code>，通过 LangChain 的 ChatOpenAI 调用百炼
     </div>
 
     <div class="config-section">
@@ -47,7 +47,7 @@
     </div>
 
     <details class="code-block">
-      <summary>📄 查看 Python 调用代码（bailian_demo.py）</summary>
+      <summary>📄 查看 Python 调用代码（DashScope_demo.py）</summary>
       <pre class="code-content">{{ codeExample }}</pre>
     </details>
   </div>
@@ -55,7 +55,7 @@
 
 <script>
 export default {
-  name: 'BailianPythonChat',
+  name: 'DashScopePythonChat',
 
   data() {
     return {
@@ -67,7 +67,7 @@ export default {
         model: 'qwen-plus',
         temperature: 0.7,
       },
-      codeExample: `# bailian_demo.py — 百炼大模型调用示例
+      codeExample: `# DashScope_demo.py — 百炼大模型调用示例
 # 安装依赖：pip install langchain langchain-openai python-dotenv
 
 import os
@@ -156,7 +156,7 @@ print()  # 换行`,
       const aiMsgIndex = this.messages.length - 1
 
       try {
-        const response = await fetch('/api/bailian/chat', {
+        const response = await fetch('/api/DashScope/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -200,7 +200,7 @@ print()  # 换行`,
 </script>
 
 <style scoped>
-.badge.bailian {
+.badge.DashScope {
   background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
   color: #fff;
 }
