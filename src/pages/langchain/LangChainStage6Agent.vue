@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:45:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-02 17:15:23
+ * @LastEditTime: 2026-09-02 20:28:00
  * @Description: 阶段六：Agent — 智能体
  *   学习目标：用 createReactAgent 自动处理工具调用循环
  *   核心 API：createReactAgent()、Agent 自动循环
@@ -20,7 +20,7 @@
     <div class="input-section">
       <textarea
         v-model="input"
-        placeholder="试试问：北京和上海今天哪个更热？温差多少？ / 现在是几点？100天后是几号？"
+        placeholder="试试问：北京和上海今天哪个更热？ 温差多少？ 现在是几点？ 100天后是几号？"
         rows="3"
         @keydown.ctrl.enter="send"
       ></textarea>
@@ -69,14 +69,14 @@ export default {
       messages: [],
       loading: false,
       error: null,
-      agentSteps: [], // 展示 Agent 的思考过程
+      agentSteps: [] // 展示 Agent 的思考过程
     }
   },
 
   watch: {
     messages: {
       deep: true,
-      handler() { this.$nextTick(() => this.scrollToBottom()) },
+      handler() { this.$nextTick(() => this.scrollToBottom()) }
     },
   },
 
@@ -101,8 +101,8 @@ export default {
           name: 'calculator',
           description: '执行数学计算。支持加减乘除、括号、百分比。',
           schema: z.object({
-            expression: z.string().describe('数学表达式'),
-          }),
+            expression: z.string().describe('数学表达式')
+          })
         }
       )
     },
@@ -118,8 +118,8 @@ export default {
           name: 'get_current_time',
           description: '获取当前日期和时间。',
           schema: z.object({
-            timezone: z.string().optional().describe('时区'),
-          }),
+            timezone: z.string().optional().describe('时区')
+          })
         }
       )
     },
@@ -132,7 +132,7 @@ export default {
             '上海': { temp: 32, condition: '多云', humidity: '65%' },
             '广州': { temp: 35, condition: '雷阵雨', humidity: '80%' },
             '深圳': { temp: 33, condition: '阵雨', humidity: '75%' },
-            '杭州': { temp: 30, condition: '阴', humidity: '60%' },
+            '杭州': { temp: 30, condition: '阴', humidity: '60%' }
           }
           const data = weatherData[city] || { temp: 25, condition: '未知', humidity: '50%' }
           return `${city}天气：${data.condition}，温度 ${data.temp}°C，湿度 ${data.humidity}`
@@ -141,8 +141,8 @@ export default {
           name: 'get_weather',
           description: '查询指定城市的天气信息。',
           schema: z.object({
-            city: z.string().describe('城市名称'),
-          }),
+            city: z.string().describe('城市名称')
+          })
         }
       )
     },
@@ -168,7 +168,7 @@ export default {
         const tools = [
           this.createCalculatorTool(),
           this.createTimeTool(),
-          this.createWeatherTool(),
+          this.createWeatherTool()
         ]
 
         const llm = new ChatOpenAI({
@@ -176,8 +176,8 @@ export default {
           apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
           temperature: 0,
           configuration: {
-            baseURL: window.location.origin + '/inner/',
-          },
+            baseURL: window.location.origin + '/inner/'
+          }
         })
 
         // createReactAgent：自动处理 Think → Act → Observe 循环
@@ -186,7 +186,7 @@ export default {
           llm,
           tools,
           // System Prompt 直接传入字符串
-          messageModifier: '你是一个有用的AI助手，可以使用工具来回答问题。当需要计算、查询时间或天气时，请使用相应的工具。回答请用中文。',
+          messageModifier: '你是一个有用的AI助手，可以使用工具来回答问题。当需要计算、查询时间或天气时，请使用相应的工具。回答请用中文。'
         })
 
         // 调用 Agent
@@ -200,7 +200,7 @@ export default {
           .filter(Boolean)
 
         const result = await agent.invoke({
-          messages: historyMessages,
+          messages: historyMessages
         })
 
         // 提取 Agent 的中间步骤（思考过程）
@@ -211,7 +211,8 @@ export default {
           if (msg.tool_calls && msg.tool_calls.length > 0) {
             const toolResults = []
             for (let j = i + 1; j < allMessages.length; j++) {
-              if (allMessages[j].constructor.name === 'ToolMessage') {
+              // 用 _getType() 判断消息类型，避免 constructor.name 被 webpack 混淆
+              if (allMessages[j]._getType && allMessages[j]._getType() === 'tool') {
                 toolResults.push(allMessages[j].content)
               } else {
                 break
@@ -220,15 +221,18 @@ export default {
             steps.push({
               thought: msg.content || '(思考中...)',
               action: msg.tool_calls.map((tc) => `${tc.name}(${JSON.stringify(tc.args)})`).join(', '),
-              observation: toolResults.join(' | '),
+              observation: toolResults.join(' | ')
             })
           }
         }
         this.agentSteps = steps
 
         // 提取最终回复（最后一条 AIMessage）
+        // 注意：不能用 m.constructor.name === 'AIMessage' 判断，
+        // 因为 webpack 打包后类名可能被混淆（minify），导致判断失败。
+        // 使用 LangChain 的 _getType() 方法更可靠，返回 'ai' / 'human' / 'tool' 等。
         const finalMessage = [...allMessages].reverse().find(
-          (m) => m.constructor.name === 'AIMessage' && m.content && !m.tool_calls
+          (m) => m._getType && m._getType() === 'ai' && m.content
         )
         this.messages[aiMsgIndex].content = finalMessage
           ? finalMessage.content
@@ -253,8 +257,8 @@ export default {
     scrollToBottom() {
       const el = this.$refs.chatHistory
       if (el) el.scrollTop = el.scrollHeight
-    },
-  },
+    }
+  }
 }
 </script>
 

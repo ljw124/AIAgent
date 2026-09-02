@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:40:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-02 17:15:11
+ * @LastEditTime: 2026-09-02 20:12:05
  * @Description: 阶段五：Tool Calling — 工具调用
  *   学习目标：让 LLM 调用外部函数获取实时数据
  *   核心 API：tool()、bindTools()、AIMessage.tool_calls、ToolMessage
@@ -20,7 +20,7 @@
     <div class="input-section">
       <textarea
         v-model="input"
-        placeholder="试试问：北京今天天气怎么样？ / 计算 (123 + 456) * 789 / 10"
+        placeholder="试试问：北京今天天气怎么样？ / 当前时间？ / 计算 (123 + 456) * 789 / 10"
         rows="3"
         @keydown.ctrl.enter="send"
       ></textarea>
@@ -67,15 +67,15 @@ export default {
       messages: [],
       loading: false,
       error: null,
-      toolCalls: [], // 展示最近一次工具调用详情
+      toolCalls: [] // 展示最近一次工具调用详情
     }
   },
 
   watch: {
     messages: {
       deep: true,
-      handler() { this.$nextTick(() => this.scrollToBottom()) },
-    },
+      handler() { this.$nextTick(() => this.scrollToBottom()) }
+    }
   },
 
   methods: {
@@ -104,8 +104,8 @@ export default {
           name: 'calculator',
           description: '执行数学计算。支持加减乘除、括号、百分比。当用户需要进行数学计算时调用此工具。',
           schema: z.object({
-            expression: z.string().describe('数学表达式，如 "(123 + 456) * 789 / 10"'),
-          }),
+            expression: z.string().describe('数学表达式，如 "(123 + 456) * 789 / 10"')
+          })
         }
       )
     },
@@ -124,8 +124,8 @@ export default {
           name: 'get_current_time',
           description: '获取当前日期和时间。当用户询问现在几点、今天日期时调用。',
           schema: z.object({
-            timezone: z.string().optional().describe('时区，如 Asia/Shanghai，默认为北京时间'),
-          }),
+            timezone: z.string().optional().describe('时区，如 Asia/Shanghai，默认为北京时间')
+          })
         }
       )
     },
@@ -142,7 +142,7 @@ export default {
             '上海': { temp: 32, condition: '多云', humidity: '65%' },
             '广州': { temp: 35, condition: '雷阵雨', humidity: '80%' },
             '深圳': { temp: 33, condition: '阵雨', humidity: '75%' },
-            '杭州': { temp: 30, condition: '阴', humidity: '60%' },
+            '杭州': { temp: 30, condition: '阴', humidity: '60%' }
           }
           const data = weatherData[city] || { temp: 25, condition: '未知', humidity: '50%' }
           return `${city}天气：${data.condition}，温度 ${data.temp}°C，湿度 ${data.humidity}`
@@ -151,8 +151,8 @@ export default {
           name: 'get_weather',
           description: '查询指定城市的天气信息。当用户询问天气时调用此工具。',
           schema: z.object({
-            city: z.string().describe('城市名称，如 北京、上海、广州'),
-          }),
+            city: z.string().describe('城市名称，如 北京、上海、广州')
+          })
         }
       )
     },
@@ -179,7 +179,7 @@ export default {
         const tools = [
           this.createCalculatorTool(),
           this.createTimeTool(),
-          this.createWeatherTool(),
+          this.createWeatherTool()
         ]
 
         // 2. 创建模型并绑定工具
@@ -188,8 +188,8 @@ export default {
           apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
           temperature: 0,
           configuration: {
-            baseURL: window.location.origin + '/inner/',
-          },
+            baseURL: window.location.origin + '/inner/'
+          }
         })
 
         // bindTools 让模型知道有哪些工具可用
@@ -227,12 +227,12 @@ export default {
               const result = await selectedTool.invoke(toolCall.args)
               toolMessages.push(new ToolMessage({
                 content: result,
-                tool_call_id: toolCall.id,
+                tool_call_id: toolCall.id
               }))
               callDetails.push({
                 name: toolCall.name,
                 args: toolCall.args,
-                result: result,
+                result: result
               })
             }
           }
@@ -243,7 +243,7 @@ export default {
           const allMessages = [
             ...historyMessages,
             response,           // AIMessage（含 tool_calls）
-            ...toolMessages,    // ToolMessage（工具执行结果）
+            ...toolMessages    // ToolMessage（工具执行结果）
           ]
 
           response = await llmWithTools.invoke(allMessages)
@@ -271,8 +271,8 @@ export default {
     scrollToBottom() {
       const el = this.$refs.chatHistory
       if (el) el.scrollTop = el.scrollHeight
-    },
-  },
+    }
+  }
 }
 </script>
 
