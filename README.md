@@ -61,9 +61,9 @@
 
 | 平台 | 说明 | 调用方式 | 相关文件 |
 | --- | --- | --- | --- |
-| **内网 hikvision** | 公司内网部署的大模型 | JS / Python | [`InnerModelChat.vue`](src/pages/inner/InnerModelChat.vue)、[`InnerModelPythonChat.vue`](src/pages/inner/InnerModelPythonChat.vue)、[`InnerModel.py`](src/composables/InnerModel.py) |
+| **内网 hikvision** | 公司内网部署的大模型 | JS / Python | [`InnerModelChat.vue`](src/pages/inner/InnerModelChat.vue)、[`InnerModelChat-js.vue`](src/pages/inner/InnerModelChat-js.vue)、[`InnerModelPythonChat.vue`](src/pages/inner/InnerModelPythonChat.vue)、[`InnerModel.py`](src/composables/InnerModel.py) |
 | **本地 Ollama** | 本地部署的开源模型 | JS / Python | [`OllamaChat.vue`](src/pages/ollama/OllamaChat.vue)、[`OllamaPythonChat.vue`](src/pages/ollama/OllamaPythonChat.vue)、[`OllamaModel.py`](src/composables/OllamaModel.py) |
-| **百炼 DashScope** | 阿里云百炼大模型平台 | JS / Python | [`DashScopeModelChat.vue`](src/pages/DashScope/DashScopeModelChat.vue)、[`DashScopePythonChat.vue`](src/pages/DashScope/DashScopePythonChat.vue)、[`DashScopeModel.js`](src/composables/DashScopeModel.js)、[`DashScope_demo.py`](src/pages/DashScope/DashScope_demo.py) |
+| **百炼 DashScope** | 阿里云百炼大模型平台（专属网关） | JS / Python | [`DashScopeModelChat.vue`](src/pages/DashScope/DashScopeModelChat.vue)、[`DashScopePythonChat.vue`](src/pages/DashScope/DashScopePythonChat.vue)、[`DashScopeModel.py`](src/composables/DashScopeModel.py) |
 | **魔搭 ModelScope** | 阿里魔搭社区大模型 | JS / Python | [`ModelScopeChat.vue`](src/pages/modelscope/ModelScopeChat.vue)、[`ModelScopePythonChat.vue`](src/pages/modelscope/ModelScopePythonChat.vue)、[`ModelScopeModel.py`](src/composables/ModelScopeModel.py) |
 
 ---
@@ -118,7 +118,6 @@
     ├── main.js               # 应用入口
     ├── assets/               # 静态资源（logo 等）
     ├── composables/          # 模型调用封装（JS / Python）
-    │   ├── DashScopeModel.js   # 百炼模型 JS 封装
     │   ├── DashScopeModel.py   # 百炼模型 Python 脚本
     │   ├── InnerModel.py     # 内网模型 Python 脚本
     │   ├── ModelScopeModel.py # 魔搭 ModelScope 模型 Python 脚本
@@ -139,9 +138,9 @@
 项目通过根目录的 [`.env`](.env) 文件管理所有环境变量，`vue.config.js` 使用 `DefinePlugin` 将变量注入前端代码，`server.js` 通过 `dotenv` 加载并传递给 Python 子进程。
 
 ```bash
-# 百炼大模型
+# 百炼大模型（专属网关，绕过公司网络对 dashscope.aliyuncs.com 的封锁）
 DASHSCOPE_API_KEY="your-dashscope-api-key"
-DASHSCOPE_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+DASHSCOPE_BASE_URL="https://ws-j6nf3ofbsu23jbhk.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
 
 # 魔搭社区大模型
 MODELSCOPE_API_KEY="your-modelscope-api-key"
@@ -217,7 +216,7 @@ pnpm run lint
 
 [`server.js`](server.js) 是一个基于 Node.js 原生 `http` 模块的轻量后端服务，主要职责：
 
-- **调用 Python 脚本**：通过 `spawn` 启动 Python 子进程，执行内网模型（[`InnerModel.py`](src/composables/InnerModel.py)）、本地模型（[`OllamaModel.py`](src/composables/OllamaModel.py)）与魔搭模型（[`ModelScopeModel.py`](src/composables/ModelScopeModel.py)）的推理，并解析 JSON 结果返回。
+- **调用 Python 脚本**：通过 `spawn` 启动 Python 子进程，执行内网模型（[`InnerModel.py`](src/composables/InnerModel.py)）、本地模型（[`OllamaModel.py`](src/composables/OllamaModel.py)）、魔搭模型（[`ModelScopeModel.py`](src/composables/ModelScopeModel.py)）与百炼模型（[`DashScopeModel.py`](src/composables/DashScopeModel.py)）的推理，并解析 JSON 结果返回。
 - **LangSmith 代理**：将浏览器端无法直连的 `api.smith.langchain.com` 请求转发到真实地址，解决公司网络 ALPN 协商失败问题。
 
 > **注意**：`server.js` 中硬编码了 Windows 下的 Python 路径（`C:\Users\lujinwei\AppData\Local\Programs\Python\Python313\python.exe`），如环境不同请自行修改。
@@ -231,7 +230,7 @@ pnpm run lint
 | 代理路径 | 目标 | 用途 |
 | --- | --- | --- |
 | `/api` | `http://localhost:22223` | 转发到后端服务（Python 调用） |
-| `/dashscope` | `https://dashscope.aliyuncs.com` | 百炼 API（解决 CORS） |
+| `/dashscope` | `https://ws-j6nf3ofbsu23jbhk.cn-beijing.maas.aliyuncs.com` | 百炼 API（专属网关，解决 CORS 与网络封锁） |
 | `/modelscope` | `https://api-inference.modelscope.cn` | 魔搭 API（备选方案） |
 | `/inner` | 内网大模型地址 | 内网模型 API |
 | `/ollama` | `http://127.0.0.1:11434` | 本地 Ollama（OpenAI 兼容模式） |
