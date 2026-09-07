@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:30:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-08-27 18:28:39
+ * @LastEditTime: 2026-09-04 13:03:30
  * @Description: 阶段一：Prompt Template — 提示词模板
  *   学习目标：用 ChatPromptTemplate 替代硬编码 System Prompt
  *   核心 API：ChatPromptTemplate.fromMessages()、MessagesPlaceholder
@@ -13,7 +13,8 @@
     <div class="info-box">
       <strong>学习目标：</strong>用 <code>ChatPromptTemplate</code> 替代硬编码 System Prompt<br />
       <strong>核心 API：</strong><code>ChatPromptTemplate.fromMessages()</code>、<code>MessagesPlaceholder</code><br />
-      <strong>对比：</strong>左侧为硬编码方式（当前 InnerModelChat），右侧为模板方式
+      <strong>对比：</strong>之前为硬编码方式System Prompt，现在为模板方式ChatPromptTemplate<br />
+      <strong>知识点：</strong><code>MessagesPlaceholder</code> 的 <code>optional</code> 参数（历史为空时自动跳过，避免报错）
     </div>
 
     <!-- 角色和语言选择 -->
@@ -107,12 +108,17 @@ export default {
         // 1. 创建提示词模板
         //    - system 消息中使用 {role} 和 {language} 变量
         //    - MessagesPlaceholder 为对话历史预留位置
+        //    - optional: true 表示 history 变量是可选的：
+        //      首次对话时 history 为空数组（甚至不传），占位符会自动跳过，
+        //      不会因为缺少 history 变量而报错。
+        //      若省略 optional（默认 false），则必须提供 history 变量，
+        //      否则 formatMessages 会抛出 "Missing value for input variable 'history'" 错误。
         const promptTemplate = ChatPromptTemplate.fromMessages([
           [
             'system',
             '你是一个{role}，请用{language}回答用户的问题。回答要专业、准确、简洁。',
           ],
-          new MessagesPlaceholder('history'),
+          new MessagesPlaceholder('history', { optional: true }),
           ['human', '{input}'],
         ])
 
@@ -134,7 +140,7 @@ export default {
           input: text,
         })
 
-        // 4. 调用模型（与之前相同）
+        // 4. 调用模型
         const llm = new ChatOpenAI({
           model: 'EB-DeepSeek-V4-Pro',
           apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,

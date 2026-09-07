@@ -24,6 +24,7 @@ const PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'InnerModel.py'
 const OLLAMA_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'OllamaModel.py')
 const MODELSCOPE_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'ModelScopeModel.py')
 const DASHSCOPE_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'DashScopeModel.py')
+const MIDDLEWARE_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'MiddlewareModel.py')
 
 /**
  * 调用 Python 脚本并返回结果
@@ -273,6 +274,73 @@ function callPythonScriptDashScope(message, temperature = 0.7, model = 'qwen-plu
 }
 
 /**
+ * 调用 Python 中间件演示脚本并返回结果
+ * @param {string} message - 用户消息
+ * @param {number} temperature - 温度参数
+ * @param {string} model - 模型名称
+ * @param {object} middleware - 中间件开关配置
+ * @returns {Promise<{content?: string, error?: string}>}
+ */
+function callPythonScriptMiddleware(message, temperature = 0.7, model = 'qwen-plus', middleware = {}) {
+  return new Promise((resolve, reject) => {
+    const params = JSON.stringify({ message, temperature, model, middleware })
+    const pythonPath = process.platform === 'win32'
+      ? 'C:\\Users\\lujinwei\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
+      : 'python3'
+    const python = spawn(pythonPath, [MIDDLEWARE_PYTHON_SCRIPT, '--json', params], {
+      timeout: 120000, // 120 秒超时（云端模型推理）
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+    })
+
+    let stdout = ''
+    let stderr = ''
+
+    python.stdout.on('data', (data) => {
+      stdout += data.toString()
+    })
+
+    python.stderr.on('data', (data) => {
+      stderr += data.toString()
+    })
+
+    python.on('close', (code) => {
+      if (code !== 0) {
+        console.error(`[Middleware Python] 进程退出码: ${code}, stderr: ${stderr}`)
+        try {
+          const errResult = JSON.parse(stdout.trim())
+          if (errResult.error) {
+            reject(new Error(errResult.error))
+            return
+          }
+        } catch (_) { /* stdout 不是 JSON，使用 stderr */ }
+        reject(new Error(stderr || stdout.trim() || `Python 进程退出码: ${code}`))
+        return
+      }
+      try {
+        const result = JSON.parse(stdout.trim())
+        if (result.error) {
+          reject(new Error(result.error))
+          return
+        }
+        // 将 stderr 中的中间件日志也返回给前端
+        if (stderr.trim()) {
+          result.logs = stderr.trim().split('\n').filter(line => line.trim())
+        }
+        resolve(result)
+      } catch (e) {
+        console.error(`[Middleware Python] JSON 解析失败, stdout: ${stdout}`)
+        reject(new Error(`Python 输出解析失败: ${stdout.substring(0, 200)}`))
+      }
+    })
+
+    python.on('error', (err) => {
+      console.error(`[Middleware Python] 启动失败:`, err.message)
+      reject(new Error(`无法启动 Python: ${err.message}`))
+    })
+  })
+}
+
+/**
  * 解析请求体
  */
 function parseBody(req) {
@@ -463,6 +531,26 @@ const server = http.createServer(async (req, res) => {
       console.log(`[DashScope Chat] 收到消息: "${message.substring(0, 50)}..."`)
       const result = await callPythonScriptDashScope(message, temperature, model)
       console.log(`[DashScope Chat] 回复: "${(result.content || '').substring(0, 50)}..."`)
+      sendJSON(res, 200, result)
+      return
+    }
+
+    // ============================================================
+    // POST /api/middleware/chat 或 /middleware/chat — LangChain Python 中间件演示
+    // （vue.config.js 中 /api 代理会 strip /api 前缀，所以两种路径都要支持）
+    // ============================================================
+    if (method === 'POST' && (url === '/api/middleware/chat' || url === '/middleware/chat')) {
+      const body = await parseBody(req)
+      const { message, temperature, model, middleware } = body
+
+      if (!message || !message.trim()) {
+        sendJSON(res, 400, { error: 'message 参数不能为空' })
+        return
+      }
+
+      console.log(`[Middleware Chat] 收到消息: "${message.substring(0, 50)}..."`)
+      const result = await callPythonScriptMiddleware(message, temperature, model, middleware || {})
+      console.log(`[Middleware Chat] 回复: "${(result.content || '').substring(0, 50)}..."`)
       sendJSON(res, 200, result)
       return
     }

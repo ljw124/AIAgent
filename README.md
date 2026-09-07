@@ -33,7 +33,8 @@
 
 - **多模型平台接入**：内网 hikvision、本地 Ollama、百炼 DashScope、魔搭 ModelScope 四大平台统一接入。
 - **双语言调用**：每个模型平台均提供 JS 与 Python 两种调用示例，便于对比学习。
-- **LangChain.js 七阶段学习**：从 Prompt Template 到 RAG 检索增强的完整进阶路线。
+- **LangChain.js 八阶段学习**：从 Prompt Template 到 Middleware 中间件的完整进阶路线。
+- **中间件机制**：基于 LangChain Python 的 `BaseCallbackHandler` 实现 Before/After/Around 中间件，支持脱敏、指标采集、重试等横切关注点。
 - **流式输出**：支持 Streaming 流式响应，实时展示模型输出。
 - **结构化输出**：基于 Zod 实现结构化数据输出与校验。
 - **Tool Calling**：支持工具调用，展示 Agent 调用工具的完整过程（思考 → 调用 → 结果）。
@@ -70,17 +71,18 @@
 
 ## 📚 LangChain.js 知识体系
 
-项目内置了从入门到进阶的 **七阶段** LangChain.js 学习模块，每个阶段对应一个独立的 Vue 组件：
+项目内置了从入门到进阶的 **八阶段** LangChain 学习模块，每个阶段对应一个独立的 Vue 组件：
 
-| 阶段 | 主题 | 组件 |
-| --- | --- | --- |
-| 1️⃣ | **Prompt Template** 提示词模板 | [`LangChainStage1Prompt.vue`](src/pages/langchain/LangChainStage1Prompt.vue) |
-| 2️⃣ | **Chain 链式调用** | [`LangChainStage2Chain.vue`](src/pages/langchain/LangChainStage2Chain.vue) |
-| 3️⃣ | **Streaming 流式输出** | [`LangChainStage3Stream.vue`](src/pages/langchain/LangChainStage3Stream.vue) |
-| 4️⃣ | **Structured 结构化输出** | [`LangChainStage4Structured.vue`](src/pages/langchain/LangChainStage4Structured.vue) |
-| 5️⃣ | **Tool Calling 工具调用** | [`LangChainStage5Tool.vue`](src/pages/langchain/LangChainStage5Tool.vue) |
-| 6️⃣ | **Agent 智能体** | [`LangChainStage6Agent.vue`](src/pages/langchain/LangChainStage6Agent.vue) |
-| 7️⃣ | **RAG 检索增强** | [`LangChainStage7RAG.vue`](src/pages/langchain/LangChainStage7RAG.vue) |
+| 阶段 | 主题 | 组件 | 说明 |
+| --- | --- | --- | --- |
+| 1️⃣ | **Prompt Template** 提示词模板 | [`LangChainStage1Prompt.vue`](src/pages/langchain/LangChainStage1Prompt.vue) | JS |
+| 2️⃣ | **Chain 链式调用** | [`LangChainStage2Chain.vue`](src/pages/langchain/LangChainStage2Chain.vue) | JS |
+| 3️⃣ | **Streaming 流式输出** | [`LangChainStage3Stream.vue`](src/pages/langchain/LangChainStage3Stream.vue) | JS |
+| 4️⃣ | **Structured 结构化输出** | [`LangChainStage4Structured.vue`](src/pages/langchain/LangChainStage4Structured.vue) | JS |
+| 5️⃣ | **Tool Calling 工具调用** | [`LangChainStage5Tool.vue`](src/pages/langchain/LangChainStage5Tool.vue) | JS |
+| 6️⃣ | **Agent 智能体** | [`LangChainStage6Agent.vue`](src/pages/langchain/LangChainStage6Agent.vue) | JS |
+| 7️⃣ | **RAG 检索增强** | [`LangChainStage7RAG.vue`](src/pages/langchain/LangChainStage7RAG.vue) | JS |
+| 8️⃣ | **Middleware 中间件** | [`LangChainStage8Meddleware.vue`](src/pages/langchain/LangChainStage8Meddleware.vue) | Python |
 
 ### 📄 配套学习文档
 
@@ -99,6 +101,7 @@
 - [LangChain.js前端学习路径.md](src/docs/langchain/LangChain.js前端学习路径.md)
 - [LangChain.js深入学习路线.md](src/docs/langchain/LangChain.js深入学习路线.md)
 - [学习LangChain所需的Python知识.md](src/docs/langchain/学习LangChain所需的Python知识.md)
+- [LangChain-Python中间件Middleware详解.md](src/docs/langchain/LangChain-Python中间件Middleware详解.md)
 - [LangSmith追踪集成总结.md](src/docs/langchain/LangSmith追踪集成总结.md)
 - [Vercel-AI-SDK详细指南.md](src/docs/langchain/Vercel-AI-SDK详细指南.md)
 
@@ -120,6 +123,7 @@
     ├── composables/          # 模型调用封装（JS / Python）
     │   ├── DashScopeModel.py   # 百炼模型 Python 脚本
     │   ├── InnerModel.py     # 内网模型 Python 脚本
+    │   ├── MiddlewareModel.py # LangChain 中间件演示 Python 脚本
     │   ├── ModelScopeModel.py # 魔搭 ModelScope 模型 Python 脚本
     │   └── OllamaModel.py    # Ollama 模型 Python 脚本
     ├── docs/                 # 学习文档
@@ -216,7 +220,7 @@ pnpm run lint
 
 [`server.js`](server.js) 是一个基于 Node.js 原生 `http` 模块的轻量后端服务，主要职责：
 
-- **调用 Python 脚本**：通过 `spawn` 启动 Python 子进程，执行内网模型（[`InnerModel.py`](src/composables/InnerModel.py)）、本地模型（[`OllamaModel.py`](src/composables/OllamaModel.py)）、魔搭模型（[`ModelScopeModel.py`](src/composables/ModelScopeModel.py)）与百炼模型（[`DashScopeModel.py`](src/composables/DashScopeModel.py)）的推理，并解析 JSON 结果返回。
+- **调用 Python 脚本**：通过 `spawn` 启动 Python 子进程，执行内网模型（[`InnerModel.py`](src/composables/InnerModel.py)）、本地模型（[`OllamaModel.py`](src/composables/OllamaModel.py)）、魔搭模型（[`ModelScopeModel.py`](src/composables/ModelScopeModel.py)）、百炼模型（[`DashScopeModel.py`](src/composables/DashScopeModel.py)）以及中间件演示（[`MiddlewareModel.py`](src/composables/MiddlewareModel.py)）的推理，并解析 JSON 结果返回。
 - **LangSmith 代理**：将浏览器端无法直连的 `api.smith.langchain.com` 请求转发到真实地址，解决公司网络 ALPN 协商失败问题。
 
 > **注意**：`server.js` 中硬编码了 Windows 下的 Python 路径（`C:\Users\lujinwei\AppData\Local\Programs\Python\Python313\python.exe`），如环境不同请自行修改。
