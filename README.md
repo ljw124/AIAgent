@@ -34,7 +34,7 @@
 - **多模型平台接入**：内网 hikvision、本地 Ollama、百炼 DashScope、魔搭 ModelScope 四大平台统一接入。
 - **双语言调用**：每个模型平台均提供 JS 与 Python 两种调用示例，便于对比学习。
 - **LangChain.js 八阶段学习**：从 Prompt Template 到 Middleware 中间件的完整进阶路线。
-- **中间件机制**：基于 LangChain Python 的 `BaseCallbackHandler` 实现 Before/After/Around 中间件，支持脱敏、指标采集、重试等横切关注点。
+- **中间件机制**：双层架构 — 自定义中间件（`BaseCallbackHandler`）处理 LLM 级别关注点（日志、计时、脱敏、重试），官方内置中间件（`AgentMiddleware`）处理 Agent 级别关注点（摘要、人机协同、PII 检测、待办列表、调用限制），通过 `create_agent(middleware=)` 统一编排。
 - **流式输出**：支持 Streaming 流式响应，实时展示模型输出。
 - **结构化输出**：基于 Zod 实现结构化数据输出与校验。
 - **Tool Calling**：支持工具调用，展示 Agent 调用工具的完整过程（思考 → 调用 → 结果）。

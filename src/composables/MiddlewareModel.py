@@ -2,19 +2,29 @@
 Author: lujinwei lujinwei@hikvision.com.cn
 Date: 2026-09-07 10:00:00
 LastEditors: lujinwei lujinwei@hikvision.com.cn
-LastEditTime: 2026-09-07 20:04:30
+LastEditTime: 2026-09-08 12:39:35
 Description: LangChain Python 中间件（Middleware）演示脚本
 '''
 """
 MiddlewareModel.py — LangChain Python 中间件（Middleware）演示
 ============================================================
-本脚本演示 LangChain Python 的中间件机制，包含：
+本脚本演示 LangChain Python 的中间件机制，包含 11 个中间件：
     1. Before 中间件（调用前）：参数校验、鉴权、注入上下文
     2. After 中间件（调用后）：结果处理、缓存写入、指标采集
     3. Around 中间件（环绕）：同时包裹前后逻辑，可捕获异常
     4. 脱敏中间件：敏感数据脱敏
     5. 指标中间件：统计调用次数与耗时
     6. 重试中间件：调用失败自动重试
+    7. 摘要中间件（官方内置）：SummarizationMiddleware — 长文本自动摘要
+    8. 人机协同中间件（官方内置）：HumanInTheLoopMiddleware — 关键节点人工审核
+    9. PII 中间件（官方内置）：PIIMiddleware — 检测过滤敏感信息
+    10. 待办列表中间件（官方内置）：TodoListMiddleware — 自动提取行动项
+    11. 调用限制中间件（官方内置）：ModelCallLimitMiddleware — 限制调用次数
+
+架构说明：
+- 前 6 个为「自定义中间件」，继承 BaseCallbackHandler，通过 ChatOpenAI(callbacks=) 传递
+- 后 5 个为「官方内置中间件」，继承 AgentMiddleware，通过 create_agent(middleware=) 传递
+- 两种中间件通过 create_agent() 统一编排，协同工作
 
 安装依赖：
     pip install langchain langchain-openai langchain-core python-dotenv
@@ -27,7 +37,7 @@ MiddlewareModel.py — LangChain Python 中间件（Middleware）演示
     python src/composables/MiddlewareModel.py "你好，请介绍一下你自己"
 
     # 通过后端 API 调用（JSON 模式）
-    python src/composables/MiddlewareModel.py --json '{"message":"你好","temperature":0.7,"model":"qwen-plus"}'
+    python src/composables/MiddlewareModel.py --json '{"message":"你好","temperature":0.7,"model":"EB-DeepSeek-V4-Pro"}'
 ============================================================
 """
 
@@ -52,22 +62,21 @@ from dotenv import load_dotenv
 # os.path.join(..., '..', '..', '.env') → 向上两级 = 项目根目录/.env
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
-# 从环境变量读取 API 配置
+# 从环境变量读取 API 配置（内网大模型）
 # os.getenv("KEY", "默认值")：读取环境变量，如果不存在则使用默认值
-API_KEY = os.getenv("DASHSCOPE_API_KEY")
-BASE_URL = os.getenv("DASHSCOPE_BASE_URL",
-    "https://ws-j6nf3ofbsu23jbhk.cn-beijing.maas.aliyuncs.com/compatible-mode/v1")
+API_KEY = os.getenv("INNER_API_KEY")
+BASE_URL = os.getenv("INNER_BASE_URL", "http://lanz.hikvision.com/v3/openai/model")
 
 # 如果没有 API Key，输出错误 JSON 并退出程序
 # sys.exit(1)：退出程序，1 表示异常退出（0 表示正常退出）
 if not API_KEY:
-    print(json.dumps({"error": "未找到 DASHSCOPE_API_KEY，请检查 .env 文件"}))
+    print(json.dumps({"error": "未找到 INNER_API_KEY，请检查 .env 文件"}))
     sys.exit(1)
 
 # --- LangChain 相关库 ---
 from langchain_openai import ChatOpenAI
 # ChatOpenAI: LangChain 中用于调用 OpenAI 兼容 API 的类
-# 百炼 DashScope 提供了 OpenAI 兼容接口，所以可以用 ChatOpenAI 调用
+# 内网大模型提供了 OpenAI 兼容接口，所以可以用 ChatOpenAI 调用
 
 from langchain_core.messages import HumanMessage, SystemMessage
 # HumanMessage: 代表用户发送的消息
@@ -75,7 +84,21 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from langchain_core.callbacks import BaseCallbackHandler
 # BaseCallbackHandler: 回调处理器基类
-# 所有中间件都继承这个类，重写其中的钩子方法（如 on_llm_start、on_llm_end）
+# 自定义中间件继承这个类，重写其中的钩子方法（如 on_llm_start、on_llm_end）
+
+# ★ 官方内置中间件（来自 langchain.agents.middleware）
+# 这些中间件继承 AgentMiddleware，通过 create_agent(middleware=) 传递
+from langchain.agents.middleware import (
+    SummarizationMiddleware,      # 摘要中间件：自动摘要长对话历史
+    HumanInTheLoopMiddleware,     # 人机协同中间件：关键操作需人工确认
+    PIIMiddleware,                # PII 中间件：检测和脱敏个人身份信息
+    TodoListMiddleware,           # 待办列表中间件：提供 write_todos 工具
+    ModelCallLimitMiddleware,     # 调用限制中间件：限制模型调用次数
+)
+
+# ★ create_agent：LangChain 官方 Agent 创建函数
+# 支持 middleware= 参数传入 AgentMiddleware 列表
+from langchain.agents import create_agent
 
 
 # ============================================================
@@ -99,7 +122,7 @@ def log(msg):
 
 
 # ============================================================
-# 第三部分：六个中间件类
+# 第三部分：六个自定义中间件类（继承 BaseCallbackHandler）
 # ============================================================
 # 【什么是中间件？】
 # 中间件就像"拦截器"，在大模型调用前后自动执行额外逻辑。
@@ -275,7 +298,7 @@ class SensitiveDataMiddleware(BaseCallbackHandler):
                 # i=0, prompt="a"; i=1, prompt="b"
         - str(prompt): 将 prompt 对象转为字符串
         - re.sub(正则, 替换文本, 原文本): 正则替换
-            r'1[3-9]\d{9}' 匹配：1开头 + 3-9第二位 + 9位数字 = 11位手机号
+            r'1[3-9]\\d{9}' 匹配：1开头 + 3-9第二位 + 9位数字 = 11位手机号
         - masked[:80]: 切片，取前 80 个字符（防止日志过长）
         """
         for i, prompt in enumerate(prompts):
@@ -369,32 +392,25 @@ class RetryMiddleware(BaseCallbackHandler):
 # 第四部分：中间件组装函数
 # ============================================================
 
-def build_middleware_chain(enable_before=True, enable_after=True, enable_around=True,
-                        enable_sensitive=True, enable_metrics=True, enable_retry=True):
+def build_custom_middlewares(enable_before=True, enable_after=True, enable_around=True,
+                              enable_sensitive=True, enable_metrics=True, enable_retry=True):
     """
-    根据配置开关，组装中间件列表。
-
-    【Python 语法说明】
-    - 参数默认值 True：如果不传参数，默认启用所有中间件
-    - 命名参数调用：build_middleware_chain(enable_before=False) 可以只禁用某个中间件
+    根据配置开关，组装「自定义中间件」列表（继承 BaseCallbackHandler 的 6 个）。
 
     【参数说明】
-    每个参数对应一个中间件的开关，True=启用，False=禁用
+    每个参数对应一个自定义中间件的开关，True=启用，False=禁用
 
     【返回值】
-    中间件实例列表，如 [BeforeMiddleware(), AfterMiddleware(), ...]
-    这个列表会传给 ChatOpenAI 的 callbacks 参数
+    自定义中间件实例列表，传给 ChatOpenAI 的 callbacks 参数
     """
-    middlewares = []  # 创建空列表
+    middlewares = []
 
-    # 根据开关决定是否添加中间件
-    # list.append(item)：向列表末尾添加元素
     if enable_before:
-        middlewares.append(BeforeMiddleware())     # 创建 BeforeMiddleware 实例
+        middlewares.append(BeforeMiddleware())
     if enable_after:
-        middlewares.append(AfterMiddleware())      # 创建 AfterMiddleware 实例
+        middlewares.append(AfterMiddleware())
     if enable_around:
-        middlewares.append(AroundMiddleware())     # 创建 AroundMiddleware 实例
+        middlewares.append(AroundMiddleware())
     if enable_sensitive:
         middlewares.append(SensitiveDataMiddleware())
     if enable_metrics:
@@ -405,15 +421,98 @@ def build_middleware_chain(enable_before=True, enable_after=True, enable_around=
     return middlewares
 
 
+def build_official_middlewares(enable_summarization=True, enable_human_in_the_loop=True,
+                                enable_pii=True, enable_todo=True, enable_call_limit=True):
+    """
+    根据配置开关，组装「官方内置中间件」列表（继承 AgentMiddleware 的 5 个）。
+
+    这些中间件来自 langchain.agents.middleware，通过 create_agent(middleware=) 传递。
+
+    【参数说明】
+    每个参数对应一个官方中间件的开关，True=启用，False=禁用
+
+    【返回值】
+    官方中间件实例列表，传给 create_agent() 的 middleware 参数
+    """
+    middlewares = []
+
+    if enable_summarization:
+        # SummarizationMiddleware: 当对话历史接近 token 限制时自动摘要
+        # 参数：
+        #   model: 用于生成摘要的模型（字符串或 BaseChatModel）
+        #   trigger: 触发条件，如 ('tokens', 4000) 表示超过 4000 token 时触发
+        #   keep: 保留最近的消息数量，如 ('messages', 20) 保留最近 20 条
+        middlewares.append(SummarizationMiddleware(
+            model=ChatOpenAI(
+                model="EB-DeepSeek-V4-Pro",
+                api_key=API_KEY,
+                base_url=BASE_URL,
+                temperature=0.3,  # 摘要用较低温度，更稳定
+            ),
+            trigger=('tokens', 4000),
+            keep=('messages', 20),
+        ))
+
+    if enable_human_in_the_loop:
+        # HumanInTheLoopMiddleware: 在工具调用前暂停，等待人工确认
+        # 参数：
+        #   interrupt_on: 指定在哪些节点中断
+        #     {'tool_use': True} — 在每次工具调用前中断
+        #     {'tool_use': {'allowed_decisions': ['approve', 'reject']}} — 自定义决策选项
+        middlewares.append(HumanInTheLoopMiddleware(
+            interrupt_on={'tool_use': True},
+            description_prefix='工具执行需要人工审批',
+        ))
+
+    if enable_pii:
+        # PIIMiddleware: 检测和脱敏个人身份信息
+        # 参数：
+        #   pii_type: PII 类型 — 'email', 'credit_card', 'ip', 'mac_address', 'url'
+        #   strategy: 处理策略 — 'block'(阻止), 'redact'(脱敏), 'mask'(掩码), 'hash'(哈希)
+        #   apply_to_input: 是否对输入应用（默认 True）
+        #   apply_to_output: 是否对输出应用（默认 False）
+        middlewares.append(PIIMiddleware(
+            pii_type='email',
+            strategy='redact',
+            apply_to_input=True,
+            apply_to_output=True,
+        ))
+
+    if enable_todo:
+        # TodoListMiddleware: 为 Agent 提供 write_todos 工具
+        # Agent 可以自动创建和管理任务列表
+        # 无需额外参数，使用默认配置即可
+        middlewares.append(TodoListMiddleware())
+
+    if enable_call_limit:
+        # ModelCallLimitMiddleware: 限制模型调用次数
+        # 参数：
+        #   run_limit: 单次运行的最大调用次数
+        #   thread_limit: 跨运行（线程级别）的最大调用次数
+        #   exit_behavior: 达到限制后的行为 — 'end'(正常结束) 或 'error'(抛出异常)
+        middlewares.append(ModelCallLimitMiddleware(
+            run_limit=10,
+            exit_behavior='end',
+        ))
+
+    return middlewares
+
+
 # ============================================================
 # 第五部分：核心聊天函数
 # ============================================================
 
-def chat(message, temperature=0.7, model="qwen-plus", middleware_config=None):
+def chat(message, temperature=0.7, model="EB-DeepSeek-V4-Pro", middleware_config=None):
     """
-    使用中间件调用百炼大模型并返回回复。
+    使用中间件调用内网大模型并返回回复。
 
     这是整个脚本的核心函数，被主入口和外部调用。
+
+    【架构说明】
+    本函数使用双层中间件架构：
+    1. 自定义中间件（6个）→ 通过 ChatOpenAI(callbacks=) 传递，在 LLM 调用级别工作
+    2. 官方内置中间件（5个）→ 通过 create_agent(middleware=) 传递，在 Agent 级别工作
+    3. 两者通过 create_agent() 统一编排
 
     【参数说明】
     - message: str，用户输入的消息
@@ -421,28 +520,21 @@ def chat(message, temperature=0.7, model="qwen-plus", middleware_config=None):
         - 0 = 确定性输出（适合代码生成、事实问答）
         - 1 = 平衡
         - 2 = 创造性输出（适合创意写作）
-    - model: str，模型名称
-        - "qwen-plus"：性价比最高
-        - "qwen-max"：能力最强
-        - "qwen-turbo"：速度最快
+    - model: str，模型名称（内网大模型）
+        - "EB-DeepSeek-V4-Pro"：DeepSeek V4 Pro（推荐）
     - middleware_config: dict，中间件开关配置
         格式：{"before": True, "after": False, ...}
         不传则默认启用所有中间件
 
     【返回值】
     str，大模型的回复文本
-
-    【Python 语法说明】
-    - middleware_config=None：参数默认值为 None
-    - if xxx is None: 判断是否为 None（推荐用 is 而不是 ==）
-    - dict.get("key", default)：安全地从字典取值，key 不存在时返回 default
     """
     # 如果没有传 middleware_config，使用空字典（即全部使用默认值 True）
     if middleware_config is None:
         middleware_config = {}
 
-    # 第一步：根据配置组装中间件列表
-    middlewares = build_middleware_chain(
+    # 第一步：组装自定义中间件（BaseCallbackHandler 子类）
+    custom_middlewares = build_custom_middlewares(
         enable_before=middleware_config.get("before", True),
         enable_after=middleware_config.get("after", True),
         enable_around=middleware_config.get("around", True),
@@ -451,29 +543,49 @@ def chat(message, temperature=0.7, model="qwen-plus", middleware_config=None):
         enable_retry=middleware_config.get("retry", True),
     )
 
-    # 第二步：创建 LLM 实例
-    # ChatOpenAI 是 LangChain 提供的 OpenAI 兼容客户端
-    # 百炼 DashScope 提供了 OpenAI 兼容的 API 端点，所以可以直接使用
-    llm = ChatOpenAI(
-        model=model,              # 模型名称
-        api_key=API_KEY,          # API 密钥（从环境变量读取）
-        base_url=BASE_URL,        # API 端点地址
-        temperature=temperature,  # 温度参数
-        callbacks=middlewares,    # ★ 关键：将中间件列表传入 callbacks 参数
+    # 第二步：组装官方内置中间件（AgentMiddleware 子类）
+    official_middlewares = build_official_middlewares(
+        enable_summarization=middleware_config.get("summarization", True),
+        enable_human_in_the_loop=middleware_config.get("human_in_the_loop", True),
+        enable_pii=middleware_config.get("pii", True),
+        enable_todo=middleware_config.get("todo", True),
+        enable_call_limit=middleware_config.get("call_limit", True),
     )
 
-    # 第三步：构建消息列表并调用 LLM
-    # SystemMessage：设定 AI 的角色和行为（系统提示词）
-    # HumanMessage：用户的实际问题
-    # llm.invoke()：同步调用大模型，返回 AIMessage 对象
-    response = llm.invoke([
-        SystemMessage(content="你是一个有用的AI助手，请用中文回答。"),
-        HumanMessage(content=message),
-    ])
+    # 第三步：创建 ChatOpenAI 实例（带自定义中间件回调）
+    # 自定义中间件通过 callbacks= 参数注入，在每次 LLM API 调用前后触发
+    llm = ChatOpenAI(
+        model=model,
+        api_key=API_KEY,
+        base_url=BASE_URL,
+        temperature=temperature,
+        callbacks=custom_middlewares,  # ★ 自定义中间件通过 callbacks 传递
+    )
 
-    # 第四步：返回回复文本
-    # response.content 是 AIMessage 对象的 content 属性，即 AI 的回复文本
-    return response.content
+    # 第四步：使用 create_agent 创建 Agent（带官方内置中间件）
+    # create_agent 是 LangChain 官方推荐的 Agent 创建方式
+    # - model: 传入已配置好 callbacks 的 ChatOpenAI 实例
+    # - middleware: 传入官方内置中间件列表
+    # - system_prompt: 系统提示词
+    agent = create_agent(
+        model=llm,
+        middleware=official_middlewares,  # ★ 官方中间件通过 middleware 参数传递
+        system_prompt="你是一个有用的AI助手，请用中文回答。",
+    )
+
+    # 第五步：调用 Agent
+    # agent.invoke() 返回包含 messages 和中间件状态（如 todos）的字典
+    result = agent.invoke({
+        "messages": [HumanMessage(content=message)],
+    })
+
+    # 第六步：提取最终回复文本
+    # result["messages"] 是完整的消息列表，最后一条是 AI 的回复
+    messages = result.get("messages", [])
+    if messages:
+        last_msg = messages[-1]
+        return last_msg.content
+    return ""
 
 
 # ============================================================
@@ -501,7 +613,7 @@ if __name__ == "__main__":
             params = json.loads(sys.argv[2])
             message = params.get("message", "你好")
             temperature = params.get("temperature", 0.7)
-            model = params.get("model", "qwen-plus")
+            model = params.get("model", "EB-DeepSeek-V4-Pro")
             middleware_config = params.get("middleware", {})
 
             # 调用核心函数

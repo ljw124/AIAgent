@@ -1,8 +1,11 @@
 <!--
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-07
+ * @LastEditors: lujinwei lujinwei@hikvision.com.cn
+ * @LastEditTime: 2026-09-08 12:41:23
  * @Description: LangChain Python 版中间件（Middleware）学习教程
  *   对比：LangChain.js 目前尚无 middleware API（@langchain/core 1.2.9）
+ *   更新：重构为双层架构 — 自定义中间件（BaseCallbackHandler）+ 官方内置中间件（AgentMiddleware）
 -->
 
 # LangChain Python 版中间件（Middleware）详解
@@ -15,10 +18,10 @@
 
 - [一、什么是中间件](#一什么是中间件)
 - [二、为什么需要中间件](#二为什么需要中间件)
-- [三、中间件的类型](#三中间件的类型)
-- [四、如何定义中间件](#四如何定义中间件)
-- [五、如何应用中间件](#五如何应用中间件)
-- [六、内置中间件](#六内置中间件)
+- [三、两种中间件架构](#三两种中间件架构)
+- [四、自定义中间件（BaseCallbackHandler）](#四自定义中间件basecallbackhandler)
+- [五、官方内置中间件（AgentMiddleware）](#五官方内置中间件agentmiddleware)
+- [六、双层中间件架构实战](#六双层中间件架构实战)
 - [七、实际应用场景](#七实际应用场景)
 - [八、与 LangChain.js 的对比](#八与-langchainjs-的对比)
 - [九、最佳实践](#九最佳实践)
@@ -27,7 +30,7 @@
 
 ## 一、什么是中间件
 
-**中间件（Middleware）** 是 LangChain Python 版（`langchain` 0.3.x 后期 / 0.4.x）引入的一种机制，允许你在 **LLM 调用之前、之后或环绕调用** 插入自定义逻辑，而无需修改模型调用代码本身。
+**中间件（Middleware）** 是一种允许你在 **LLM 调用之前、之后或环绕调用** 插入自定义逻辑的机制，而无需修改模型调用代码本身。
 
 它类似于 Web 框架（如 Flask、FastAPI）中的中间件概念，但专门针对 **LLM 调用链** 设计。
 
@@ -58,188 +61,289 @@ def middleware(llm):
 
 ---
 
-## 三、中间件的类型
+## 三、两种中间件架构
 
-LangChain Python 中间件分为三种类型：
+LangChain Python 中存在 **两种不同层次** 的中间件机制：
 
-| 类型 | 时机 | 用途 |
+| 维度 | 自定义中间件 | 官方内置中间件 |
 |---|---|---|
-| **Before** | 模型调用**之前** | 输入处理、脱敏、日志、限流 |
-| **After** | 模型调用**之后** | 输出处理、缓存、日志 |
-| **Around** | **环绕**调用（前后都执行） | 计时、重试、统一日志 |
+| **基类** | [`BaseCallbackHandler`](https://reference.langchain.com/python/langchain_core/callbacks) | [`AgentMiddleware`](https://reference.langchain.com/python/langchain/agents/middleware) |
+| **导入路径** | `langchain_core.callbacks` | `langchain.agents.middleware` |
+| **传递方式** | `ChatOpenAI(callbacks=...)` | `create_agent(middleware=...)` |
+| **工作层级** | LLM 调用级别（每次 API 调用触发） | Agent 级别（工具调用、状态管理等） |
+| **适用场景** | 日志、计时、脱敏、指标统计 | 摘要、人机协同、PII 检测、待办列表、调用限制 |
 
-```python
-from langchain.middleware import BeforeMiddleware, AfterMiddleware, AroundMiddleware
+### 架构关系图
 
-# Before：调用前执行
-class MyBeforeMiddleware(BeforeMiddleware):
-    def before(self, input):
-        # 处理输入
-        return input
-
-# After：调用后执行
-class MyAfterMiddleware(AfterMiddleware):
-    def after(self, output):
-        # 处理输出
-        return output
-
-# Around：环绕执行
-class MyAroundMiddleware(AroundMiddleware):
-    def before(self, input):
-        return input
-    def after(self, output):
-        return output
+```
+┌─────────────────────────────────────────────┐
+│              create_agent()                  │
+│  ┌───────────────────────────────────────┐  │
+│  │  官方内置中间件（AgentMiddleware）      │  │
+│  │  Summarization / HumanInTheLoop /     │  │
+│  │  PII / TodoList / ModelCallLimit      │  │
+│  └───────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────┐  │
+│  │  ChatOpenAI (LLM)                     │  │
+│  │  ┌─────────────────────────────────┐  │  │
+│  │  │ 自定义中间件（BaseCallbackHandler）│  │  │
+│  │  │ Before / After / Around /       │  │  │
+│  │  │ SensitiveData / Metrics / Retry │  │  │
+│  │  └─────────────────────────────────┘  │  │
+│  └───────────────────────────────────────┘  │
+└─────────────────────────────────────────────┘
 ```
 
 ---
 
-## 四、如何定义中间件
+## 四、自定义中间件（BaseCallbackHandler）
 
-### 4.1 继承中间件基类
+自定义中间件继承 [`BaseCallbackHandler`](https://reference.langchain.com/python/langchain_core/callbacks)，通过重写钩子方法实现拦截逻辑。
+
+### 4.1 三种类型
+
+| 类型 | 钩子方法 | 时机 | 用途 |
+|---|---|---|---|
+| **Before** | `on_llm_start()` | 模型调用**之前** | 输入处理、脱敏、日志、限流 |
+| **After** | `on_llm_end()` | 模型调用**之后** | 输出处理、缓存、日志 |
+| **Around** | `on_llm_start()` + `on_llm_end()` | **环绕**调用 | 计时、重试、统一日志 |
+
+### 4.2 定义示例
 
 ```python
-from langchain.middleware import BeforeMiddleware, AfterMiddleware, AroundMiddleware
+from langchain_core.callbacks import BaseCallbackHandler
+import time
 
-class LoggingMiddleware(AroundMiddleware):
-    """记录每次调用的耗时"""
-    def before(self, input):
-        import time
+class BeforeMiddleware(BaseCallbackHandler):
+    """调用前：参数校验、鉴权、注入上下文"""
+    def on_llm_start(self, serialized, prompts, **kwargs):
+        print(f"[Before] LLM 调用开始，输入消息数: {len(prompts)}")
+
+class AfterMiddleware(BaseCallbackHandler):
+    """调用后：结果处理、缓存写入、指标采集"""
+    def on_llm_end(self, response, **kwargs):
+        text = response.generations[0][0].text
+        print(f"[After] LLM 调用结束，输出长度: {len(text)} 字符")
+
+class AroundMiddleware(BaseCallbackHandler):
+    """环绕：统一计时、统一异常处理"""
+    def on_llm_start(self, serialized, prompts, **kwargs):
         self.start_time = time.time()
-        print(f"[Middleware] 开始调用，输入: {input}")
-        return input
 
-    def after(self, output):
-        import time
-        duration = time.time() - self.start_time
-        print(f"[Middleware] 调用完成，耗时: {duration:.2f}s")
-        return output
+    def on_llm_end(self, response, **kwargs):
+        elapsed = time.time() - self.start_time
+        print(f"[Around] 调用耗时: {elapsed:.2f} 秒")
 ```
 
-### 4.2 使用装饰器（更简洁）
-
-```python
-from langchain.middleware import middleware
-
-@middleware
-def logging_middleware(call_next, input):
-    """call_next 是下一个中间件或实际模型调用"""
-    print(f"调用前: {input}")
-    output = call_next(input)  # 调用下一个
-    print(f"调用后: {output}")
-    return output
-```
-
----
-
-## 五、如何应用中间件
-
-### 5.1 在创建模型时传入
+### 4.3 传递方式
 
 ```python
 from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(
     model="gpt-4o",
-    middleware=[LoggingMiddleware(), CacheMiddleware()]  # 传入中间件列表
+    callbacks=[BeforeMiddleware(), AfterMiddleware(), AroundMiddleware()]
 )
-```
-
-### 5.2 在调用时传入
-
-```python
-response = llm.invoke(
-    "你好",
-    config={"middleware": [LoggingMiddleware()]}  # 调用时临时指定
-)
-```
-
-### 5.3 中间件执行顺序
-
-多个中间件按**声明顺序**执行，形成"洋葱模型"：
-
-```python
-llm = ChatOpenAI(
-    model="gpt-4o",
-    middleware=[MiddlewareA(), MiddlewareB(), MiddlewareC()]
-)
-# 执行顺序：A.before → B.before → C.before → 模型调用 → C.after → B.after → A.after
+# 执行顺序：Before.on_llm_start → Around.on_llm_start → API调用 → Around.on_llm_end → After.on_llm_end
 ```
 
 ---
 
-## 六、内置中间件
+## 五、官方内置中间件（AgentMiddleware）
 
-LangChain Python 提供了一些开箱即用的内置中间件：
+从 `langchain` 1.4.0 开始，官方在 [`langchain.agents.middleware`](https://reference.langchain.com/python/langchain/agents/middleware) 模块中提供了 5 个开箱即用的内置中间件，它们继承 [`AgentMiddleware`](https://reference.langchain.com/python/langchain/agents/middleware)，通过 [`create_agent(middleware=)`](https://reference.langchain.com/python/langchain/agents) 传递。
 
-| 中间件 | 作用 |
-|---|---|
-| `CacheMiddleware` | 缓存相同请求的结果，减少重复调用 |
-| `RetryMiddleware` | 调用失败时自动重试 |
-| `RateLimitMiddleware` | 限制调用频率（限流） |
-| `LoggingMiddleware` | 记录调用日志 |
+### 5.1 官方内置中间件列表
+
+| 中间件 | 类名 | 作用 |
+|---|---|---|
+| 摘要中间件 | `SummarizationMiddleware` | 对话历史接近 token 限制时自动摘要 |
+| 人机协同中间件 | `HumanInTheLoopMiddleware` | 工具调用前暂停，等待人工确认 |
+| PII 中间件 | `PIIMiddleware` | 检测和脱敏个人身份信息（邮箱/信用卡/IP等） |
+| 待办列表中间件 | `TodoListMiddleware` | 为 Agent 提供 `write_todos` 工具，自动管理任务 |
+| 调用限制中间件 | `ModelCallLimitMiddleware` | 限制模型调用次数，防止滥用超配额 |
+
+### 5.2 导入方式
 
 ```python
-from langchain.middleware import CacheMiddleware, RetryMiddleware
-
-llm = ChatOpenAI(
-    model="gpt-4o",
-    middleware=[
-        CacheMiddleware(),      # 缓存
-        RetryMiddleware(max_retries=3),  # 失败重试 3 次
-    ]
+from langchain.agents.middleware import (
+    SummarizationMiddleware,
+    HumanInTheLoopMiddleware,
+    PIIMiddleware,
+    TodoListMiddleware,
+    ModelCallLimitMiddleware,
 )
+```
+
+### 5.3 各中间件用法详解
+
+#### SummarizationMiddleware — 摘要中间件
+
+```python
+SummarizationMiddleware(
+    model=ChatOpenAI(model="gpt-4o"),  # 用于生成摘要的模型
+    trigger=('tokens', 4000),           # 超过 4000 token 时触发摘要
+    keep=('messages', 20),              # 保留最近 20 条消息
+)
+```
+
+#### HumanInTheLoopMiddleware — 人机协同中间件
+
+```python
+HumanInTheLoopMiddleware(
+    interrupt_on={'tool_use': True},                    # 在工具调用前中断
+    description_prefix='工具执行需要人工审批',
+)
+```
+
+#### PIIMiddleware — PII 中间件
+
+```python
+PIIMiddleware(
+    pii_type='email',           # PII 类型：email/credit_card/ip/mac_address/url
+    strategy='redact',          # 策略：block(阻止)/redact(脱敏)/mask(掩码)/hash(哈希)
+    apply_to_input=True,        # 对输入应用
+    apply_to_output=True,       # 对输出应用
+)
+```
+
+#### TodoListMiddleware — 待办列表中间件
+
+```python
+TodoListMiddleware()  # 无需额外参数，使用默认配置
+# Agent 会自动获得 write_todos 工具，可以创建和管理任务列表
+```
+
+#### ModelCallLimitMiddleware — 调用限制中间件
+
+```python
+ModelCallLimitMiddleware(
+    run_limit=10,               # 单次运行最大调用次数
+    thread_limit=None,          # 跨运行（线程级别）最大调用次数
+    exit_behavior='end',        # 达到限制后：'end'(正常结束) 或 'error'(抛异常)
+)
+```
+
+---
+
+## 六、双层中间件架构实战
+
+本项目 [`MiddlewareModel.py`](../../src/composables/MiddlewareModel.py) 演示了如何将两种中间件结合使用：
+
+```python
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langchain.agents.middleware import (
+    SummarizationMiddleware, HumanInTheLoopMiddleware,
+    PIIMiddleware, TodoListMiddleware, ModelCallLimitMiddleware,
+)
+
+# ============================================================
+# 第一步：定义自定义中间件（BaseCallbackHandler 子类）
+# ============================================================
+class BeforeMiddleware(BaseCallbackHandler):
+    def on_llm_start(self, serialized, prompts, **kwargs):
+        print(f"[Before] LLM 调用开始")
+
+class AfterMiddleware(BaseCallbackHandler):
+    def on_llm_end(self, response, **kwargs):
+        print(f"[After] LLM 调用结束")
+
+# ============================================================
+# 第二步：创建 ChatOpenAI 实例（带自定义中间件）
+# ============================================================
+llm = ChatOpenAI(
+    model="EB-DeepSeek-V4-Pro",
+    api_key=API_KEY,
+    base_url=BASE_URL,
+    callbacks=[BeforeMiddleware(), AfterMiddleware()],  # ★ 自定义中间件
+)
+
+# ============================================================
+# 第三步：创建 Agent（带官方内置中间件）
+# ============================================================
+agent = create_agent(
+    model=llm,  # 已配置自定义中间件的 LLM 实例
+    middleware=[  # ★ 官方内置中间件
+        SummarizationMiddleware(model=llm, trigger=('tokens', 4000)),
+        TodoListMiddleware(),
+        ModelCallLimitMiddleware(run_limit=10),
+        PIIMiddleware(pii_type='email', strategy='redact'),
+        HumanInTheLoopMiddleware(interrupt_on={'tool_use': True}),
+    ],
+    system_prompt="你是一个有用的AI助手，请用中文回答。",
+)
+
+# ============================================================
+# 第四步：调用 Agent
+# ============================================================
+result = agent.invoke({"messages": [HumanMessage(content="你好")]})
+print(result["messages"][-1].content)
+```
+
+### 执行流程
+
+```
+用户消息 → create_agent
+  → 官方中间件处理（PII检测、摘要检查、调用计数等）
+  → ChatOpenAI.invoke()
+    → 自定义中间件.on_llm_start()（Before → Around → SensitiveData）
+    → 实际 API 调用
+    → 自定义中间件.on_llm_end()（Around → After → Metrics）
+  → 官方中间件后处理（TodoList提取、HumanInTheLoop审核等）
+  → 返回最终结果
 ```
 
 ---
 
 ## 七、实际应用场景
 
-### 7.1 敏感信息脱敏
+### 7.1 敏感信息脱敏（自定义中间件）
 
 ```python
-from langchain.middleware import BeforeMiddleware
-
-class SensitiveDataMiddleware(BeforeMiddleware):
+class SensitiveDataMiddleware(BaseCallbackHandler):
     """对输入中的敏感信息（如手机号、身份证）脱敏"""
-    def before(self, input):
+    def on_llm_start(self, serialized, prompts, **kwargs):
         import re
-        text = str(input)
-        text = re.sub(r'1[3-9]\d{9}', '[手机号已脱敏]', text)  # 手机号
-        text = re.sub(r'\d{17}[\dXx]', '[身份证已脱敏]', text)  # 身份证
-        return text
+        for prompt in prompts:
+            masked = str(prompt)
+            masked = re.sub(r'1[3-9]\d{9}', '[手机号已脱敏]', masked)
+            print(f"[脱敏] {masked[:80]}...")
 ```
 
-### 7.2 调用统计与监控
+### 7.2 调用统计与监控（自定义中间件）
 
 ```python
-from langchain.middleware import AroundMiddleware
+class MetricsMiddleware(BaseCallbackHandler):
+    call_count = 0
+    total_time = 0.0
 
-class MetricsMiddleware(AroundMiddleware):
-    """统计调用次数、token 消耗、耗时"""
-    def before(self, input):
-        self.start = time.time()
-        return input
+    def on_llm_start(self, serialized, prompts, **kwargs):
+        self.start_time = time.time()
 
-    def after(self, output):
-        duration = time.time() - self.start
-        # 上报到监控系统
-        metrics.record(duration=duration, tokens=output.usage_metadata)
-        return output
+    def on_llm_end(self, response, **kwargs):
+        MetricsMiddleware.call_count += 1
+        MetricsMiddleware.total_time += time.time() - self.start_time
+        avg = MetricsMiddleware.total_time / MetricsMiddleware.call_count
+        print(f"[指标] 累计调用 {MetricsMiddleware.call_count} 次，平均耗时 {avg:.2f}s")
 ```
 
-### 7.3 统一错误处理
+### 7.3 PII 检测与脱敏（官方内置中间件）
 
 ```python
-from langchain.middleware import AroundMiddleware
+# 使用官方 PIIMiddleware，一行代码搞定
+PIIMiddleware(pii_type='email', strategy='redact')
+# 自动检测输入/输出中的邮箱地址并脱敏
+```
 
-class ErrorHandlingMiddleware(AroundMiddleware):
-    """统一捕获异常，返回友好提示"""
-    def after(self, output):
-        return output
+### 7.4 任务管理（官方内置中间件）
 
-    def on_error(self, error):
-        print(f"调用出错: {error}")
-        return "抱歉，服务暂时不可用，请稍后重试。"
+```python
+# 使用官方 TodoListMiddleware，Agent 自动获得任务管理能力
+agent = create_agent(model=llm, middleware=[TodoListMiddleware()])
+result = agent.invoke({"messages": [HumanMessage("帮我规划学习计划")]})
+# result["todos"] 包含 Agent 自动创建的任务列表
 ```
 
 ---
@@ -248,9 +352,9 @@ class ErrorHandlingMiddleware(AroundMiddleware):
 
 | 维度 | LangChain Python | LangChain.js |
 |---|---|---|
-| `middleware` API | ✅ 已支持（0.3.x 后期 / 0.4.x） | ❌ 尚未提供 |
-| 中间件类型 | Before / After / Around | — |
-| 内置中间件 | 缓存、重试、限流、日志 | — |
+| 自定义中间件 API | ✅ `BaseCallbackHandler` + `callbacks=` | ❌ 无直接等价物 |
+| 官方内置中间件 | ✅ `langchain.agents.middleware` (5个) | ❌ 尚未提供 |
+| Agent 级别中间件 | ✅ `create_agent(middleware=)` | ❌ 尚未提供 |
 | 替代方案 | 原生中间件 | `RunnableLambda` 链式组合、`callbacks` 回调 |
 
 **LangChain.js 的替代实现**（当前 `@langchain/core` 1.2.9）：
@@ -274,18 +378,20 @@ const chain = RunnableLambda.from(async (input) => {
 
 ## 九、最佳实践
 
-1. **单一职责**：每个中间件只做一件事（日志、缓存、限流分开写）
-2. **保持顺序**：注意中间件声明顺序，before 按顺序、after 逆序执行
-3. **避免副作用**：中间件应尽量无状态，或使用可重入设计
-4. **性能考量**：中间件会增加调用开销，避免在热路径中做重操作
-5. **关注版本**：中间件是较新特性，使用前确认 `langchain` 版本支持
+1. **分层使用**：自定义中间件处理 LLM 级别关注点（日志、计时），官方中间件处理 Agent 级别关注点（摘要、PII、任务管理）
+2. **单一职责**：每个中间件只做一件事（日志、缓存、限流分开写）
+3. **注意顺序**：自定义中间件的 `on_llm_start` 按列表顺序执行，`on_llm_end` 逆序执行
+4. **避免副作用**：中间件应尽量无状态，或使用可重入设计
+5. **性能考量**：中间件会增加调用开销，避免在热路径中做重操作
+6. **版本要求**：官方内置中间件需要 `langchain >= 1.4.0`
 
 ---
 
 ## 总结
 
-- **中间件** 是 LangChain Python 版在模型调用前后插入自定义逻辑的机制
-- 分为 **Before / After / Around** 三种类型
-- 通过继承基类或装饰器定义，在创建模型或调用时传入
-- 内置了缓存、重试、限流、日志等常用中间件
+- LangChain Python 提供 **两种中间件机制**：自定义（`BaseCallbackHandler`）和官方内置（`AgentMiddleware`）
+- **自定义中间件** 通过 `ChatOpenAI(callbacks=)` 传递，在 LLM 调用级别工作
+- **官方内置中间件** 通过 `create_agent(middleware=)` 传递，在 Agent 级别工作
+- 官方内置了 5 个中间件：`SummarizationMiddleware`、`HumanInTheLoopMiddleware`、`PIIMiddleware`、`TodoListMiddleware`、`ModelCallLimitMiddleware`
+- 两种中间件可通过 `create_agent()` 统一编排，形成 **双层中间件架构**
 - **LangChain.js 目前没有 `middleware` API**，可用 `RunnableLambda` 链式组合或 `callbacks` 回调实现类似功能

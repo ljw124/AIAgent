@@ -281,7 +281,7 @@ function callPythonScriptDashScope(message, temperature = 0.7, model = 'qwen-plu
  * @param {object} middleware - 中间件开关配置
  * @returns {Promise<{content?: string, error?: string}>}
  */
-function callPythonScriptMiddleware(message, temperature = 0.7, model = 'qwen-plus', middleware = {}) {
+function callPythonScriptMiddleware(message, temperature = 0.7, model = 'EB-DeepSeek-V4-Pro', middleware = {}) {
   return new Promise((resolve, reject) => {
     const params = JSON.stringify({ message, temperature, model, middleware })
     const pythonPath = process.platform === 'win32'

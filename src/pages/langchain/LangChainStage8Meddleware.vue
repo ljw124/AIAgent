@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-07 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-07 19:37:48
+ * @LastEditTime: 2026-09-08 12:38:26
  * @Description: 阶段七：中间件 Middleware — LangChain Python 中间件演示
  *   学习目标：理解 LangChain Python 的中间件机制（Before/After/Around）
  *   核心 API：BaseCallbackHandler、callbacks 参数
@@ -13,8 +13,8 @@
     <h1>阶段七：中间件 Middleware <span class="badge stage">Python 演示</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>理解 LangChain Python 的中间件机制，实现横切关注点（日志、缓存、限流、重试）<br />
-      <strong>核心 API：</strong><code>BaseCallbackHandler</code>、<code>callbacks</code> 参数<br />
-      <strong>说明：</strong>LangChain.js 无中间件 API，本页面通过 Python 脚本（<code>MiddlewareModel.py</code>）调用百炼模型演示
+      <strong>核心 API：</strong><code>BaseCallbackHandler</code>（自定义中间件）、<code>create_agent(middleware=)</code>（官方内置中间件）<br />
+      <strong>说明：</strong>LangChain.js 无中间件 API，本页面通过 Python 脚本（<code>MiddlewareModel.py</code>）调用内网大模型演示
     </div>
 
     <!-- 中间件与模型配置 -->
@@ -45,6 +45,8 @@
                 v-model="selectedMiddleware"
               />
               <span class="ms-option-name">{{ opt.label }}</span>
+              <span v-if="opt.className" class="ms-option-class">{{ opt.className }}</span>
+              <span class="ms-option-type" :class="opt.type">{{ opt.type === 'custom' ? '自定义' : '官方内置' }}</span>
             </div>
             <span class="ms-option-desc">{{ opt.desc }}</span>
           </label>
@@ -56,6 +58,7 @@
           v-for="opt in selectedMiddlewareOptions"
           :key="opt.value"
           class="selected-tag"
+          :class="opt.type"
         >
           {{ opt.label }}
         </span>
@@ -68,9 +71,7 @@
         <label>
           模型：
           <select v-model="config.model">
-            <option value="qwen-plus">qwen-plus（性价比）</option>
-            <option value="qwen-max">qwen-max（最强）</option>
-            <option value="qwen-turbo">qwen-turbo（最快）</option>
+            <option value="EB-DeepSeek-V4-Pro">EB-DeepSeek-V4-Pro（推荐）</option>
           </select>
         </label>
         <label class="ml-24">
@@ -131,70 +132,85 @@ export default {
       loading: false,
       error: null,
       config: {
-        model: 'qwen-plus',
+        model: 'EB-DeepSeek-V4-Pro',
         temperature: 0.7,
       },
       // 下拉多选：选中的中间件 key 数组
-      selectedMiddleware: ['before', 'after', 'around', 'sensitive', 'metrics', 'retry'],
+      selectedMiddleware: ['before', 'after', 'around', 'sensitive', 'metrics', 'retry', 'summarization', 'human_in_the_loop', 'pii', 'todo', 'call_limit'],
       // 中间件选项列表
       middlewareOptions: [
-        { value: 'before', label: 'Before 中间件', desc: '调用前：参数校验、鉴权、注入上下文' },
-        { value: 'after', label: 'After 中间件', desc: '调用后：结果处理、缓存写入、指标采集' },
-        { value: 'around', label: 'Around 中间件', desc: '环绕：统一计时、统一异常处理' },
-        { value: 'sensitive', label: '脱敏中间件', desc: '敏感数据脱敏，防止信息泄露' },
-        { value: 'metrics', label: '指标中间件', desc: '统计调用次数与平均耗时' },
-        { value: 'retry', label: '重试中间件', desc: '调用失败自动重试' },
+        { value: 'before', label: 'Before 中间件', desc: '调用前：参数校验、鉴权、注入上下文', type: 'custom', className: 'BeforeMiddleware' },
+        { value: 'after', label: 'After 中间件', desc: '调用后：结果处理、缓存写入、指标采集', type: 'custom', className: 'AfterMiddleware' },
+        { value: 'around', label: 'Around 中间件', desc: '环绕：统一计时、统一异常处理', type: 'custom', className: 'AroundMiddleware' },
+        { value: 'sensitive', label: '脱敏中间件', desc: '敏感数据脱敏，防止信息泄露', type: 'custom', className: 'SensitiveDataMiddleware' },
+        { value: 'metrics', label: '指标中间件', desc: '统计调用次数与平均耗时', type: 'custom', className: 'MetricsMiddleware' },
+        { value: 'retry', label: '重试中间件', desc: '调用失败自动重试', type: 'custom', className: 'RetryMiddleware' },
+        { value: 'summarization', label: '摘要中间件', desc: '长文本自动摘要，便于快速阅读', type: 'official', className: 'SummarizationMiddleware' },
+        { value: 'human_in_the_loop', label: '人机协同中间件', desc: '关键节点人工审核确认', type: 'official', className: 'HumanInTheLoopMiddleware' },
+        { value: 'pii', label: 'PII 中间件', desc: '检测过滤身份证/手机号/邮箱等敏感信息', type: 'official', className: 'PIIMiddleware' },
+        { value: 'todo', label: '待办列表中间件', desc: '从回复中自动提取行动项/待办事项', type: 'official', className: 'TodoListMiddleware' },
+        { value: 'call_limit', label: '调用限制中间件', desc: '限制调用次数，防止滥用超配额', type: 'official', className: 'ModelCallLimitMiddleware' },
       ],
       dropdownOpen: false,
-      codeExample: `# MiddlewareModel.py — LangChain Python 中间件演示
+      codeExample: `# MiddlewareModel.py — LangChain Python 中间件演示（重构版）
       # 安装依赖：pip install langchain langchain-openai langchain-core python-dotenv
 
       from langchain_core.callbacks import BaseCallbackHandler
       from langchain_openai import ChatOpenAI
+      from langchain.agents import create_agent
+      from langchain.agents.middleware import (
+          SummarizationMiddleware, HumanInTheLoopMiddleware,
+          PIIMiddleware, TodoListMiddleware, ModelCallLimitMiddleware,
+      )
 
       # ============================================================
-      # 一、Before 中间件：调用前执行
+      # 一、自定义中间件（继承 BaseCallbackHandler，通过 callbacks= 传递）
       # ============================================================
       class BeforeMiddleware(BaseCallbackHandler):
           """调用前：参数校验、鉴权、注入上下文"""
           def on_llm_start(self, serialized, prompts, **kwargs):
               print(f"[Before] LLM 调用开始，输入消息数: {len(prompts)}")
 
-      # ============================================================
-      # 二、After 中间件：调用后执行
-      # ============================================================
       class AfterMiddleware(BaseCallbackHandler):
           """调用后：结果处理、缓存写入、指标采集"""
           def on_llm_end(self, response, **kwargs):
               text = response.generations[0][0].text
               print(f"[After] LLM 调用结束，输出长度: {len(text)} 字符")
 
-      # ============================================================
-      # 三、Around 中间件：环绕执行（统一计时/异常处理）
-      # ============================================================
       class AroundMiddleware(BaseCallbackHandler):
+          """环绕：统一计时/异常处理"""
           def on_llm_start(self, serialized, prompts, **kwargs):
               self.start_time = time.time()
           def on_llm_end(self, response, **kwargs):
               print(f"[Around] 调用耗时: {time.time() - self.start_time:.2f} 秒")
 
       # ============================================================
-      # 四、组合中间件并调用模型
+      # 二、双层中间件架构：自定义 + 官方内置
       # ============================================================
-      middlewares = [BeforeMiddleware(), AfterMiddleware(), AroundMiddleware()]
-
+      # 1. 自定义中间件 → ChatOpenAI(callbacks=)
       llm = ChatOpenAI(
-          model="qwen-plus",
+          model="EB-DeepSeek-V4-Pro",
           api_key=API_KEY,
           base_url=BASE_URL,
-          callbacks=middlewares,  # 关键：将中间件作为 callbacks 传入
+          callbacks=[BeforeMiddleware(), AfterMiddleware(), AroundMiddleware()],
       )
 
-      response = llm.invoke([
-          SystemMessage(content="你是一个有用的AI助手"),
-          HumanMessage(content=message),
-      ])
-      print(response.content)`,
+      # 2. 官方内置中间件 → create_agent(middleware=)
+      agent = create_agent(
+          model=llm,  # 已配置自定义中间件的 LLM 实例
+          middleware=[
+              SummarizationMiddleware(model=llm, trigger=('tokens', 4000)),
+              TodoListMiddleware(),
+              ModelCallLimitMiddleware(run_limit=10),
+              PIIMiddleware(pii_type='email', strategy='redact'),
+              HumanInTheLoopMiddleware(interrupt_on={'tool_use': True}),
+          ],
+          system_prompt="你是一个有用的AI助手，请用中文回答。",
+      )
+
+      # 3. 调用 Agent（两种中间件协同工作）
+      result = agent.invoke({"messages": [HumanMessage(content=message)]})
+      print(result["messages"][-1].content)`,
     }
   },
 
@@ -339,6 +355,7 @@ export default {
 .multi-select {
   position: relative;
   margin-bottom: 12px;
+  max-width: 520px;
 }
 
 .multi-select-trigger {
@@ -377,15 +394,16 @@ export default {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  right: 0;
   z-index: 100;
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-height: 280px;
+  max-height: 320px;
   overflow-y: auto;
   padding: 8px;
+  width: 100%;
+  min-width: 400px;
 }
 
 .multi-select-actions {
@@ -414,11 +432,13 @@ export default {
 .multi-select-option {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 4px;
   padding: 8px;
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s;
+  text-align: left;
 }
 
 .multi-select-option:hover {
@@ -440,6 +460,34 @@ export default {
   font-weight: 600;
   color: #1e293b;
   font-size: 14px;
+  flex: 1;
+}
+
+/* 中间件类型标签 */
+.ms-option-type {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.ms-option-type.custom {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.ms-option-type.official {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+/* 中间件英文类名 */
+.ms-option-class {
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: 'Consolas', 'Courier New', monospace;
+  flex-shrink: 0;
 }
 
 .ms-option-desc {
@@ -447,6 +495,7 @@ export default {
   font-size: 12px;
   line-height: 1.5;
   padding-left: 24px;
+  text-align: left;
 }
 
 /* 已选中间件标签 */
@@ -461,12 +510,23 @@ export default {
   display: inline-flex;
   align-items: center;
   padding: 4px 12px;
-  background: #f5f3ff;
-  color: #6d28d9;
-  border: 1px solid #ede9fe;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
+}
+
+/* 自定义中间件标签：紫色 */
+.selected-tag.custom {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border: 1px solid #ede9fe;
+}
+
+/* 官方内置中间件标签：蓝色 */
+.selected-tag.official {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
 }
 
 .config-row {
