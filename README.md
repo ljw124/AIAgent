@@ -33,7 +33,8 @@
 
 - **多模型平台接入**：内网 hikvision、本地 Ollama、百炼 DashScope、魔搭 ModelScope 四大平台统一接入。
 - **双语言调用**：每个模型平台均提供 JS 与 Python 两种调用示例，便于对比学习。
-- **LangChain.js 八阶段学习**：从 Prompt Template 到 Middleware 中间件的完整进阶路线。
+- **LangChain.js 九阶段学习**：从 Prompt Template 到 Memory 短期记忆的完整进阶路线。
+- **短期记忆（Memory）**：基于 LangGraph `MemorySaver` Checkpoint 机制实现多轮对话上下文记忆，支持 `thread_id` 线程隔离、Checkpoint 历史查看、线程切换/删除管理。
 - **中间件机制**：双层架构 — 自定义中间件（`BaseCallbackHandler`）处理 LLM 级别关注点（日志、计时、脱敏、重试），官方内置中间件（`AgentMiddleware`）处理 Agent 级别关注点（摘要、人机协同、PII 检测、待办列表、调用限制），通过 `create_agent(middleware=)` 统一编排。
 - **流式输出**：支持 Streaming 流式响应，实时展示模型输出。
 - **结构化输出**：基于 Zod 实现结构化数据输出与校验。
@@ -71,7 +72,7 @@
 
 ## 📚 LangChain.js 知识体系
 
-项目内置了从入门到进阶的 **八阶段** LangChain 学习模块，每个阶段对应一个独立的 Vue 组件：
+项目内置了从入门到进阶的 **九阶段** LangChain 学习模块，每个阶段对应一个独立的 Vue 组件：
 
 | 阶段 | 主题 | 组件 | 说明 |
 | --- | --- | --- | --- |
@@ -83,6 +84,7 @@
 | 6️⃣ | **Agent 智能体** | [`LangChainStage6Agent.vue`](src/pages/langchain/LangChainStage6Agent.vue) | JS |
 | 7️⃣ | **RAG 检索增强** | [`LangChainStage7RAG.vue`](src/pages/langchain/LangChainStage7RAG.vue) | JS |
 | 8️⃣ | **Middleware 中间件** | [`LangChainStage8Meddleware.vue`](src/pages/langchain/LangChainStage8Meddleware.vue) | Python |
+| 9️⃣ | **Memory 短期记忆** | [`LangChainStage9Memory.vue`](src/pages/langchain/LangChainStage9Memory.vue) | JS |
 
 ### 📄 配套学习文档
 
@@ -102,6 +104,7 @@
 - [LangChain.js深入学习路线.md](src/docs/langchain/LangChain.js深入学习路线.md)
 - [学习LangChain所需的Python知识.md](src/docs/langchain/学习LangChain所需的Python知识.md)
 - [LangChain-Python中间件Middleware详解.md](src/docs/langchain/LangChain-Python中间件Middleware详解.md)
+- [LangChain.js短期记忆Memory详解.md](src/docs/langchain/LangChain.js短期记忆Memory详解.md)
 - [LangSmith追踪集成总结.md](src/docs/langchain/LangSmith追踪集成总结.md)
 - [Vercel-AI-SDK详细指南.md](src/docs/langchain/Vercel-AI-SDK详细指南.md)
 
