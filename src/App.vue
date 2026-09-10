@@ -12,145 +12,170 @@
       <nav class="sidebar-nav">
         <!-- 分组：内网大模型 -->
         <div class="nav-group">
-          <div class="nav-group-title">内网 hikvision</div>
-          <div
-            :class="['nav-item', { active: currentPage === 'inner-js' }]"
-            @click="currentPage = 'inner-js'"
-          >
-            <span class="nav-icon">🇯🇸</span>
-            <span class="nav-label">JS 调用</span>
+          <div class="nav-group-title" @click="toggleGroup('inner')">
+            <span class="group-arrow" :class="{ collapsed: !expandedGroups.inner }">▼</span>
+            <span>内网 hikvision</span>
           </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'inner-python' }]"
-            @click="currentPage = 'inner-python'"
-          >
-            <span class="nav-icon">🇵🇾</span>
-            <span class="nav-label">Python 调用</span>
+          <div v-show="expandedGroups.inner" class="nav-group-body">
+            <div
+              :class="['nav-item', { active: currentPage === 'inner-js' }]"
+              @click="currentPage = 'inner-js'"
+            >
+              <span class="nav-icon">🇯🇸</span>
+              <span class="nav-label">JS 调用</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'inner-python' }]"
+              @click="currentPage = 'inner-python'"
+            >
+              <span class="nav-icon">🇵🇾</span>
+              <span class="nav-label">Python 调用</span>
+            </div>
           </div>
         </div>
 
         <!-- 分组：本地 Ollama -->
         <div class="nav-group">
-          <div class="nav-group-title">本地 Ollama</div>
-          <div
-            :class="['nav-item', { active: currentPage === 'ollama-chat' }]"
-            @click="currentPage = 'ollama-chat'"
-          >
-            <span class="nav-icon">🇯🇸</span>
-            <span class="nav-label">JS 调用</span>
+          <div class="nav-group-title" @click="toggleGroup('ollama')">
+            <span class="group-arrow" :class="{ collapsed: !expandedGroups.ollama }">▼</span>
+            <span>本地 Ollama</span>
           </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'ollama-python' }]"
-            @click="currentPage = 'ollama-python'"
-          >
-            <span class="nav-icon">🇵🇾</span>
-            <span class="nav-label">Python 调用</span>
+          <div v-show="expandedGroups.ollama" class="nav-group-body">
+            <div
+              :class="['nav-item', { active: currentPage === 'ollama-chat' }]"
+              @click="currentPage = 'ollama-chat'"
+            >
+              <span class="nav-icon">🇯🇸</span>
+              <span class="nav-label">JS 调用</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'ollama-python' }]"
+              @click="currentPage = 'ollama-python'"
+            >
+              <span class="nav-icon">🇵🇾</span>
+              <span class="nav-label">Python 调用</span>
+            </div>
           </div>
         </div>
 
         <!-- 分组：百炼大模型 -->
         <div class="nav-group">
-          <div class="nav-group-title">百炼 DashScope</div>
-          <div
-            :class="['nav-item', { active: currentPage === 'DashScope-js' }]"
-            @click="currentPage = 'DashScope-js'"
-          >
-            <span class="nav-icon">🇯🇸</span>
-            <span class="nav-label">JS 调用</span>
+          <div class="nav-group-title" @click="toggleGroup('dashscope')">
+            <span class="group-arrow" :class="{ collapsed: !expandedGroups.dashscope }">▼</span>
+            <span>百炼 DashScope</span>
           </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'DashScope-python' }]"
-            @click="currentPage = 'DashScope-python'"
-          >
-            <span class="nav-icon">🇵🇾</span>
-            <span class="nav-label">Python 调用</span>
+          <div v-show="expandedGroups.dashscope" class="nav-group-body">
+            <div
+              :class="['nav-item', { active: currentPage === 'DashScope-js' }]"
+              @click="currentPage = 'DashScope-js'"
+            >
+              <span class="nav-icon">🇯🇸</span>
+              <span class="nav-label">JS 调用</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'DashScope-python' }]"
+              @click="currentPage = 'DashScope-python'"
+            >
+              <span class="nav-icon">🇵🇾</span>
+              <span class="nav-label">Python 调用</span>
+            </div>
           </div>
         </div>
 
         <!-- 分组：魔搭社区 -->
         <div class="nav-group">
-          <div class="nav-group-title">魔搭 ModelScope</div>
-          <div
-            :class="['nav-item', { active: currentPage === 'modelscope-js' }]"
-            @click="currentPage = 'modelscope-js'"
-          >
-            <span class="nav-icon">🇯🇸</span>
-            <span class="nav-label">JS 调用</span>
+          <div class="nav-group-title" @click="toggleGroup('modelscope')">
+            <span class="group-arrow" :class="{ collapsed: !expandedGroups.modelscope }">▼</span>
+            <span>魔搭 ModelScope</span>
           </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'modelscope-python' }]"
-            @click="currentPage = 'modelscope-python'"
-          >
-            <span class="nav-icon">🇵🇾</span>
-            <span class="nav-label">Python 调用</span>
+          <div v-show="expandedGroups.modelscope" class="nav-group-body">
+            <div
+              :class="['nav-item', { active: currentPage === 'modelscope-js' }]"
+              @click="currentPage = 'modelscope-js'"
+            >
+              <span class="nav-icon">🇯🇸</span>
+              <span class="nav-label">JS 调用</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'modelscope-python' }]"
+              @click="currentPage = 'modelscope-python'"
+            >
+              <span class="nav-icon">🇵🇾</span>
+              <span class="nav-label">Python 调用</span>
+            </div>
           </div>
         </div>
 
         <!-- 分组：LangChain.js 学习 -->
         <div class="nav-group">
-          <div class="nav-group-title">📚 LangChain.js 知识体系</div>
-          <div
-            :class="['nav-item', { active: currentPage === 'lc-stage1' }]"
-            @click="currentPage = 'lc-stage1'"
-          >
-            <span class="nav-icon">1️⃣</span>
-            <span class="nav-label">Prompt Template</span>
+          <div class="nav-group-title" @click="toggleGroup('langchain')">
+            <span class="group-arrow" :class="{ collapsed: !expandedGroups.langchain }">▼</span>
+            <span>📚 LangChain.js 知识体系</span>
           </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'lc-stage2' }]"
-            @click="currentPage = 'lc-stage2'"
-          >
-            <span class="nav-icon">2️⃣</span>
-            <span class="nav-label">Chain 链式调用</span>
-          </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'lc-stage6' }]"
-            @click="currentPage = 'lc-stage6'"
-          >
-            <span class="nav-icon">3️⃣</span>
-            <span class="nav-label">Streaming 流式</span>
-          </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'lc-stage7' }]"
-            @click="currentPage = 'lc-stage7'"
-          >
-            <span class="nav-icon">4️⃣</span>
-            <span class="nav-label">Structured 结构化</span>
-          </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'lc-stage3' }]"
-            @click="currentPage = 'lc-stage3'"
-          >
-            <span class="nav-icon">5️⃣</span>
-            <span class="nav-label">Tool Calling</span>
-          </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'lc-stage4' }]"
-            @click="currentPage = 'lc-stage4'"
-          >
-            <span class="nav-icon">6️⃣</span>
-            <span class="nav-label">Agent 智能体</span>
-          </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'lc-stage5' }]"
-            @click="currentPage = 'lc-stage5'"
-          >
-            <span class="nav-icon">7️⃣</span>
-            <span class="nav-label">RAG 检索增强</span>
-          </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'lc-stage8' }]"
-            @click="currentPage = 'lc-stage8'"
-          >
-            <span class="nav-icon">8️⃣</span>
-            <span class="nav-label">Middleware 中间件</span>
-          </div>
-          <div
-            :class="['nav-item', { active: currentPage === 'lc-stage9' }]"
-            @click="currentPage = 'lc-stage9'"
-          >
-            <span class="nav-icon">9️⃣</span>
-            <span class="nav-label">Memory 短期记忆</span>
+          <div v-show="expandedGroups.langchain" class="nav-group-body">
+            <div
+              :class="['nav-item', { active: currentPage === 'lc-stage1' }]"
+              @click="currentPage = 'lc-stage1'"
+            >
+              <span class="nav-icon">1️⃣</span>
+              <span class="nav-label">Prompt Template</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lc-stage2' }]"
+              @click="currentPage = 'lc-stage2'"
+            >
+              <span class="nav-icon">2️⃣</span>
+              <span class="nav-label">Chain 链式调用</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lc-stage6' }]"
+              @click="currentPage = 'lc-stage6'"
+            >
+              <span class="nav-icon">3️⃣</span>
+              <span class="nav-label">Streaming 流式</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lc-stage7' }]"
+              @click="currentPage = 'lc-stage7'"
+            >
+              <span class="nav-icon">4️⃣</span>
+              <span class="nav-label">Structured 结构化</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lc-stage3' }]"
+              @click="currentPage = 'lc-stage3'"
+            >
+              <span class="nav-icon">5️⃣</span>
+              <span class="nav-label">Tool Calling</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lc-stage4' }]"
+              @click="currentPage = 'lc-stage4'"
+            >
+              <span class="nav-icon">6️⃣</span>
+              <span class="nav-label">Agent 智能体</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lc-stage5' }]"
+              @click="currentPage = 'lc-stage5'"
+            >
+              <span class="nav-icon">7️⃣</span>
+              <span class="nav-label">RAG 检索增强</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lc-stage8' }]"
+              @click="currentPage = 'lc-stage8'"
+            >
+              <span class="nav-icon">8️⃣</span>
+              <span class="nav-label">Middleware 中间件</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lc-stage9' }]"
+              @click="currentPage = 'lc-stage9'"
+            >
+              <span class="nav-icon">9️⃣</span>
+              <span class="nav-label">Memory 短期记忆</span>
+            </div>
           </div>
         </div>
       </nav>
@@ -230,7 +255,20 @@ export default {
   data() {
     return {
       currentPage: 'inner-js',
+      expandedGroups: {
+        inner: true,
+        ollama: true,
+        dashscope: true,
+        modelscope: true,
+        langchain: true,
+      },
     }
+  },
+
+  methods: {
+    toggleGroup(group) {
+      this.expandedGroups[group] = !this.expandedGroups[group]
+    },
   },
 }
 </script>
@@ -304,12 +342,32 @@ html, body {
 }
 
 .nav-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 20px 4px;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: #5a6a8a;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.nav-group-title:hover {
+  color: #8892b0;
+}
+
+.group-arrow {
+  font-size: 8px;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.group-arrow.collapsed {
+  transform: rotate(-90deg);
 }
 
 .nav-item {
