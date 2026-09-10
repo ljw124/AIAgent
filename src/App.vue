@@ -176,6 +176,13 @@
               <span class="nav-icon">9️⃣</span>
               <span class="nav-label">Memory 短期记忆</span>
             </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lc-stage10' }]"
+              @click="currentPage = 'lc-stage10'"
+            >
+              <span class="nav-icon">🔟</span>
+              <span class="nav-label">Store 长期记忆</span>
+            </div>
           </div>
         </div>
       </nav>
@@ -204,6 +211,7 @@
       <LangChainStage7RAG v-if="currentPage === 'lc-stage5'" />
       <LangChainStage8Meddleware v-if="currentPage === 'lc-stage8'" />
       <LangChainStage9Memory v-if="currentPage === 'lc-stage9'" />
+      <LangChainStage10Store v-if="currentPage === 'lc-stage10'" />
       <OllamaChat v-if="currentPage === 'ollama-chat'" />
       <OllamaPythonChat v-if="currentPage === 'ollama-python'" />
     </main>
@@ -226,6 +234,7 @@ import LangChainStage6Agent from '@/pages/langchain/LangChainStage6Agent.vue'
 import LangChainStage7RAG from '@/pages/langchain/LangChainStage7RAG.vue'
 import LangChainStage8Meddleware from '@/pages/langchain/LangChainStage8Meddleware.vue'
 import LangChainStage9Memory from '@/pages/langchain/LangChainStage9Memory.vue'
+import LangChainStage10Store from '@/pages/langchain/LangChainStage10Store.vue'
 import OllamaChat from '@/pages/ollama/OllamaChat.vue'
 import OllamaPythonChat from '@/pages/ollama/OllamaPythonChat.vue'
 
@@ -248,6 +257,7 @@ export default {
     LangChainStage7RAG,
     LangChainStage8Meddleware,
     LangChainStage9Memory,
+    LangChainStage10Store,
     OllamaChat,
     OllamaPythonChat,
   },
