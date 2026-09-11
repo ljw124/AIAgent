@@ -36,6 +36,7 @@
 - **LangChain.js 十阶段学习**：从 Prompt Template 到 Store 长期记忆的完整进阶路线。
 - **短期记忆（Memory）**：基于 LangGraph `MemorySaver` Checkpoint 机制实现多轮对话上下文记忆，支持 `thread_id` 线程隔离、Checkpoint 历史查看、线程切换/删除管理。
 - **长期记忆（Store）**：基于 LangGraph `InMemoryStore` 实现跨会话信息持久化，支持三种记忆模式（完全隔离/共享记忆/混合模式）、namespace 命名空间隔离、localStorage 持久化备份。
+- **RAG 检索增强生成**：基于 `RecursiveCharacterTextSplitter` 文档分片 + 混合相似度检索（Bigram Jaccard + 短查询加权 + 子串包含加分），支持内置知识库与文件上传（.txt/.md）两种文档来源，将检索结果注入 System Prompt 让 LLM 基于真实数据回答，有效解决幻觉问题。
 - **中间件机制**：双层架构 — 自定义中间件（`BaseCallbackHandler`）处理 LLM 级别关注点（日志、计时、脱敏、重试），官方内置中间件（`AgentMiddleware`）处理 Agent 级别关注点（摘要、人机协同、PII 检测、待办列表、调用限制），通过 `create_agent(middleware=)` 统一编排。
 - **流式输出**：支持 Streaming 流式响应，实时展示模型输出。
 - **结构化输出**：基于 Zod 实现结构化数据输出与校验。
@@ -108,6 +109,7 @@
 - [LangChain-Python中间件Middleware详解.md](src/docs/langchain/LangChain-Python中间件Middleware详解.md)
 - [LangChain.js短期记忆Memory详解.md](src/docs/langchain/LangChain.js短期记忆Memory详解.md)
 - [LangChain.js长期记忆Store详解.md](src/docs/langchain/LangChain.js长期记忆Store详解.md)
+- [LangChain.js RAG 检索增强生成详解.md](src/docs/langchain/LangChain.js RAG 检索增强生成详解.md)
 - [LangSmith追踪集成总结.md](src/docs/langchain/LangSmith追踪集成总结.md)
 - [Vercel-AI-SDK详细指南.md](src/docs/langchain/Vercel-AI-SDK详细指南.md)
 
