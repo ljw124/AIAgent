@@ -34,6 +34,7 @@
 - **多模型平台接入**：内网 hikvision、本地 Ollama、百炼 DashScope、魔搭 ModelScope 四大平台统一接入。
 - **双语言调用**：每个模型平台均提供 JS 与 Python 两种调用示例，便于对比学习。
 - **LangChain.js 十阶段学习**：从 Prompt Template 到 Store 长期记忆的完整进阶路线。
+- **🎯 综合实战：智能客服**：串联全部 10 阶段知识的完整 Agent 应用，支持多租户（技术文档 / 学习辅导 / 通用助手）、流式对话、工具调用（计算器 / 天气 / 知识库搜索）、RAG 知识库检索、短期记忆（MemorySaver）+ 长期记忆（InMemoryStore）、中间件日志与 Token 统计。
 - **短期记忆（Memory）**：基于 LangGraph `MemorySaver` Checkpoint 机制实现多轮对话上下文记忆，支持 `thread_id` 线程隔离、Checkpoint 历史查看、线程切换/删除管理。
 - **长期记忆（Store）**：基于 LangGraph `InMemoryStore` 实现跨会话信息持久化，支持三种记忆模式（完全隔离/共享记忆/混合模式）、namespace 命名空间隔离、localStorage 持久化备份。
 - **RAG 检索增强生成**：基于 `RecursiveCharacterTextSplitter` 文档分片 + 混合相似度检索（Bigram Jaccard + 短查询加权 + 子串包含加分），支持内置知识库与文件上传（.txt/.md）两种文档来源，将检索结果注入 System Prompt 让 LLM 基于真实数据回答，有效解决幻觉问题。
@@ -88,6 +89,7 @@
 | 8️⃣ | **Middleware 中间件** | [`LangChainStage8Meddleware.vue`](src/pages/langchain/LangChainStage8Meddleware.vue) | Python |
 | 9️⃣ | **Memory 短期记忆** | [`LangChainStage9Memory.vue`](src/pages/langchain/LangChainStage9Memory.vue) | JS |
 | 🔟 | **Store 长期记忆** | [`LangChainStage10Store.vue`](src/pages/langchain/LangChainStage10Store.vue) | JS |
+| 🎯 | **综合实战：智能客服** | [`CustomerChat.vue`](src/pages/CustomerAgent/CustomerChat.vue) | JS — 串联全部 10 阶段 |
 
 ### 📄 配套学习文档
 
@@ -112,6 +114,7 @@
 - [LangChain.js RAG 检索增强生成详解.md](src/docs/langchain/LangChain.js RAG 检索增强生成详解.md)
 - [LangSmith追踪集成总结.md](src/docs/langchain/LangSmith追踪集成总结.md)
 - [Vercel-AI-SDK详细指南.md](src/docs/langchain/Vercel-AI-SDK详细指南.md)
+- [LangChain-智能客服项目实战.md](src/docs/langchain/LangChain-智能客服项目实战.md)
 
 ---
 
@@ -133,9 +136,18 @@
     │   ├── InnerModel.py     # 内网模型 Python 脚本
     │   ├── MiddlewareModel.py # LangChain 中间件演示 Python 脚本
     │   ├── ModelScopeModel.py # 魔搭 ModelScope 模型 Python 脚本
-    │   └── OllamaModel.py    # Ollama 模型 Python 脚本
+    │   ├── OllamaModel.py    # Ollama 模型 Python 脚本
+    │   └── useCustomerAgent.js # 智能客服 Agent 核心 Composable
     ├── docs/                 # 学习文档
     └── pages/                # 页面组件
+        ├── CustomerAgent/    # 🎯 综合实战：智能客服（串联全部 10 阶段）
+        │   ├── CustomerChat.vue   # 主页面
+        │   └── modules/           # 模块化拆分
+        │       ├── tools.js       # Stage5: 工具定义（计算器/天气/知识库搜索）
+        │       ├── rag.js         # Stage2+7: RAG 知识库服务
+        │       ├── middleware.js  # Stage8: 日志 + Token 统计中间件
+        │       ├── memory.js      # Stage9+10: 短期记忆 + 长期记忆管理
+        │       └── tenants.js     # 多租户配置（技术文档/学习辅导/通用助手）
         ├── DashScope/          # 百炼 DashScope（平台）
         ├── inner/            # 内网大模型（平台）
         ├── langchain/        # LangChain.js 知识体系（学习）
