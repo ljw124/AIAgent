@@ -192,6 +192,22 @@
             </div>
           </div>
         </div>
+        <!-- 分组：LangGraph.js 学习 -->
+        <div class="nav-group">
+          <div class="nav-group-title" @click="toggleGroup('langgraph')">
+            <span class="group-arrow" :class="{ collapsed: !expandedGroups.langgraph }">▼</span>
+            <span>🔀 LangGraph.js 知识体系</span>
+          </div>
+          <div v-show="expandedGroups.langgraph" class="nav-group-body">
+            <div
+              :class="['nav-item', { active: currentPage === 'lg-stage1' }]"
+              @click="currentPage = 'lg-stage1'"
+            >
+              <span class="nav-icon">1️⃣</span>
+              <span class="nav-label">StateGraph 基础图</span>
+            </div>
+          </div>
+        </div>
       </nav>
 
       <div class="sidebar-footer">
@@ -220,6 +236,7 @@
       <LangChainStage9Memory v-if="currentPage === 'lc-stage9'" />
       <LangChainStage10Store v-if="currentPage === 'lc-stage10'" />
       <CustomerChat v-if="currentPage === 'lc-customer-agent'" />
+      <LangGraphStage1StateGraph v-if="currentPage === 'lg-stage1'" />
       <OllamaChat v-if="currentPage === 'ollama-chat'" />
       <OllamaPythonChat v-if="currentPage === 'ollama-python'" />
     </main>
@@ -244,6 +261,7 @@ import LangChainStage8Meddleware from '@/pages/langchain/LangChainStage8Meddlewa
 import LangChainStage9Memory from '@/pages/langchain/LangChainStage9Memory.vue'
 import LangChainStage10Store from '@/pages/langchain/LangChainStage10Store.vue'
 import CustomerChat from '@/pages/CustomerAgent/CustomerChat.vue'
+import LangGraphStage1StateGraph from '@/pages/langgraph/LangGraphStage1StateGraph.vue'
 import OllamaChat from '@/pages/ollama/OllamaChat.vue'
 import OllamaPythonChat from '@/pages/ollama/OllamaPythonChat.vue'
 
@@ -268,6 +286,7 @@ export default {
     LangChainStage9Memory,
     LangChainStage10Store,
     CustomerChat,
+    LangGraphStage1StateGraph,
     OllamaChat,
     OllamaPythonChat,
   },
@@ -281,6 +300,7 @@ export default {
         dashscope: true,
         modelscope: true,
         langchain: true,
+        langgraph: true,
       },
     }
   },

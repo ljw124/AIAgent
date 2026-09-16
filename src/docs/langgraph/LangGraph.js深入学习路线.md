@@ -169,7 +169,7 @@ from langgraph.func import entrypoint, task
 
 | API | 说明 |
 |-----|------|
-| [`StateGraph(channels)`](node_modules/@langchain/langgraph/dist/graph/state.d.ts:128) | 创建状态图，传入 channels 定义状态结构 |
+| [`StateGraph(stateDefinition)`](node_modules/@langchain/langgraph/dist/graph/state.d.ts:128) | 创建状态图，传入 Annotation.Root 定义状态结构 |
 | [`graph.addNode(name, fn)`](node_modules/@langchain/langgraph/dist/graph/state.d.ts) | 添加节点 |
 | [`graph.addEdge(from, to)`](node_modules/@langchain/langgraph/dist/graph/graph.d.ts) | 添加普通边（固定路由） |
 | [`graph.compile()`](node_modules/@langchain/langgraph/dist/graph/state.d.ts) | 编译图为可执行对象 |
@@ -184,29 +184,29 @@ from langgraph.func import entrypoint, task
 
 | 操作 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
-| 创建图 | `new StateGraph(channels)` | `StateGraph(StateClass)` |
+| 创建图 | `new StateGraph(stateDefinition)` | `StateGraph(StateClass)` |
 | 添加节点 | `graph.addNode('name', fn)` | `graph.add_node('name', fn)` |
 | 添加普通边 | `graph.addEdge('a', 'b')` | `graph.add_edge('a', 'b')` |
-| 设置入口 | `graph.addEdge(START, 'a')` | `graph.set_entry_point('a')` |
+| 设置入口 | `graph.addEdge(START, 'a')` | `graph.add_edge(START, 'a')` |
 | 编译图 | `graph.compile()` | `graph.compile()` |
 | 执行图 | `compiled.invoke(input)` | `compiled.invoke(input)` |
 | 流式执行 | `compiled.stream(input)` | `compiled.stream(input)` |
 | 入口常量 | `START` | `START` |
 | 出口常量 | `END` | `END` |
 
-> **关键差异**：JS 版用 `addEdge(START, 'node')` 设置入口，Python 版用 `set_entry_point('node')`。JS 版 `StateGraph` 构造函数接受 `channels` 对象，Python 版接受一个 `TypedDict` 类。
+> **关键差异**：JS 版用 `addEdge(START, 'node')` 设置入口，Python 版用 `add_edge(START, 'node')`。JS 版 `StateGraph` 构造函数接受 `Annotation.Root` 定义的状态对象，Python 版接受一个 `TypedDict` 类。
 
 #### 代码对比：构建一个简单的两节点图
 
 ```js
 // ============ LangGraph.js ============
-import { StateGraph, START, END } from '@langchain/langgraph';
+import { StateGraph, Annotation, START, END } from '@langchain/langgraph';
 
-// 1. 定义状态 channels
-const channels = {
-  text: { reducer: (left, right) => right ?? left, default: () => '' },
-  step: { reducer: (left, right) => right ?? left, default: () => '' },
-};
+// 1. 定义状态（使用 Annotation.Root — v1.x 新 API）
+const stateDefinition = Annotation.Root({
+  text: Annotation(),
+  step: Annotation(),
+});
 
 // 2. 定义节点函数
 const nodeA = (state) => {
@@ -218,7 +218,7 @@ const nodeB = (state) => {
 };
 
 // 3. 构建图
-const graph = new StateGraph(channels)
+const graph = new StateGraph(stateDefinition)
   .addNode('nodeA', nodeA)
   .addNode('nodeB', nodeB)
   .addEdge(START, 'nodeA')   // JS: 用 addEdge 设置入口
@@ -252,7 +252,7 @@ def node_b(state: State) -> dict:
 graph = StateGraph(State)  # Python: 传入 TypedDict 类
 graph.add_node('nodeA', node_a)
 graph.add_node('nodeB', node_b)
-graph.set_entry_point('nodeA')  # Python: 用 set_entry_point
+graph.add_edge(START, 'nodeA')  # Python: 用 add_edge 设置入口
 graph.add_edge('nodeA', 'nodeB')
 graph.add_edge('nodeB', END)
 
@@ -263,8 +263,8 @@ result = app.invoke({'text': 'start'})
 ```
 
 > **核心差异总结**：
-> - JS 用 `channels` 对象（含 `reducer` + `default`）定义状态，Python 用 `TypedDict` 类
-> - JS 用 `addEdge(START, ...)` 设置入口，Python 用 `set_entry_point(...)`
+> - JS 用 `Annotation.Root` 定义状态，Python 用 `TypedDict` 类
+> - JS 用 `addEdge(START, ...)` 设置入口，Python 用 `add_edge(START, ...)`
 > - JS 节点函数返回 `Partial<State>`，Python 返回 `dict`
 > - JS 方法名用驼峰（`addNode`），Python 用蛇形（`add_node`）
 
@@ -274,7 +274,7 @@ result = app.invoke({'text': 'start'})
 
 **学习要点：**
 - `StateGraph` 的基本结构：定义状态 → 添加节点 → 添加边 → 编译 → 执行
-- `channels` 参数定义状态中的键及其 reducer
+- `Annotation.Root` 定义状态结构（v1.x 新 API，替代旧的 `channels` 对象）
 - `START` 和 `END` 是特殊节点名
 - 节点函数接收 `state`，返回 `Partial<State>`（部分状态更新）
 - 与 `createReactAgent` 的对比：预构建 vs 自定义
@@ -292,7 +292,7 @@ result = app.invoke({'text': 'start'})
 
 ### 3.1 概念
 
-阶段一使用了简单的 `channels` 对象定义状态。LangGraph 提供了更强大的 [`Annotation`](node_modules/@langchain/langgraph/dist/graph/annotation.d.ts:27) API 来定义状态结构，支持：
+阶段一使用了 `Annotation.Root` 定义简单状态。LangGraph 的 [`Annotation`](node_modules/@langchain/langgraph/dist/graph/annotation.d.ts:27) API 还支持更高级的状态定义，包括：
 
 - **类型安全**：TypeScript 泛型自动推导 State 和 Update 类型
 - **Reducer**：自定义状态合并逻辑（如追加消息列表、累加计数器）
@@ -1410,11 +1410,11 @@ result = await document_analysis.ainvoke('这是一篇关于AI发展的文章...
 
 | 操作 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
-| 创建图 | `new StateGraph(channels)` | `StateGraph(StateClass)` |
+| 创建图 | `new StateGraph(stateDefinition)` | `StateGraph(StateClass)` |
 | 添加节点 | `graph.addNode(name, fn)` | `graph.add_node(name, fn)` |
 | 添加普通边 | `graph.addEdge(from, to)` | `graph.add_edge(from, to)` |
 | 添加条件边 | `graph.addConditionalEdges(src, router)` | `graph.add_conditional_edges(src, router)` |
-| 设置入口 | `graph.addEdge(START, 'node')` | `graph.set_entry_point('node')` |
+| 设置入口 | `graph.addEdge(START, 'node')` | `graph.add_edge(START, 'node')` |
 | 编译图 | `graph.compile()` | `graph.compile()` |
 | 执行图 | `app.invoke(input)` | `app.invoke(input)` |
 | 流式执行 | `app.stream(input)` | `app.stream(input)` |
@@ -1464,7 +1464,7 @@ result = await document_analysis.ainvoke('这是一篇关于AI发展的文章...
 | 方面 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
 | **状态定义哲学** | 使用 `Annotation` DSL，内置 reducer + default | 使用标准库 `TypedDict` + `Annotated`，更 Pythonic |
-| **入口设置** | `addEdge(START, 'node')` — 把 START 当作特殊节点 | `set_entry_point('node')` — 显式设置入口方法 |
+| **入口设置** | `addEdge(START, 'node')` — 把 START 当作特殊节点 | `add_edge(START, 'node')` — 统一使用 add_edge 设置入口 |
 | **Command 构造** | `new Command({...})` — 构造函数模式 | `Command(...)` — 直接实例化 |
 | **Functional API** | 函数调用式 `task('name', fn)` | 装饰器式 `@task()`（也支持函数调用） |
 | **生态定位** | 前端/全栈 JS 生态，Node.js 服务端 | 数据科学/ML 生态，Python 服务端 |
