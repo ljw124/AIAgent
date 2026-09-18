@@ -1,6 +1,6 @@
 # 🤖 AI Agent
 
-> 基于 **LangChain.js** 与 **Vue 2** 构建的多模型 AI Agent 交互平台，支持内网大模型、本地 Ollama、百炼 DashScope、魔搭 ModelScope 等多种大模型接入，并内置完整的 LangChain.js 知识体系学习模块。
+> 基于 **LangChain.js** 与 **Vue 2** 构建的多模型 AI Agent 交互平台，支持内网大模型、本地 Ollama、百炼 DashScope、DeepSeek、魔搭 ModelScope 等多种大模型接入，并内置完整的 LangChain.js 知识体系学习模块。
 
 ---
 
@@ -31,7 +31,7 @@
 
 ## ✨ 核心特性
 
-- **多模型平台接入**：内网 hikvision、本地 Ollama、百炼 DashScope、魔搭 ModelScope 四大平台统一接入。
+- **多模型平台接入**：内网 hikvision、本地 Ollama、百炼 DashScope、DeepSeek、魔搭 ModelScope 五大平台统一接入。
 - **双语言调用**：每个模型平台均提供 JS 与 Python 两种调用示例，便于对比学习。
 - **LangChain.js 十阶段学习**：从 Prompt Template 到 Store 长期记忆的完整进阶路线。
 - **🎯 综合实战：智能客服**：串联全部 10 阶段知识的完整 Agent 应用，支持多租户（技术文档 / 学习辅导 / 通用助手）、流式对话、工具调用（计算器 / 天气 / 知识库搜索）、RAG 知识库检索、短期记忆（MemorySaver）+ 长期记忆（InMemoryStore）、中间件日志与 Token 统计。
@@ -69,6 +69,7 @@
 | **内网 hikvision** | 公司内网部署的大模型 | JS / Python | [`InnerModelChat.vue`](src/pages/inner/InnerModelChat.vue)、[`InnerModelChat-js.vue`](src/pages/inner/InnerModelChat-js.vue)、[`InnerModelPythonChat.vue`](src/pages/inner/InnerModelPythonChat.vue)、[`InnerModel.py`](src/composables/InnerModel.py) |
 | **本地 Ollama** | 本地部署的开源模型 | JS / Python | [`OllamaChat.vue`](src/pages/ollama/OllamaChat.vue)、[`OllamaPythonChat.vue`](src/pages/ollama/OllamaPythonChat.vue)、[`OllamaModel.py`](src/composables/OllamaModel.py) |
 | **百炼 DashScope** | 阿里云百炼大模型平台（专属网关） | JS / Python | [`DashScopeModelChat.vue`](src/pages/DashScope/DashScopeModelChat.vue)、[`DashScopePythonChat.vue`](src/pages/DashScope/DashScopePythonChat.vue)、[`DashScopeModel.py`](src/composables/DashScopeModel.py) |
+| **DeepSeek** | DeepSeek 大模型（OpenAI 兼容模式） | JS / Python | [`DeepSeekModelChat.vue`](src/pages/DeepSeek/DeepSeekModelChat.vue)、[`DeepSeekPythonChat.vue`](src/pages/DeepSeek/DeepSeekPythonChat.vue)、[`DeepSeekModel.py`](src/composables/DeepSeekModel.py) |
 | **魔搭 ModelScope** | 阿里魔搭社区大模型 | JS / Python | [`ModelScopeChat.vue`](src/pages/modelscope/ModelScopeChat.vue)、[`ModelScopePythonChat.vue`](src/pages/modelscope/ModelScopePythonChat.vue)、[`ModelScopeModel.py`](src/composables/ModelScopeModel.py) |
 
 ---
@@ -133,6 +134,7 @@
     ├── assets/               # 静态资源（logo 等）
     ├── composables/          # 模型调用封装（JS / Python）
     │   ├── DashScopeModel.py   # 百炼模型 Python 脚本
+    │   ├── DeepSeekModel.py  # DeepSeek 模型 Python 脚本
     │   ├── InnerModel.py     # 内网模型 Python 脚本
     │   ├── MiddlewareModel.py # LangChain 中间件演示 Python 脚本
     │   ├── ModelScopeModel.py # 魔搭 ModelScope 模型 Python 脚本
@@ -149,6 +151,7 @@
         │       ├── memory.js      # Stage9+10: 短期记忆 + 长期记忆管理
         │       └── tenants.js     # 多租户配置（技术文档/学习辅导/通用助手）
         ├── DashScope/          # 百炼 DashScope（平台）
+        ├── DeepSeek/           # DeepSeek 大模型（平台）
         ├── inner/            # 内网大模型（平台）
         ├── langchain/        # LangChain.js 知识体系（学习）
         ├── modelscope/       # 魔搭 ModelScope（平台）
@@ -165,6 +168,10 @@
 # 百炼大模型（专属网关，绕过公司网络对 dashscope.aliyuncs.com 的封锁）
 DASHSCOPE_API_KEY="your-dashscope-api-key"
 DASHSCOPE_BASE_URL="https://ws-j6nf3ofbsu23jbhk.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
+
+# DeepSeek 大模型（OpenAI 兼容模式）
+DEEPSEEK_API_KEY="your-deepseek-api-key"
+DEEPSEEK_BASE_URL="https://api.deepseek.com"
 
 # 魔搭社区大模型
 MODELSCOPE_API_KEY="your-modelscope-api-key"
@@ -240,7 +247,7 @@ pnpm run lint
 
 [`server.js`](server.js) 是一个基于 Node.js 原生 `http` 模块的轻量后端服务，主要职责：
 
-- **调用 Python 脚本**：通过 `spawn` 启动 Python 子进程，执行内网模型（[`InnerModel.py`](src/composables/InnerModel.py)）、本地模型（[`OllamaModel.py`](src/composables/OllamaModel.py)）、魔搭模型（[`ModelScopeModel.py`](src/composables/ModelScopeModel.py)）、百炼模型（[`DashScopeModel.py`](src/composables/DashScopeModel.py)）以及中间件演示（[`MiddlewareModel.py`](src/composables/MiddlewareModel.py)）的推理，并解析 JSON 结果返回。
+- **调用 Python 脚本**：通过 `spawn` 启动 Python 子进程，执行内网模型（[`InnerModel.py`](src/composables/InnerModel.py)）、本地模型（[`OllamaModel.py`](src/composables/OllamaModel.py)）、魔搭模型（[`ModelScopeModel.py`](src/composables/ModelScopeModel.py)）、百炼模型（[`DashScopeModel.py`](src/composables/DashScopeModel.py)）、DeepSeek 模型（[`DeepSeekModel.py`](src/composables/DeepSeekModel.py)）以及中间件演示（[`MiddlewareModel.py`](src/composables/MiddlewareModel.py)）的推理，并解析 JSON 结果返回。
 - **LangSmith 代理**：将浏览器端无法直连的 `api.smith.langchain.com` 请求转发到真实地址，解决公司网络 ALPN 协商失败问题。
 
 > **注意**：`server.js` 中硬编码了 Windows 下的 Python 路径（`C:\Users\lujinwei\AppData\Local\Programs\Python\Python313\python.exe`），如环境不同请自行修改。
@@ -257,6 +264,7 @@ pnpm run lint
 | `/dashscope` | `https://ws-j6nf3ofbsu23jbhk.cn-beijing.maas.aliyuncs.com` | 百炼 API（专属网关，解决 CORS 与网络封锁） |
 | `/modelscope` | `https://api-inference.modelscope.cn` | 魔搭 API（备选方案） |
 | `/inner` | 内网大模型地址 | 内网模型 API |
+| `/deepseek` | `https://api.deepseek.com` | DeepSeek API（OpenAI 兼容模式） |
 | `/ollama` | `http://127.0.0.1:11434` | 本地 Ollama（OpenAI 兼容模式） |
 | `/langsmith-proxy` | `http://localhost:22223` | LangSmith 代理链路 |
 

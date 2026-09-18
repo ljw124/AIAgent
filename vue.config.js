@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-25 09:21:33
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-02 19:50:28
+ * @LastEditTime: 2026-09-18 16:45:00
  * @Description:
  */
 const { defineConfig } = require('@vue/cli-service')
@@ -30,6 +30,10 @@ module.exports = defineConfig({
       // 内网大模型（供 LangChain.js 前端调用使用）
       if (envConfig.INNER_API_KEY) {
         envVars.INNER_API_KEY = JSON.stringify(envConfig.INNER_API_KEY)
+      }
+      // DeepSeek 大模型（供 LangChain.js 前端调用使用）
+      if (envConfig.DEEPSEEK_API_KEY) {
+        envVars.DEEPSEEK_API_KEY = JSON.stringify(envConfig.DEEPSEEK_API_KEY)
       }
       // 魔搭社区大模型（供 LangChain.js 前端调用使用）
       // ChatOpenAI 客户端会校验 apiKey 必须存在，否则报 Missing credentials
@@ -170,6 +174,29 @@ module.exports = defineConfig({
           },
           onError(err, req, res) {
             console.error('[Inner Proxy Error]', err.message)
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ error: `代理请求失败: ${err.message}` }))
+          }
+        })
+      )
+
+      // 代理：/deepseek → DeepSeek API（OpenAI 兼容模式）
+      devServer.app.use(
+        '/deepseek',
+        createProxyMiddleware({
+          target: envConfig.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
+          changeOrigin: true,
+          pathRewrite: { '^/deepseek': '' },
+          onProxyReq(proxyReq) {
+            if (envConfig.DEEPSEEK_API_KEY) {
+              proxyReq.setHeader('Authorization', `Bearer ${envConfig.DEEPSEEK_API_KEY}`)
+            }
+          },
+          onProxyRes(proxyRes, req) {
+            console.log(`[DeepSeek Proxy] ${req.method} ${req.url} → ${proxyRes.statusCode}`)
+          },
+          onError(err, req, res) {
+            console.error('[DeepSeek Proxy Error]', err.message)
             res.writeHead(500, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify({ error: `代理请求失败: ${err.message}` }))
           }

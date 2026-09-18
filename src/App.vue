@@ -58,6 +58,30 @@
           </div>
         </div>
 
+        <!-- 分组：DeepSeek -->
+        <div class="nav-group">
+          <div class="nav-group-title" @click="toggleGroup('deepseek')">
+            <span class="group-arrow" :class="{ collapsed: !expandedGroups.deepseek }">▼</span>
+            <span>深度求索 DeepSeek</span>
+          </div>
+          <div v-show="expandedGroups.deepseek" class="nav-group-body">
+            <div
+              :class="['nav-item', { active: currentPage === 'deepseek-js' }]"
+              @click="currentPage = 'deepseek-js'"
+            >
+              <span class="nav-icon">🇯🇸</span>
+              <span class="nav-label">JS 调用</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'deepseek-python' }]"
+              @click="currentPage = 'deepseek-python'"
+            >
+              <span class="nav-icon">🇵🇾</span>
+              <span class="nav-label">Python 调用</span>
+            </div>
+          </div>
+        </div>
+
         <!-- 分组：百炼大模型 -->
         <div class="nav-group">
           <div class="nav-group-title" @click="toggleGroup('dashscope')">
@@ -255,6 +279,8 @@
       <LangGraphStage3Routing v-if="currentPage === 'lg-stage3'" />
       <OllamaChat v-if="currentPage === 'ollama-chat'" />
       <OllamaPythonChat v-if="currentPage === 'ollama-python'" />
+      <DeepSeekModelChat v-if="currentPage === 'deepseek-js'" />
+      <DeepSeekPythonChat v-if="currentPage === 'deepseek-python'" />
     </main>
   </div>
 </template>
@@ -282,6 +308,8 @@ import LangGraphStage2Annotation from '@/pages/langgraph/LangGraphStage2Annotati
 import LangGraphStage3Routing from '@/pages/langgraph/LangGraphStage3Routing.vue'
 import OllamaChat from '@/pages/ollama/OllamaChat.vue'
 import OllamaPythonChat from '@/pages/ollama/OllamaPythonChat.vue'
+import DeepSeekModelChat from '@/pages/DeepSeek/DeepSeekModelChat.vue'
+import DeepSeekPythonChat from '@/pages/DeepSeek/DeepSeekPythonChat.vue'
 
 export default {
   name: 'App',
@@ -309,6 +337,8 @@ export default {
     LangGraphStage3Routing,
     OllamaChat,
     OllamaPythonChat,
+    DeepSeekModelChat,
+    DeepSeekPythonChat,
   },
 
   data() {
@@ -318,6 +348,7 @@ export default {
         inner: true,
         ollama: true,
         dashscope: true,
+        deepseek: true,
         modelscope: true,
         langchain: true,
         langgraph: true,
