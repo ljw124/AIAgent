@@ -9,7 +9,7 @@
 -->
 <template>
   <div>
-    <h1>阶段一：Prompt Template <span class="badge stage">学习</span></h1>
+    <h1>阶段一：Prompt Template <span class="badge stage">LangChain</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>用 <code>ChatPromptTemplate</code> 替代硬编码 System Prompt<br />
       <strong>核心 API：</strong><code>ChatPromptTemplate.fromMessages()</code>、<code>MessagesPlaceholder</code><br />

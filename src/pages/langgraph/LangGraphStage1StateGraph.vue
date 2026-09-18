@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-16 10:58:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-16 18:21:42
+ * @LastEditTime: 2026-09-18 16:09:07
  * @Description: 阶段一：StateGraph 入门 — 构建第一个状态图
  *   学习目标：掌握 StateGraph 的基本结构（定义状态 → 添加节点 → 添加边 → 编译 → 执行）
  *   核心 API：StateGraph、Annotation.Root、addNode、addEdge、START、END、compile、invoke
@@ -36,6 +36,14 @@
         <span>nodeA → nodeB（普通边）</span>
         <span>nodeB → END（普通边）</span>
       </div>
+    </div>
+
+    <!-- Mermaid 图结构（等价于 Python display(graph)） -->
+    <div v-if="mermaidGraph" class="graph-viz" style="margin-top: 12px;">
+      <div class="graph-viz-title">
+        📐 LangGraph 官方图结构（getGraphAsync + drawMermaid）
+      </div>
+      <div ref="mermaidContainer" class="mermaid-container"></div>
     </div>
 
     <!-- 配置区域 -->
@@ -138,6 +146,7 @@
 
 <script>
 import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
+import mermaid from 'mermaid'
 
 export default {
   name: 'LangGraphStage1StateGraph',
@@ -150,10 +159,19 @@ export default {
       error: null,
       result: null,
       executionSteps: [],
+      mermaidGraph: '',
       jsCodeSample: '',
       pyCodeSample: '',
       partialStateText: 'Partial<State>'
     }
+  },
+
+  mounted() {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose'
+    })
   },
 
   created() {
@@ -318,6 +336,20 @@ export default {
           // 一次性执行：invoke 返回最终状态
           this.result = await app.invoke({ text: this.inputText })
         }
+
+        // 获取 Mermaid 图结构
+        try {
+          const graphObj = await app.getGraphAsync()
+          this.mermaidGraph = graphObj.drawMermaid({
+            withStyles: true,
+            curveStyle: 'basis'
+          })
+          this.$nextTick(() => {
+            this.renderMermaid()
+          })
+        } catch (graphErr) {
+          console.warn('[LangGraph Stage1] 获取图结构失败:', graphErr)
+        }
       } catch (err) {
         console.error('[LangGraph Stage1 Error]', err)
         this.error = `执行失败: ${err.message}`
@@ -330,7 +362,22 @@ export default {
     clearResult() {
       this.result = null
       this.executionSteps = []
+      this.mermaidGraph = ''
       this.error = null
+    },
+
+    /** 渲染 Mermaid 图 */
+    async renderMermaid() {
+      if (!this.mermaidGraph) return
+      const container = this.$refs.mermaidContainer
+      if (!container) return
+      try {
+        const { svg } = await mermaid.render('mermaid-graph-stage1', this.mermaidGraph)
+        container.innerHTML = svg
+      } catch (err) {
+        console.warn('[LangGraph Stage1] Mermaid 渲染失败:', err)
+        container.innerHTML = '<p style="color:#999;">图结构渲染失败</p>'
+      }
     },
 
     /** 格式化 JSON 展示 */
@@ -530,5 +577,20 @@ export default {
   margin: 6px 0 12px;
   overflow-x: auto;
   white-space: pre;
+}
+
+/* ============================================================
+  Mermaid 图结构容器
+  ============================================================ */
+.mermaid-container {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+  overflow-x: auto;
+}
+
+.mermaid-container :deep(svg) {
+  max-width: 100%;
+  height: auto;
 }
 </style>

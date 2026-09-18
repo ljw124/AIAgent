@@ -10,7 +10,7 @@
 -->
 <template>
   <div>
-    <h1>阶段五：Tool Calling <span class="badge stage">学习</span></h1>
+    <h1>阶段五：Tool Calling <span class="badge stage">LangChain</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>让 LLM 调用外部函数（计算器、天气查询等）<br />
       <strong>核心 API：</strong><code>tool()</code>、<code>bindTools()</code>、<code>ToolMessage</code><br />

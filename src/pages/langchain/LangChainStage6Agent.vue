@@ -15,7 +15,7 @@
 -->
 <template>
   <div>
-    <h1>阶段六：Agent 智能体 <span class="badge stage">学习</span></h1>
+    <h1>阶段六：Agent 智能体 <span class="badge stage">LangChain</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>用 <code>createReactAgent()</code> 自动处理工具调用循环<br />
       <strong>核心 API：</strong><code>createReactAgent()</code>、Agent 自动 Think→Act→Observe 循环<br />

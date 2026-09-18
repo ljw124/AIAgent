@@ -10,7 +10,7 @@
 -->
 <template>
   <div>
-    <h1>阶段七：RAG 检索增强生成 <span class="badge stage">学习</span></h1>
+    <h1>阶段七：RAG 检索增强生成 <span class="badge stage">LangChain</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>基于外部知识库回答问题，解决「训练数据过时」和「幻觉」问题<br />
       <strong>核心 API：</strong><code>RecursiveCharacterTextSplitter</code>、<code>MemoryVectorStore</code>、检索链<br />

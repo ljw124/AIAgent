@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-18 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-18 15:25:14
+ * @LastEditTime: 2026-09-18 16:04:33
  * @Description: 阶段三：条件边与路由 — 动态流程控制
  *   学习目标：掌握 addConditionalEdges 的用法，理解条件边如何让图拥有「决策能力」
  *   核心 API：addConditionalEdges、router 函数、toolsCondition、ToolNode
@@ -46,6 +46,14 @@
         <span>agent → router（条件边：有 tool_calls → tools，无 → END）</span>
         <span>tools → agent（普通边：循环回 agent）</span>
       </div>
+    </div>
+
+    <!-- Mermaid 图结构（等价于 Python display(graph)） -->
+    <div v-if="mermaidGraph" class="graph-viz" style="margin-top: 12px;">
+      <div class="graph-viz-title">
+        📐 LangGraph 官方图结构（getGraphAsync + drawMermaid）
+      </div>
+      <div ref="mermaidContainer" class="mermaid-container"></div>
     </div>
 
     <!-- 配置区域 -->
@@ -196,17 +204,17 @@
       ④ JS 的 <code>toolsCondition</code>（驼峰），Python 的 <code>tools_condition</code>（蛇形）<br />
       ⑤ 两者都支持返回 <code>END</code> 常量来终止图<br />
       ⑥ 条件边让图有了「决策能力」——这是 <code>createReactAgent</code> 内部的核心逻辑
-   </div>
+    </div>
 
-   <!-- recursion_limit 说明 -->
-   <div class="info-box" style="margin-top: 12px; background: #fef2f2; border-color: #fecaca; color: #991b1b;">
-     <strong>🔁 recursion_limit（递归限制）说明：</strong><br />
-     ① <code>recursion_limit</code> 限制单次图运行的最大 <b>SuperStep</b>（超步）数量，防止 ReAct 循环无限执行<br />
-     ② 达到限制时抛出 <code>GraphRecursionError</code>，之前遇到的 "Recursion limit of 25 reached" 就是这个错误<br />
-     ③ JS 版 LangGraph 默认值通常为 <b>25</b>（来自 <code>langchain_core.runnables.config</code>），Python 版为 <b>10000</b><br />
-     ④ <b>最佳实践：显式传入</b> <code>{ recursion_limit: N }</code>，避免不同版本/环境默认值不一致<br />
-     ⑤ 也可通过 <code>RemainingSteps</code> 托管状态在路由函数中主动判断剩余步数，优雅退出循环
-   </div>
+    <!-- recursion_limit 说明 -->
+    <div class="info-box" style="margin-top: 12px; background: #fef2f2; border-color: #fecaca; color: #991b1b;">
+      <strong>🔁 recursion_limit（递归限制）说明：</strong><br />
+      ① <code>recursion_limit</code> 限制单次图运行的最大 <b>SuperStep</b>（超步）数量，防止 ReAct 循环无限执行<br />
+      ② 达到限制时抛出 <code>GraphRecursionError</code>，之前遇到的 "Recursion limit of 25 reached" 就是这个错误<br />
+      ③ JS 版 LangGraph 默认值通常为 <b>25</b>（来自 <code>langchain_core.runnables.config</code>），Python 版为 <b>10000</b><br />
+      ④ <b>最佳实践：显式传入</b> <code>{ recursion_limit: N }</code>，避免不同版本/环境默认值不一致<br />
+      ⑤ 也可通过 <code>RemainingSteps</code> 托管状态在路由函数中主动判断剩余步数，优雅退出循环
+    </div>
 
     <!-- 条件边 vs 普通边 对比 -->
     <div class="info-box" style="margin-top: 12px; background: #f0f9ff; border-color: #bae6fd; color: #0369a1;">
@@ -259,6 +267,7 @@ import { tool } from '@langchain/core/tools'
 import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
 import { ToolNode, toolsCondition } from '@langchain/langgraph/prebuilt'
 import { z } from 'zod'
+import mermaid from 'mermaid'
 
 export default {
   name: 'LangGraphStage3Routing',
@@ -275,9 +284,18 @@ export default {
       finalAnswer: '',
       executionSteps: [],
       routingDecisions: [],
+      mermaidGraph: '',
       jsCodeSample: '',
       pyCodeSample: ''
     }
+  },
+
+  mounted() {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose'
+    })
   },
 
   created() {
@@ -631,6 +649,19 @@ export default {
         this.finalAnswer = lastMessage?.content || '(无文本内容)'
         this.userInput = ''
 
+        // 获取 Mermaid 图结构
+        try {
+          const graphObj = await app.getGraphAsync()
+          this.mermaidGraph = graphObj.drawMermaid({
+            withStyles: true,
+            curveStyle: 'basis'
+          })
+          this.$nextTick(() => {
+            this.renderMermaid()
+          })
+        } catch (graphErr) {
+          console.warn('[LangGraph Stage3] 获取图结构失败:', graphErr)
+        }
       } catch (err) {
         console.error('[LangGraph Stage3 Error]', err)
         this.error = `执行失败: ${err.message}`
@@ -645,8 +676,23 @@ export default {
       this.finalAnswer = ''
       this.executionSteps = []
       this.routingDecisions = []
+      this.mermaidGraph = ''
       this.error = null
       this.userInput = ''
+    },
+
+    /** 渲染 Mermaid 图 */
+    async renderMermaid() {
+      if (!this.mermaidGraph) return
+      const container = this.$refs.mermaidContainer
+      if (!container) return
+      try {
+        const { svg } = await mermaid.render('mermaid-graph', this.mermaidGraph)
+        container.innerHTML = svg
+      } catch (err) {
+        console.warn('[LangGraph Stage3] Mermaid 渲染失败:', err)
+        container.innerHTML = '<p style="color:#999;">图结构渲染失败</p>'
+      }
     },
 
     /** 格式化 JSON 展示 */
@@ -940,5 +986,20 @@ export default {
   margin: 6px 0 12px;
   overflow-x: auto;
   white-space: pre;
+}
+
+/* ============================================================
+  Mermaid 图结构容器
+  ============================================================ */
+.mermaid-container {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+  overflow-x: auto;
+}
+
+.mermaid-container :deep(svg) {
+  max-width: 100%;
+  height: auto;
 }
 </style>

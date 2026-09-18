@@ -10,7 +10,7 @@
 -->
 <template>
   <div>
-    <h1>阶段七：中间件 Middleware <span class="badge stage">Python 演示</span></h1>
+    <h1>阶段七：中间件 Middleware <span class="badge stage">Python演示</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>理解 LangChain Python 的中间件机制，实现横切关注点（日志、缓存、限流、重试）<br />
       <strong>核心 API：</strong><code>BaseCallbackHandler</code>（自定义中间件）、<code>create_agent(middleware=)</code>（官方内置中间件）<br />

@@ -9,7 +9,7 @@
 -->
 <template>
   <div>
-    <h1>阶段二：Chain 链式调用 <span class="badge stage">学习</span></h1>
+    <h1>阶段二：Chain 链式调用 <span class="badge stage">LangChain</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>用 LCEL <code>.pipe()</code> 管道模式串联组件<br />
       <strong>核心 API：</strong><code>.pipe()</code>、<code>StringOutputParser</code><br />

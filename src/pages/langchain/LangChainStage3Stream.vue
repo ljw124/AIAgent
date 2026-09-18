@@ -10,7 +10,7 @@
 -->
 <template>
   <div>
-    <h1>阶段三：Streaming 流式输出 <span class="badge stage">学习</span></h1>
+    <h1>阶段三：Streaming 流式输出 <span class="badge stage">LangChain</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>用 <code>stream()</code> 实现打字机效果，逐 token 显示回复<br />
       <strong>核心 API：</strong><code>llm.stream()</code>、<code>for await...of</code>、<code>AIMessageChunk</code><br />
