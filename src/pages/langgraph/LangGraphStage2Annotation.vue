@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-17 11:02:22
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-17 19:06:52
+ * @LastEditTime: 2026-09-18 15:22:23
  * @Description: 
 -->
 <!--
@@ -348,12 +348,12 @@ export default {
       '})',
       '',
       '// 2. 类型推导（AnnotationRoot 内置 .State / .Update / .Node）',
-      '// type State = typeof stateDefinition.State',
-      '//   → { messages: string[], counter: number, currentStep: string }',
-      '// type Update = typeof stateDefinition.Update',
-      '//   → Partial<State>（所有字段可选）',
-      '// type NodeFn = typeof stateDefinition.Node',
-      '//   → (state: State) => Update | Partial<State>',
+      'type State = typeof stateDefinition.State',
+      '  → { messages: string[], counter: number, currentStep: string }',
+      'type Update = typeof stateDefinition.Update',
+      '  → Partial<State>（所有字段可选）',
+      'type NodeFn = typeof stateDefinition.Node',
+      '  → (state: State) => Update | Partial<State>',
       '',
       '// 3. 定义节点函数（返回 Partial<State>）',
       'const nodeA = (state) => ({',
@@ -379,27 +379,25 @@ export default {
       '// 5. 编译并执行',
       'const app = graph.compile()',
       "const result = await app.invoke({ input: 'Hello' })",
-      "// result.messages: ['[A] ...', '[B] ...']  ← 两条消息都被保留",
-      '// result.counter: 2                          ← 1 + 1 = 2（累加）',
-      "// result.currentStep: 'nodeB'                ← 被 nodeB 覆盖",
-      '',
+      "result.messages: ['[A] ...', '[B] ...']  ← 两条消息都被保留",
+      'result.counter: 2                          ← 1 + 1 = 2（累加）',
+      "result.currentStep: 'nodeB'                ← 被 nodeB 覆盖",
       '',
       '// ============================================================',
       '// 补充：使用 MessagesAnnotation 预构建状态（官网推荐方式）',
       '// ============================================================',
-      '// import { MessagesAnnotation, StateGraph } from "@langchain/langgraph"',
-      '//',
-      '// MessagesAnnotation 内部等价于：',
-      '// Annotation.Root({',
-      '// messages: Annotation<BaseMessage[]>({',
-      '//     reducer: messagesStateReducer,  // 支持 RemoveMessage、ID 去重',
-      '//     default: () => [],',
-      '//   }),',
-      '// })',
-      '//',
-      '// const graph = new StateGraph(MessagesAnnotation)',
-      '//   .addNode(...)',
-      '//   .compile()',
+      'import { MessagesAnnotation, StateGraph } from "@langchain/langgraph"',
+      'MessagesAnnotation 内部等价于：',
+      'Annotation.Root({',
+      '  messages: Annotation<BaseMessage[]>({',
+      '     reducer: messagesStateReducer,  // 支持 RemoveMessage、ID 去重',
+      '     default: () => [],',
+      '   }),',
+      ' })',
+      '',
+      'const graph = new StateGraph(MessagesAnnotation)',
+      '   .addNode(...)',
+      '   .compile()',
     ].join('\n')
 
     this.pyCodeSample = [

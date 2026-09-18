@@ -213,6 +213,13 @@
               <span class="nav-icon">2️⃣</span>
               <span class="nav-label">Annotation 状态定义</span>
             </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lg-stage3' }]"
+              @click="currentPage = 'lg-stage3'"
+            >
+              <span class="nav-icon">3️⃣</span>
+              <span class="nav-label">Routing 条件路由</span>
+            </div>
           </div>
         </div>
       </nav>
@@ -245,6 +252,7 @@
       <CustomerChat v-if="currentPage === 'lc-customer-agent'" />
       <LangGraphStage1StateGraph v-if="currentPage === 'lg-stage1'" />
       <LangGraphStage2Annotation v-if="currentPage === 'lg-stage2'" />
+      <LangGraphStage3Routing v-if="currentPage === 'lg-stage3'" />
       <OllamaChat v-if="currentPage === 'ollama-chat'" />
       <OllamaPythonChat v-if="currentPage === 'ollama-python'" />
     </main>
@@ -271,6 +279,7 @@ import LangChainStage10Store from '@/pages/langchain/LangChainStage10Store.vue'
 import CustomerChat from '@/pages/CustomerAgent/CustomerChat.vue'
 import LangGraphStage1StateGraph from '@/pages/langgraph/LangGraphStage1StateGraph.vue'
 import LangGraphStage2Annotation from '@/pages/langgraph/LangGraphStage2Annotation.vue'
+import LangGraphStage3Routing from '@/pages/langgraph/LangGraphStage3Routing.vue'
 import OllamaChat from '@/pages/ollama/OllamaChat.vue'
 import OllamaPythonChat from '@/pages/ollama/OllamaPythonChat.vue'
 
@@ -297,6 +306,7 @@ export default {
     CustomerChat,
     LangGraphStage1StateGraph,
     LangGraphStage2Annotation,
+    LangGraphStage3Routing,
     OllamaChat,
     OllamaPythonChat,
   },
