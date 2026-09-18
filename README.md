@@ -112,7 +112,7 @@
 - [LangChain-Python中间件Middleware详解.md](src/docs/langchain/LangChain-Python中间件Middleware详解.md)
 - [LangChain.js短期记忆Memory详解.md](src/docs/langchain/LangChain.js短期记忆Memory详解.md)
 - [LangChain.js长期记忆Store详解.md](src/docs/langchain/LangChain.js长期记忆Store详解.md)
-- [LangChain.js RAG 检索增强生成详解.md](src/docs/langchain/LangChain.js RAG 检索增强生成详解.md)
+- [LangChain.js RAG 检索增强生成详解.md](src/docs/langchain/LangChain.js%20RAG%20检索增强生成详解.md)
 - [LangSmith追踪集成总结.md](src/docs/langchain/LangSmith追踪集成总结.md)
 - [LangChain-智能客服项目实战.md](src/docs/langchain/LangChain-智能客服项目实战.md)
 
