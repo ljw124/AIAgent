@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-18 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-18 16:04:33
+ * @LastEditTime: 2026-09-21 18:47:27
  * @Description: 阶段三：条件边与路由 — 动态流程控制
  *   学习目标：掌握 addConditionalEdges 的用法，理解条件边如何让图拥有「决策能力」
  *   核心 API：addConditionalEdges、router 函数、toolsCondition、ToolNode
@@ -268,6 +268,7 @@ import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
 import { ToolNode, toolsCondition } from '@langchain/langgraph/prebuilt'
 import { z } from 'zod'
 import mermaid from 'mermaid'
+import { stage3JsCode, stage3PyCode } from '@/composables/langgraphSamples.js'
 
 export default {
   name: 'LangGraphStage3Routing',
@@ -299,114 +300,8 @@ export default {
   },
 
   created() {
-    this.jsCodeSample = [
-      "import { StateGraph, Annotation, START, END } from '@langchain/langgraph'",
-      "import { ToolNode, toolsCondition } from '@langchain/langgraph/prebuilt'",
-      "import { ChatOpenAI } from '@langchain/openai'",
-      "import { tool } from '@langchain/core/tools'",
-      "import { z } from 'zod'",
-      '',
-      '// 1. 定义工具',
-      'const getWeather = tool(async ({ city }) => {',
-      "  return `${city}天气：晴，25°C`",
-      '}, {',
-      "  name: 'get_weather',",
-      "  description: '查询城市天气'",
-      '  schema: z.object({ city: z.string() })',
-      '})',
-      '',
-      '// 2. 定义状态',
-      'const AgentState = Annotation.Root({',
-      '  messages: Annotation<BaseMessage[]>({',
-      '    reducer: (left, right) => left.concat(right),',
-      '    default: () => [],',
-      '  }),',
-      '})',
-      '',
-      '// 3. 创建 LLM 并绑定工具',
-      "const llm = new ChatOpenAI({ model: '...' })",
-      'const llmWithTools = llm.bindTools(tools)',
-      '',
-      '// 4. agent 节点：调用 LLM',
-      'const callModel = async (state) => {',
-      '  const response = await llmWithTools.invoke(state.messages)',
-      '  return { messages: [response] }',
-      '}',
-      '',
-      '// 5. 构建图',
-      '',
-      '// ===== 方式一：toolsCondition（推荐） =====',
-      'const graph1 = new StateGraph(AgentState)',
-      "  .addNode('agent', callModel)",
-      "  .addNode('tools', new ToolNode(tools))",
-      "  .addEdge(START, 'agent')",
-      "  .addConditionalEdges('agent', toolsCondition)",
-      "  .addEdge('tools', 'agent')",
-      '',
-      '// ===== 方式二：自定义 router =====',
-      'const graph2 = new StateGraph(AgentState)',
-      "  .addNode('agent', callModel)",
-      "  .addNode('tools', new ToolNode(tools))",
-      "  .addEdge(START, 'agent')",
-      "  .addConditionalEdges('agent', (state) => {",
-      '    const lastMsg = state.messages[state.messages.length - 1]',
-      "    if (lastMsg.tool_calls?.length > 0) return 'tools'",
-      '    return END',
-      '  })',
-      "  .addEdge('tools', 'agent')",
-      '',
-      '// 6. 编译并执行',
-      'const app = graph1.compile()',
-      "const result = await app.invoke({ messages: [new HumanMessage('北京天气')] })",
-    ].join('\n')
-
-    this.pyCodeSample = [
-      'from langgraph.graph import StateGraph, START, END',
-      'from langgraph.graph import MessagesState',
-      'from langgraph.prebuilt import ToolNode, tools_condition',
-      'from langchain_openai import ChatOpenAI',
-      '',
-      '# 1. 定义工具',
-      'def get_weather(city: str) -> str:',
-      "    return f'{city}天气：晴，25°C'",
-      '',
-      '# 2. 创建 LLM 并绑定工具',
-      "llm = ChatOpenAI(model='...')",
-      'llm_with_tools = llm.bind_tools(tools)',
-      '',
-      '# 3. agent 节点',
-      'def call_model(state: MessagesState) -> dict:',
-      '    response = llm_with_tools.invoke(state["messages"])',
-      "    return {'messages': [response]}",
-      '',
-      '# 4. 构建图',
-      '',
-      '# ===== 方式一：tools_condition（推荐） =====',
-      'graph1 = StateGraph(MessagesState)',
-      "graph1.add_node('agent', call_model)",
-      "graph1.add_node('tools', ToolNode(tools))",
-      "graph1.add_edge(START, 'agent')",
-      "graph1.add_conditional_edges('agent', tools_condition)",
-      "graph1.add_edge('tools', 'agent')",
-      '',
-      '# ===== 方式二：自定义 router =====',
-      'def custom_router(state: MessagesState) -> str:',
-      "    last_msg = state['messages'][-1]",
-      "    if hasattr(last_msg, 'tool_calls') and last_msg.tool_calls:",
-      "        return 'tools'",
-      '    return END',
-      '',
-      'graph2 = StateGraph(MessagesState)',
-      "graph2.add_node('agent', call_model)",
-      "graph2.add_node('tools', ToolNode(tools))",
-      "graph2.add_edge(START, 'agent')",
-      "graph2.add_conditional_edges('agent', custom_router)",
-      "graph2.add_edge('tools', 'agent')",
-      '',
-      '# 5. 编译并执行',
-      'app = graph1.compile()',
-      "result = app.invoke({'messages': [HumanMessage(content='北京天气')]})",
-    ].join('\n')
+    this.jsCodeSample = stage3JsCode
+    this.pyCodeSample = stage3PyCode
   },
 
   methods: {

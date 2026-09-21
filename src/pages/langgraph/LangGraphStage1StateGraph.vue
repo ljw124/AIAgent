@@ -147,6 +147,7 @@
 <script>
 import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
 import mermaid from 'mermaid'
+import { stage1JsCode, stage1PyCode } from '@/composables/langgraphSamples.js'
 
 export default {
   name: 'LangGraphStage1StateGraph',
@@ -175,73 +176,8 @@ export default {
   },
 
   created() {
-    this.jsCodeSample = [
-      "import { StateGraph, Annotation, START, END } from '@langchain/langgraph'",
-      '',
-      '// 1. 定义状态（JS 版：用 Annotation.Root）',
-      'const stateDefinition = Annotation.Root({',
-      '  text: Annotation(),',
-      '  step: Annotation(),',
-      '})',
-      '',
-      '// 2. 定义节点函数（返回 Partial<State>）',
-      'const nodeA = (state) => ({',
-      '  text: `[A处理] ${state.text}`,',
-      "  step: 'A',",
-      '})',
-      '',
-      'const nodeB = (state) => ({',
-      '  text: `${state.text} → [B追加]`,',
-      "  step: 'B',",
-      '})',
-      '',
-      '// 3. 构建图（链式调用）',
-      'const graph = new StateGraph(stateDefinition)',
-      "  .addNode('nodeA', nodeA)",
-      "  .addNode('nodeB', nodeB)",
-      "  .addEdge(START, 'nodeA')   // JS 版：用 addEdge 设置入口",
-      "  .addEdge('nodeA', 'nodeB')",
-      "  .addEdge('nodeB', END)",
-      '',
-      '// 4. 编译图',
-      'const app = graph.compile()',
-      '',
-      '// 5. 执行图',
-      "const result = await app.invoke({ text: '输入文本' })",
-      'console.log(result) // { text: \'...\', step: \'B\' }',
-    ].join('\n')
-
-    this.pyCodeSample = [
-      'from langgraph.graph import StateGraph, START, END',
-      'from typing import TypedDict',
-      '',
-      '# 1. 定义状态（Python 版：用 TypedDict 类）',
-      'class State(TypedDict):',
-      '    text: str',
-      '    step: str',
-      '',
-      '# 2. 定义节点函数（返回 dict）',
-      'def node_a(state: State) -> dict:',
-      '    return {\'text\': f\'[A处理] {state["text"]}\', \'step\': \'A\'}',
-      '',
-      'def node_b(state: State) -> dict:',
-      '    return {\'text\': f\'{state["text"]} → [B追加]\', \'step\': \'B\'}',
-      '',
-      '# 3. 构建图（链式调用）',
-      'graph = StateGraph(State)',
-      "graph.add_node('node_a', node_a)",
-      "graph.add_node('node_b', node_b)",
-      "graph.add_edge(START, 'node_a')  # Python 版：也可用 add_edge",
-      "graph.add_edge('node_a', 'node_b')",
-      "graph.add_edge('node_b', END)",
-      '',
-      '# 4. 编译图',
-      'app = graph.compile()',
-      '',
-      '# 5. 执行图',
-      "result = app.invoke({'text': '输入文本'})",
-      'print(result)  # {\'text\': \'...\', \'step\': \'B\'}',
-    ].join('\n')
+    this.jsCodeSample = stage1JsCode
+    this.pyCodeSample = stage1PyCode
   },
 
   methods: {
