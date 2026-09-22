@@ -99,7 +99,7 @@ export class TokenMetricsCallback extends BaseCallbackHandler {
     return {
       promptTokens: this.totalPromptTokens,
       completionTokens: this.totalCompletionTokens,
-      total: this.totalPromptTokens + this.totalCompletionTokens,
+      total: this.totalPromptTokens + this.totalCompletionTokens
     }
   }
 

@@ -35,7 +35,7 @@ export const BUILTIN_TENANTS = [
     tools: ['calculator', 'search_knowledge'],
     knowledgeBase: {
       type: 'builtin',
-      description: 'LangChain.js 学习资料（9 篇内置文档）',
+      description: 'LangChain.js 学习资料（9 篇内置文档）'
     },
     defaultFeatures: {
       enableStream: true,
@@ -43,8 +43,8 @@ export const BUILTIN_TENANTS = [
       enableMemory: true,
       enableStore: true,
       showThinking: true,
-      showRetrieved: true,
-    },
+      showRetrieved: true
+    }
   },
   {
     id: 'study-tutor',
@@ -70,7 +70,7 @@ export const BUILTIN_TENANTS = [
     tools: ['calculator', 'get_weather', 'search_knowledge'],
     knowledgeBase: {
       type: 'builtin',
-      description: 'LangChain.js 学习资料（9 篇内置文档）',
+      description: 'LangChain.js 学习资料（9 篇内置文档）'
     },
     defaultFeatures: {
       enableStream: true,
@@ -78,8 +78,8 @@ export const BUILTIN_TENANTS = [
       enableMemory: true,
       enableStore: true,
       showThinking: true,
-      showRetrieved: true,
-    },
+      showRetrieved: true
+    }
   },
   {
     id: 'general',
@@ -104,7 +104,7 @@ export const BUILTIN_TENANTS = [
     tools: ['calculator', 'get_weather', 'search_knowledge'],
     knowledgeBase: {
       type: 'builtin',
-      description: 'LangChain.js 学习资料（9 篇内置文档）',
+      description: 'LangChain.js 学习资料（9 篇内置文档）'
     },
     defaultFeatures: {
       enableStream: true,
@@ -112,9 +112,9 @@ export const BUILTIN_TENANTS = [
       enableMemory: true,
       enableStore: true,
       showThinking: true,
-      showRetrieved: true,
-    },
-  },
+      showRetrieved: true
+    }
+  }
 ]
 
 // ============================================================

@@ -29,8 +29,8 @@ export function createCalculatorTool() {
       name: 'calculator',
       description: '执行数学计算。支持加减乘除、括号、百分比。当用户需要进行数学运算时使用此工具。',
       schema: z.object({
-        expression: z.string().describe('数学表达式，如 "(123 + 456) * 789 / 10"'),
-      }),
+        expression: z.string().describe('数学表达式，如 "(123 + 456) * 789 / 10"')
+      })
     }
   )
 }
@@ -49,12 +49,12 @@ export function createWeatherTool() {
         '杭州': { temp: 30, condition: '阴', humidity: '60%' },
         '成都': { temp: 26, condition: '小雨', humidity: '70%' },
         '武汉': { temp: 34, condition: '晴', humidity: '55%' },
-        '南京': { temp: 31, condition: '多云', humidity: '58%' },
+        '南京': { temp: 31, condition: '多云', humidity: '58%' }
       }
       const data = weatherData[city] || {
         temp: Math.floor(Math.random() * 20) + 10,
         condition: ['晴', '多云', '小雨', '阴天'][Math.floor(Math.random() * 4)],
-        humidity: `${Math.floor(Math.random() * 30) + 40}%`,
+        humidity: `${Math.floor(Math.random() * 30) + 40}%`
       }
       return `${city}天气：${data.condition}，温度 ${data.temp}°C，湿度 ${data.humidity}`
     },
@@ -62,8 +62,8 @@ export function createWeatherTool() {
       name: 'get_weather',
       description: '查询指定城市的天气信息。当用户询问天气相关问题时使用此工具。',
       schema: z.object({
-        city: z.string().describe('城市名称，如"北京"、"上海"'),
-      }),
+        city: z.string().describe('城市名称，如"北京"、"上海"')
+      })
     }
   )
 }
@@ -92,7 +92,7 @@ export function createKnowledgeSearchTool() {
         results.map((item) => ({
           content: item.content.substring(0, 300),
           source: item.metadata?.source || '未知来源',
-          score: Math.round(item.score * 100) / 100,
+          score: Math.round(item.score * 100) / 100
         }))
       )
     },
@@ -101,8 +101,8 @@ export function createKnowledgeSearchTool() {
       description:
         '在知识库中搜索相关文档。当用户询问技术问题、概念解释、使用方法、政策规定等需要参考资料的问题时，优先使用此工具检索知识库。',
       schema: z.object({
-        query: z.string().describe('搜索查询内容，使用关键词'),
-      }),
+        query: z.string().describe('搜索查询内容，使用关键词')
+      })
     }
   )
 }
@@ -114,7 +114,7 @@ export function createTools(toolNames = ['calculator', 'get_weather', 'search_kn
   const toolFactories = {
     calculator: createCalculatorTool,
     get_weather: createWeatherTool,
-    search_knowledge: createKnowledgeSearchTool,
+    search_knowledge: createKnowledgeSearchTool
   }
 
   return toolNames

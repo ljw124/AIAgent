@@ -187,7 +187,7 @@ export class RAGService {
     this.vectorStore = [] // 内存数组模拟向量存储
     this.splitter = new RecursiveCharacterTextSplitter({
       chunkSize: 500,
-      chunkOverlap: 50,
+      chunkOverlap: 50
     })
     this.docCount = 0
   }
@@ -207,7 +207,7 @@ export class RAGService {
       for (const chunk of chunks) {
         allChunks.push({
           content: chunk,
-          metadata: { source: doc.source, title: doc.title },
+          metadata: { source: doc.source, title: doc.title }
         })
       }
     }
@@ -224,7 +224,7 @@ export class RAGService {
     const chunks = await this.splitter.splitText(content)
     const docs = chunks.map((chunk) => ({
       content: chunk,
-      metadata,
+      metadata
     }))
 
     this.vectorStore.push(...docs)
@@ -238,7 +238,7 @@ export class RAGService {
   async addFile(fileName, content) {
     return this.addDocument(content, {
       source: fileName,
-      uploadedAt: new Date().toISOString(),
+      uploadedAt: new Date().toISOString()
     })
   }
 
@@ -302,7 +302,7 @@ export class RAGService {
     const scored = this.vectorStore.map((doc) => ({
       content: doc.content,
       metadata: doc.metadata,
-      score: this._similarity(query, doc.content),
+      score: this._similarity(query, doc.content)
     }))
 
     return scored
@@ -322,7 +322,7 @@ export class RAGService {
   getStats() {
     return {
       ready: this.isReady(),
-      docCount: this.docCount,
+      docCount: this.docCount
     }
   }
 

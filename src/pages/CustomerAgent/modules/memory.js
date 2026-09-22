@@ -110,7 +110,7 @@ export class MemoryManager {
     const ns = this.getUserNamespace(tenantId, userId)
     await this.store.put([...ns, 'preferences'], 'profile', {
       ...preferences,
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     })
     this._schedulePersist()
   }
@@ -136,7 +136,7 @@ export class MemoryManager {
     await this.store.put([...ns, 'history'], threadId, {
       summary,
       threadId,
-      savedAt: new Date().toISOString(),
+      savedAt: new Date().toISOString()
     })
     this._schedulePersist()
   }
@@ -195,7 +195,7 @@ export class MemoryManager {
     return {
       threadCount: this.threadIds.length,
       currentThreadRounds: this.getRounds(threadId),
-      currentThreadMessages: this.getThreadMessageCount(threadId),
+      currentThreadMessages: this.getThreadMessageCount(threadId)
     }
   }
 }
