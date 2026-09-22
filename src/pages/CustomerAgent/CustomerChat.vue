@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-14 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-14 14:59:48
+ * @LastEditTime: 2026-09-22 19:13:42
  * @Description: 智能客服 Agent — LangChain 10 阶段综合实战
  *   融合全部 10 阶段知识：
  *     Stage1:  Prompt 模板（多租户 System Prompt）
@@ -207,9 +207,9 @@
                   </div>
                 </div>
 
-                <!-- Stage3: 文本回复 -->
+                <!-- Stage3: 文本回复（Markdown 渲染） -->
                 <div v-if="seg.type === 'text'" class="segment text-seg">
-                  <div class="msg-bubble ai-bubble">{{ seg.content }}</div>
+                  <div class="msg-bubble ai-bubble markdown-body" v-html="renderMarkdown(seg.content)"></div>
                 </div>
 
                 <!-- 错误 -->
@@ -236,7 +236,7 @@
     <div class="status-bar">
       <span>🧠 短期记忆: {{ stats.rounds }} 轮</span>
       <span>🗄️ 长期记忆: {{ features.enableStore ? '已启用' : '已禁用' }}</span>
-      <span>🪙 Token: {{ stats.tokens.total || 0 }}</span>
+      <span>🔢 Token: {{ stats.tokens.total || 0 }}</span>
       <span>📚 知识库: {{ knowledgeReady ? docCount + ' 片段' : '未初始化' }}</span>
     </div>
 
@@ -262,8 +262,15 @@
 </template>
 
 <script>
+import { marked } from 'marked'
 import { BUILTIN_TENANTS, getTenantById, getTenantDefaultFeatures } from './modules/tenants'
 import { useCustomerAgent } from '@/composables/useCustomerAgent'
+
+// 配置 marked
+marked.setOptions({
+  breaks: true, // 换行符转为 <br>
+  gfm: true,    // 启用 GitHub Flavored Markdown
+})
 
 export default {
   name: 'CustomerChat',
@@ -351,6 +358,18 @@ export default {
   },
 
   methods: {
+    // ============================================================
+    // Markdown 渲染
+    // ============================================================
+    renderMarkdown(content) {
+      if (!content) return ''
+      try {
+        return marked.parse(content)
+      } catch {
+        return content
+      }
+    },
+
     // ============================================================
     // 同步功能开关
     // ============================================================
@@ -1010,6 +1029,89 @@ h1 {
   border: 1px solid #e2e8f0;
   border-bottom-left-radius: 4px;
   color: #1e293b;
+}
+
+/* Markdown 渲染样式 */
+.markdown-body {
+  line-height: 1.8;
+  word-wrap: break-word;
+}
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  margin: 12px 0 6px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.markdown-body h1 { font-size: 18px; }
+.markdown-body h2 { font-size: 16px; }
+.markdown-body h3 { font-size: 15px; }
+.markdown-body h4 { font-size: 14px; }
+.markdown-body p {
+  margin: 6px 0;
+}
+.markdown-body ul,
+.markdown-body ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+.markdown-body li {
+  margin: 3px 0;
+}
+.markdown-body code {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  color: #d6336c;
+}
+.markdown-body pre {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.markdown-body pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+.markdown-body blockquote {
+  border-left: 3px solid #cbd5e1;
+  padding-left: 12px;
+  margin: 8px 0;
+  color: #64748b;
+}
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+}
+.markdown-body th,
+.markdown-body td {
+  border: 1px solid #e2e8f0;
+  padding: 6px 10px;
+  text-align: left;
+}
+.markdown-body th {
+  background: #f8fafc;
+  font-weight: 600;
+}
+.markdown-body strong {
+  font-weight: 600;
+  color: #0f172a;
+}
+.markdown-body a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+.markdown-body a:hover {
+  text-decoration: underline;
 }
 
 .msg-content {

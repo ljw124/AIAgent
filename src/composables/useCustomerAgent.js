@@ -303,6 +303,15 @@ export function useCustomerAgent() {
               }
             }
 
+            // Stage8: 从 AIMessage 的 usage_metadata 提取 Token 用量
+            if (msgType === 'ai' && lastMsg.usage_metadata) {
+              const um = lastMsg.usage_metadata
+              const promptTokens = um.input_tokens || um.promptTokens || 0
+              const completionTokens = um.output_tokens || um.completionTokens || 0
+              callbacks.tokenMetrics.totalPromptTokens += promptTokens
+              callbacks.tokenMetrics.totalCompletionTokens += completionTokens
+            }
+
             // Stage4: 结构化输出
             if (state.structuredResponse) {
               onSegment({ type: 'structured', data: state.structuredResponse })
@@ -326,6 +335,17 @@ export function useCustomerAgent() {
           })
 
           const allMessages = result.messages || []
+
+          // Stage8: 从 AIMessage 的 usage_metadata 提取 Token 用量
+          for (const msg of allMessages) {
+            if (msg._getType?.() === 'ai' && msg.usage_metadata) {
+              const um = msg.usage_metadata
+              const promptTokens = um.input_tokens || um.promptTokens || 0
+              const completionTokens = um.output_tokens || um.completionTokens || 0
+              callbacks.tokenMetrics.totalPromptTokens += promptTokens
+              callbacks.tokenMetrics.totalCompletionTokens += completionTokens
+            }
+          }
 
           // 提取思考过程
           this._extractNonStreamSteps(allMessages, onSegment)

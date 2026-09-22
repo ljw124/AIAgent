@@ -67,15 +67,31 @@ export class TokenMetricsCallback extends BaseCallbackHandler {
   }
 
   async handleLLMEnd(output) {
-    const usage = output.llmOutput?.usage || output.usage_metadata
+    // 兼容多种 token 用量字段格式
+    // 1. output.llmOutput?.usage（标准 OpenAI 格式）
+    // 2. output.llmOutput?.tokenUsage（LangChain LLMResult 格式）
+    // 3. output.usage_metadata（AIMessage 格式）
+    // 4. output.llmOutput?.token_usage（部分 API 返回格式）
+    const usage =
+      output?.llmOutput?.usage ||
+      output?.llmOutput?.tokenUsage ||
+      output?.llmOutput?.token_usage ||
+      output?.usage_metadata ||
+      output?.generations?.[0]?.[0]?.message?.usage_metadata
+
     if (usage) {
-      const promptTokens = usage.promptTokens || usage.input_tokens || 0
-      const completionTokens = usage.completionTokens || usage.output_tokens || 0
+      const promptTokens = usage.promptTokens || usage.prompt_tokens || usage.input_tokens || 0
+      const completionTokens = usage.completionTokens || usage.completion_tokens || usage.output_tokens || 0
       this.totalPromptTokens += promptTokens
       this.totalCompletionTokens += completionTokens
-      console.log(
-        `[Agent] 🪙 Token: prompt=${promptTokens}, completion=${completionTokens}`
-      )
+    } else {
+      // 回退方案：根据文本长度估算 token 数（1 个中文字 ≈ 2 token，1 个英文单词 ≈ 1.3 token）
+      const text = output?.generations?.[0]?.[0]?.text ||
+        output?.generations?.[0]?.[0]?.message?.content || ''
+      if (text) {
+        const estimatedTokens = Math.ceil(text.length * 1.5)
+        this.totalCompletionTokens += estimatedTokens
+      }
     }
   }
 
