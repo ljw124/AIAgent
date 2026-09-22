@@ -2,13 +2,54 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-25 09:21:33
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-01 09:29:23
+ * @LastEditTime: 2026-09-22 10:38:15
  * @Description:
  */
 import Vue from 'vue'
 import App from './App.vue'
 
 Vue.config.productionTip = false
+
+// LangGraph interrupt() 依赖 AsyncLocalStorage 获取图执行上下文。
+// 浏览器中 node:async_hooks 不可用，且 @langchain/langgraph/dist/web.js
+// 不会初始化 AsyncLocalStorage，导致 interrupt() 抛出
+// "Called interrupt() outside the context of a graph"。
+// 此处提供浏览器兼容的 AsyncLocalStorage 实现并注入全局单例。
+class BrowserAsyncLocalStorage {
+  constructor() {
+    this._current = undefined
+  }
+
+  getStore() {
+    return this._current
+  }
+
+  run(store, callback) {
+    const previous = this._current
+    this._current = store
+    try {
+      const result = callback()
+      if (result && typeof result.then === 'function') {
+        return result.then(
+          (value) => { this._current = previous; return value },
+          (error) => { this._current = previous; throw error }
+        )
+      }
+      this._current = previous
+      return result
+    } catch (e) {
+      this._current = previous
+      throw e
+    }
+  }
+
+  enterWith(store) {
+    this._current = store
+  }
+}
+
+// 直接写入 globalThis 单例 key，与 @langchain/core 的 AsyncLocalStorageProviderSingleton 共享
+window[Symbol.for('ls:tracing_async_local_storage')] = new BrowserAsyncLocalStorage()
 
 // ============================================================
 // LangSmith 追踪初始化

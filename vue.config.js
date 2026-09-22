@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-25 09:21:33
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-18 16:45:00
+ * @LastEditTime: 2026-09-22 09:59:36
  * @Description:
  */
 const { defineConfig } = require('@vue/cli-service')
@@ -81,6 +81,23 @@ module.exports = defineConfig({
     //   1. 通过 config.merge 注入 module.rule 标记 sideEffects: true
     //   2. 禁用 usedExports 防止 webpack 标记未使用导出
     // ============================================================
+    // ============================================================
+    // 强制 @langchain/langgraph 使用浏览器兼容版本 (dist/web.js)
+    //
+    // 问题根因：
+    //   @langchain/langgraph 的 package.json 中 exports 字段：
+    //   ".": { "browser": "./dist/web.js", "import": "./dist/index.js" }
+    //   webpack 5 的 resolve.conditionNames 默认包含 "browser"，
+    //   但某些 webpack 配置可能不包含，导致解析到 dist/index.js。
+    //   dist/index.js 在模块加载时调用 initializeAsyncLocalStorageSingleton()，
+    //   该函数依赖 node:async_hooks（Node.js 专有 API），浏览器中不可用。
+    //
+    // 解决方案：
+    //   通过 resolve.alias 强制 @langchain/langgraph 指向 dist/web.js，
+    //   绕过 conditionNames 解析，确保浏览器环境使用正确的入口文件。
+    // ============================================================
+    config.resolve.alias.set('@langchain/langgraph$', path.resolve(__dirname, 'node_modules/@langchain/langgraph/dist/web.js'))
+
     config.merge({
       module: {
         rules: [{
