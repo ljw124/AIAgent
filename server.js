@@ -27,6 +27,9 @@ const DASHSCOPE_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'Dash
 const DEEPSEEK_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'DeepSeekModel.py')
 const MIDDLEWARE_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'MiddlewareModel.py')
 
+// PostgreSQL 长期记忆存储模块
+const pgStore = require('./src/composables/pgStore')
+
 /**
  * 调用 Python 脚本并返回结果
  * @param {string} message - 用户消息
@@ -676,6 +679,121 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ============================================================
+    // POST /api/store/get — 获取长期记忆 item
+    // Body: { namespace: string[], key: string }
+    // ============================================================
+    if (method === 'POST' && (url === '/api/store/get' || url === '/store/get')) {
+      const body = await parseBody(req)
+      const { namespace, key } = body
+
+      if (!Array.isArray(namespace) || !key) {
+        sendJSON(res, 400, { error: 'namespace (array) 和 key 为必填参数' })
+        return
+      }
+
+      try {
+        const item = await pgStore.getItem(namespace, key)
+        sendJSON(res, 200, { item })
+      } catch (err) {
+        console.error('[Store Get Error]', err.message)
+        sendJSON(res, 500, { error: `获取记忆失败: ${err.message}` })
+      }
+      return
+    }
+
+    // ============================================================
+    // POST /api/store/put — 存储/更新长期记忆 item
+    // Body: { namespace: string[], key: string, value: object|null }
+    // ============================================================
+    if (method === 'POST' && (url === '/api/store/put' || url === '/store/put')) {
+      const body = await parseBody(req)
+      const { namespace, key, value } = body
+
+      if (!Array.isArray(namespace) || !key) {
+        sendJSON(res, 400, { error: 'namespace (array) 和 key 为必填参数' })
+        return
+      }
+
+      try {
+        await pgStore.putItem(namespace, key, value)
+        sendJSON(res, 200, { success: true })
+      } catch (err) {
+        console.error('[Store Put Error]', err.message)
+        sendJSON(res, 500, { error: `存储记忆失败: ${err.message}` })
+      }
+      return
+    }
+
+    // ============================================================
+    // POST /api/store/search — 搜索长期记忆 items
+    // Body: { namespacePrefix: string[], filter?: object, limit?: number, offset?: number }
+    // ============================================================
+    if (method === 'POST' && (url === '/api/store/search' || url === '/store/search')) {
+      const body = await parseBody(req)
+      const { namespacePrefix, filter, limit, offset } = body
+
+      if (!Array.isArray(namespacePrefix)) {
+        sendJSON(res, 400, { error: 'namespacePrefix (array) 为必填参数' })
+        return
+      }
+
+      try {
+        const items = await pgStore.searchItems(namespacePrefix, { filter, limit, offset })
+        sendJSON(res, 200, { items })
+      } catch (err) {
+        console.error('[Store Search Error]', err.message)
+        sendJSON(res, 500, { error: `搜索记忆失败: ${err.message}` })
+      }
+      return
+    }
+
+    // ============================================================
+    // POST /api/store/delete — 删除长期记忆 item
+    // Body: { namespace: string[], key: string }
+    // ============================================================
+    if (method === 'POST' && (url === '/api/store/delete' || url === '/store/delete')) {
+      const body = await parseBody(req)
+      const { namespace, key } = body
+
+      if (!Array.isArray(namespace) || !key) {
+        sendJSON(res, 400, { error: 'namespace (array) 和 key 为必填参数' })
+        return
+      }
+
+      try {
+        await pgStore.deleteItem(namespace, key)
+        sendJSON(res, 200, { success: true })
+      } catch (err) {
+        console.error('[Store Delete Error]', err.message)
+        sendJSON(res, 500, { error: `删除记忆失败: ${err.message}` })
+      }
+      return
+    }
+
+    // ============================================================
+    // POST /api/store/delete-namespace — 删除 namespace 下所有记忆
+    // Body: { namespace: string[] }
+    // ============================================================
+    if (method === 'POST' && (url === '/api/store/delete-namespace' || url === '/store/delete-namespace')) {
+      const body = await parseBody(req)
+      const { namespace } = body
+
+      if (!Array.isArray(namespace)) {
+        sendJSON(res, 400, { error: 'namespace (array) 为必填参数' })
+        return
+      }
+
+      try {
+        const result = await pgStore.deleteByNamespace(namespace)
+        sendJSON(res, 200, result)
+      } catch (err) {
+        console.error('[Store DeleteNamespace Error]', err.message)
+        sendJSON(res, 500, { error: `删除命名空间记忆失败: ${err.message}` })
+      }
+      return
+    }
+
+    // ============================================================
     // GET /api/health — 健康检查
     // ============================================================
     if (method === 'GET' && url === '/api/health') {
@@ -691,8 +809,14 @@ const server = http.createServer(async (req, res) => {
   }
 })
 
+// 启动时初始化 PostgreSQL 长期记忆表
+pgStore.initStoreTable().catch((err) => {
+  console.error('[PGStore] 初始化失败:', err.message)
+})
+
 server.listen(PORT, () => {
   console.log(`[Server] AI Agent 后端服务已启动: http://localhost:${PORT}`)
   console.log(`[Server] 内网 Python 调用端点: POST http://localhost:${PORT}/api/inner/chat`)
   console.log(`[Server] Python 脚本路径: ${PYTHON_SCRIPT}`)
+  console.log(`[Server] 长期记忆 Store API: POST http://localhost:${PORT}/api/store/{get,put,search,delete}`)
 })

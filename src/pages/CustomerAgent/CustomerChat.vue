@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-14 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-22 19:13:42
+ * @LastEditTime: 2026-09-23 09:53:28
  * @Description: 智能客服 Agent — LangChain 10 阶段综合实战
  *   融合全部 10 阶段知识：
  *     Stage1:  Prompt 模板（多租户 System Prompt）
@@ -22,7 +22,7 @@
     <h1>🤖 智能客服 Agent <span class="badge stage">综合实战</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>用智能客服场景串联 LangChain 全部 10 个阶段知识点<br />
-      <strong>核心 API：</strong><code>createReactAgent()</code> + <code>MemorySaver</code> + <code>InMemoryStore</code> + <code>MemoryVectorStore</code><br />
+      <strong>核心 API：</strong><code>createReactAgent()</code> + <code>MemorySaver</code> + <code>PostgresStore</code> + <code>MemoryVectorStore</code><br />
     </div>
 
     <!-- ============================================================ -->
@@ -108,6 +108,42 @@
       <div v-if="knowledgePreview.length > 0" class="knowledge-preview">
         <span class="preview-label">内置文档：</span>
         <span v-for="(title, i) in knowledgePreview" :key="i" class="preview-tag">{{ title }}</span>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 长期记忆（Stage10 — PostgreSQL 持久化） -->
+    <!-- ============================================================ -->
+    <div class="memory-section">
+      <div class="memory-header">
+        <span class="memory-title">🧠 长期记忆（PostgreSQL）</span>
+        <span v-if="memoryLoaded" class="memory-status ready">✅ 已加载 ({{ userMemories.length }} 条记忆 / {{ conversationHistory.length }} 条历史)</span>
+        <span v-else class="memory-status not-ready">⏳ 加载中...</span>
+        <button @click="refreshHistory" class="btn-sm">🔄 刷新</button>
+        <button @click="clearLongTermMemory" class="btn-sm btn-danger-sm">🗑️ 清空记忆</button>
+      </div>
+      <!-- 用户事实记忆（姓名、偏好等） -->
+      <div v-if="userMemories.length > 0" class="memory-facts">
+        <span class="facts-label">📋 用户记忆：</span>
+        <div class="facts-list">
+          <span v-for="(item, i) in userMemories" :key="i" class="fact-tag">
+            {{ item.value?.content || item.value?.value?.content || '(未知)' }}
+          </span>
+        </div>
+      </div>
+      <div v-if="userPreferences" class="memory-prefs">
+        <span class="prefs-label">用户偏好：</span>
+        <span class="prefs-value">{{ JSON.stringify(userPreferences) }}</span>
+      </div>
+      <div v-if="conversationHistory.length > 0" class="memory-history">
+        <div v-for="(item, i) in conversationHistory" :key="i" class="history-item">
+          <span class="history-thread">{{ item.value?.threadId || 'unknown' }}</span>
+          <span class="history-query">{{ item.value?.summary?.userQuery || '(无摘要)' }}</span>
+          <span class="history-time">{{ formatTime(item.value?.summary?.savedAt || item.updatedAt) }}</span>
+        </div>
+      </div>
+      <div v-else-if="memoryLoaded && userMemories.length === 0" class="memory-empty">
+        暂无历史对话记录
       </div>
     </div>
 
@@ -312,7 +348,13 @@ export default {
       },
 
       // === Agent 服务实例 ===
-      agentService: null
+      agentService: null,
+
+      // === 长期记忆（Stage10 — PostgreSQL） ===
+      memoryLoaded: false,
+      userPreferences: null,
+      userMemories: [],
+      conversationHistory: [],
     }
   },
 
@@ -339,12 +381,16 @@ export default {
     // 同步功能开关到服务
     this.syncFeatures()
 
-    // 自动初始化 LLM + 知识库
+    // 自动初始化 LLM + 知识库 + 长期记忆
     try {
       const result = await this.agentService.fullInit()
       this.knowledgeReady = result.ragReady
       this.docCount = this.agentService.getKnowledgeStats().docCount
       this.knowledgePreview = this.agentService.getKnowledgePreview()
+
+      // Stage10: 加载长期记忆（用户偏好 + 对话历史）
+      this.userPreferences = result.userPreferences
+      await this.refreshHistory()
     } catch (err) {
       console.error('[CustomerChat] 初始化失败:', err)
       this.error = `初始化失败: ${err.message}`
@@ -417,6 +463,8 @@ export default {
       } finally {
         this.loading = false
         this.updateStats()
+        // Stage10: 对话结束后刷新长期记忆（延迟 2 秒等待异步保存完成）
+        setTimeout(() => this.refreshHistory(), 2000)
       }
     },
 
@@ -530,6 +578,8 @@ export default {
       this.features = getTenantDefaultFeatures(this.currentTenantId)
       this.agentService.switchTenant(this.currentTenantId)
       this.syncFeatures()
+      // 切换租户后刷新长期记忆（不同租户的记忆数据不同）
+      this.refreshHistory()
     },
 
     // ============================================================
@@ -650,6 +700,64 @@ export default {
       const el = this.$refs.chatHistory
       if (el) {
         el.scrollTop = el.scrollHeight
+      }
+    },
+
+    // ============================================================
+    // 长期记忆操作（Stage10 — PostgreSQL）
+    // ============================================================
+
+    /**
+     * 刷新对话历史（从 PostgreSQL 加载）
+     */
+    async refreshHistory() {
+      if (!this.agentService) return
+      try {
+        // 并行加载对话历史和用户事实记忆
+        const [history, memories] = await Promise.all([
+          this.agentService.getConversationHistory(),
+          this.agentService.loadUserMemories()
+        ])
+        this.conversationHistory = history || []
+        this.userMemories = memories || []
+      } catch (err) {
+        console.warn('[CustomerChat] 加载长期记忆失败:', err.message)
+        this.conversationHistory = []
+        this.userMemories = []
+      } finally {
+        this.memoryLoaded = true
+      }
+    },
+
+    /**
+     * 清空当前用户的长期记忆
+     */
+    async clearLongTermMemory() {
+      if (!this.agentService) return
+      // eslint-disable-next-line no-alert
+      if (!confirm('确定要清空所有长期记忆吗？此操作不可恢复。')) return
+
+      try {
+        await this.agentService.deleteUserMemory()
+        this.userPreferences = null
+        this.userMemories = []
+        this.conversationHistory = []
+        console.log('[CustomerChat] 长期记忆已清空')
+      } catch (err) {
+        this.error = `清空记忆失败: ${err.message}`
+      }
+    },
+
+    /**
+     * 格式化时间显示
+     */
+    formatTime(timeStr) {
+      if (!timeStr) return ''
+      try {
+        const d = new Date(timeStr)
+        return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+      } catch {
+        return timeStr
       }
     }
   }
@@ -817,6 +925,141 @@ h1 {
 
 .checkbox-label input[type="checkbox"] {
   accent-color: #3b82f6;
+}
+
+/* ============================================================ */
+/* 长期记忆（PostgreSQL） */
+/* ============================================================ */
+.memory-section {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.memory-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.memory-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: #065f46;
+}
+
+.memory-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.memory-status.ready {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.memory-status.not-ready {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.memory-facts {
+  font-size: 12px;
+  color: #047857;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: #d1fae5;
+  border-radius: 6px;
+}
+
+.memory-facts .facts-label {
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.memory-facts .facts-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.memory-facts .fact-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #ffffff;
+  border: 1px solid #6ee7b7;
+  border-radius: 12px;
+  font-size: 11px;
+  color: #065f46;
+}
+
+.memory-prefs {
+  font-size: 12px;
+  color: #047857;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: #d1fae5;
+  border-radius: 6px;
+}
+
+.memory-prefs .prefs-label {
+  font-weight: 600;
+}
+
+.memory-prefs .prefs-value {
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.memory-history {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #d1fae5;
+  font-size: 12px;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-thread {
+  font-family: monospace;
+  color: #6b7280;
+  min-width: 120px;
+}
+
+.history-query {
+  flex: 1;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-time {
+  color: #9ca3af;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.memory-empty {
+  font-size: 12px;
+  color: #6b7280;
+  padding: 8px 0;
+  text-align: center;
 }
 
 /* ============================================================ */

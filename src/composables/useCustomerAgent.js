@@ -12,7 +12,7 @@
  *   Stage7:  RAG 知识库（文档→分片→向量→检索）
  *   Stage8:  中间件（日志 + Token 统计）
  *   Stage9:  短期记忆（MemorySaver，thread_id 隔离）
- *   Stage10: 长期记忆（InMemoryStore，namespace 隔离）
+ *   Stage10: 长期记忆（PostgresStore，namespace 隔离 + 用户事实提取注入）
  *
  * 架构：纯前端 Vue 2，与现有 Stage1-Stage10 完全一致
  */
@@ -119,16 +119,27 @@ export function useCustomerAgent() {
     }
 
     /**
-     * 完整初始化（LLM + 知识库 + 中间件）
+     * 完整初始化（LLM + 知识库 + 中间件 + 长期记忆加载）
      */
     async fullInit() {
       this.initLLM()
       this.initCallbacks()
       await this.initKnowledgeBase()
+
+      // Stage10: 从 PostgreSQL 加载用户偏好（长期记忆）
+      let userPreferences = null
+      try {
+        userPreferences = await this.loadUserPreferences()
+        console.log('[CustomerAgent] 长期记忆已加载:', userPreferences ? '命中' : '无记录')
+      } catch (err) {
+        console.warn('[CustomerAgent] 加载长期记忆失败:', err.message)
+      }
+
       return {
         llmReady: !!this.llm,
         ragReady: this.ragService?.isReady() || false,
         memoryReady: true,
+        userPreferences,
       }
     }
 
@@ -137,9 +148,10 @@ export function useCustomerAgent() {
     // ============================================================
 
     /**
-     * 构建或获取缓存的 Agent 实例
+     * 构建或获取缓存的 Agent 实例（异步）
+     * Stage10: 加载用户长期记忆并注入到 System Prompt
      */
-    buildAgent(tenantId) {
+    async buildAgent(tenantId) {
       // 检查缓存
       if (this._agentCache[tenantId]) {
         return this._agentCache[tenantId]
@@ -149,9 +161,53 @@ export function useCustomerAgent() {
       const toolNames = getTenantToolNames(tenantId)
       const tools = createTools(toolNames)
 
+      // Stage10: 从 PG 加载用户长期记忆，注入到 System Prompt
+      let systemPrompt = tenant.systemPrompt
+
+      // 1. 注入用户事实记忆（姓名、偏好等）
+      try {
+        const memories = await this.loadUserMemories()
+        if (memories && memories.length > 0) {
+          const memoryLines = memories.map((m) => {
+            const content = m.value?.content || m.value?.value?.content || ''
+            return `- ${content}`
+          }).filter(Boolean)
+          if (memoryLines.length > 0) {
+            systemPrompt += `\n\n## 用户记忆（长期记忆）\n以下是关于该用户的已知信息，请在回答时参考这些信息：\n${memoryLines.join('\n')}`
+            console.log('[CustomerAgent] 已注入用户事实记忆:', memoryLines.length, '条')
+          }
+        }
+      } catch (err) {
+        console.warn('[CustomerAgent] 加载用户记忆失败:', err.message)
+      }
+
+      // 2. 注入对话历史摘要（之前聊过什么）
+      try {
+        const history = await this.getConversationHistory()
+        if (history && history.length > 0) {
+          // 取最近 5 条对话历史，避免 prompt 过长
+          const recentHistory = history.slice(-5)
+          const historyLines = recentHistory.map((item) => {
+            const summary = item.value?.summary || item.value?.value?.summary
+            if (!summary) return ''
+            const query = summary.userQuery || '(未知问题)'
+            const snippet = summary.conversationSnippet || ''
+            // 截取对话片段的前 150 字，避免 prompt 过长
+            const shortSnippet = snippet.substring(0, 150)
+            return `- 用户问：${query}\n  对话摘要：${shortSnippet}`
+          }).filter(Boolean)
+          if (historyLines.length > 0) {
+            systemPrompt += `\n\n## 对话历史（长期记忆）\n以下是之前与用户的对话记录，请在回答时参考这些上下文：\n${historyLines.join('\n')}`
+            console.log('[CustomerAgent] 已注入对话历史摘要:', historyLines.length, '条')
+          }
+        }
+      } catch (err) {
+        console.warn('[CustomerAgent] 加载对话历史失败:', err.message)
+      }
+
       // Stage1: 构建 Prompt 模板
       const prompt = ChatPromptTemplate.fromMessages([
-        ['system', tenant.systemPrompt],
+        ['system', systemPrompt],
         ['placeholder', '{messages}'],
       ])
 
@@ -216,7 +272,7 @@ export function useCustomerAgent() {
      *        - { type: 'done' }                            完成
      */
     async sendMessage(userInput, historyMessages, onSegment) {
-      const agent = this.buildAgent(this.currentTenantId)
+      const agent = await this.buildAgent(this.currentTenantId)
 
       // 构建 LangChain 消息格式
       const langchainMessages = historyMessages
@@ -369,11 +425,150 @@ export function useCustomerAgent() {
         }
 
         onSegment({ type: 'done' })
+
+        // Stage10: 异步保存对话摘要到 PostgreSQL（长期记忆）
+        this._saveConversationMemory(userInput, historyMessages).catch((err) => {
+          console.warn('[CustomerAgent] 保存长期记忆失败:', err.message)
+        })
       } catch (err) {
         console.error('[CustomerAgent Error]', err)
         onSegment({ type: 'error', message: `请求失败: ${err.message}` })
         onSegment({ type: 'done' })
       }
+    }
+
+    /**
+     * 保存对话摘要到长期记忆（PostgreSQL）
+     * 在每次对话结束后异步调用，不阻塞用户交互
+     * Stage10: 同时使用 LLM 提取用户事实信息（姓名、偏好等）保存到 PG
+     *
+     * @param {string} userInput - 用户输入
+     * @param {Array} historyMessages - 历史消息
+     */
+    async _saveConversationMemory(userInput, historyMessages) {
+      // 获取最近几轮对话内容用于生成摘要
+      const recentMessages = historyMessages.slice(-6) // 最近 3 轮（6 条消息）
+      const conversationText = recentMessages
+        .map((m) => `[${m.role}]: ${m.content?.substring(0, 200) || ''}`)
+        .join('\n')
+
+      // 1. 保存对话摘要
+      const summary = {
+        userQuery: userInput.substring(0, 200),
+        conversationSnippet: conversationText.substring(0, 500),
+        tenantId: this.currentTenantId,
+        messageCount: historyMessages.length,
+      }
+
+      await this.memoryManager.saveConversationSummary(
+        this.currentTenantId,
+        this.currentUserId,
+        this.currentThreadId,
+        summary
+      )
+      console.log('[CustomerAgent] 对话摘要已保存到长期记忆')
+
+      // 2. 使用 LLM 从对话中提取用户事实信息（姓名、偏好等）
+      await this._extractAndSaveUserFacts(userInput, conversationText)
+    }
+
+    /**
+     * 使用 LLM 从对话中提取用户事实信息并保存到 PG 长期记忆
+     * 提取的信息包括：姓名、职业、偏好、重要事实等
+     * 使用内容哈希作为 key 实现去重：相同事实不会重复保存，更新的事实会覆盖旧值
+     */
+    async _extractAndSaveUserFacts(userInput, conversationText) {
+      if (!this.llm) return
+
+      const extractPrompt = `你是一个信息提取助手。请从以下对话中提取用户的个人事实信息（如姓名、职业、偏好、重要事实等）。
+
+对话内容：
+${conversationText}
+
+请以 JSON 数组格式返回提取到的事实，每条事实为一个字符串。如果没有可提取的事实，返回空数组 []。
+只提取明确的事实，不要推测或编造。格式示例：
+["用户姓名是小米", "用户是前端工程师"]
+
+请只返回 JSON 数组，不要包含其他文字：`
+
+      try {
+        const response = await this.llm.invoke([
+          { role: 'user', content: extractPrompt }
+        ])
+
+        const responseText = typeof response.content === 'string'
+          ? response.content
+          : JSON.stringify(response.content)
+
+        // 解析 LLM 返回的 JSON 数组
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/)
+        if (!jsonMatch) {
+          console.log('[CustomerAgent] 未提取到用户事实信息')
+          return
+        }
+
+        const facts = JSON.parse(jsonMatch[0])
+        if (!Array.isArray(facts) || facts.length === 0) {
+          console.log('[CustomerAgent] 未提取到用户事实信息')
+          return
+        }
+
+        // 加载已有记忆，构建已有事实内容集合（用于去重）
+        const existingMemories = await this.memoryManager.loadUserMemories(
+          this.currentTenantId,
+          this.currentUserId
+        )
+        const existingContents = new Set(
+          existingMemories.map((m) => {
+            const content = m.value?.content || m.value?.value?.content || ''
+            return content.trim()
+          })
+        )
+
+        // 保存新事实（去重：跳过已存在的内容）
+        let newCount = 0
+        for (const fact of facts) {
+          const factStr = String(fact).trim()
+          if (!factStr) continue
+
+          // 跳过已存在的事实
+          if (existingContents.has(factStr)) continue
+
+          // 使用内容哈希作为 key，相同内容会覆盖（更新），不同内容不会重复
+          const factKey = this._hashFact(factStr)
+          await this.memoryManager.saveUserMemory(
+            this.currentTenantId,
+            this.currentUserId,
+            `fact_${factKey}`,
+            factStr
+          )
+          newCount++
+        }
+
+        if (newCount > 0) {
+          console.log('[CustomerAgent] 已提取并保存用户事实:', newCount, '条（去重后）')
+          // 清除 Agent 缓存，使下次对话能加载最新的用户记忆
+          this.clearAgentCache(this.currentTenantId)
+        } else {
+          console.log('[CustomerAgent] 提取的事实均已存在，跳过保存')
+        }
+      } catch (err) {
+        console.warn('[CustomerAgent] 提取用户事实失败:', err.message)
+      }
+    }
+
+    /**
+     * 生成事实内容的简单哈希（用于作为 PG key 实现去重）
+     */
+    _hashFact(content) {
+      let hash = 0
+      const str = content.trim().toLowerCase()
+      for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i)
+        hash = ((hash << 5) - hash) + char
+        hash = hash & hash // 转为 32 位整数
+      }
+      return Math.abs(hash).toString(36)
     }
 
     /**
@@ -510,6 +705,40 @@ export function useCustomerAgent() {
         this.currentTenantId,
         this.currentUserId
       )
+    }
+
+    /**
+     * 保存用户事实记忆（姓名、偏好等）
+     */
+    async saveUserMemory(memoryKey, content) {
+      await this.memoryManager.saveUserMemory(
+        this.currentTenantId,
+        this.currentUserId,
+        memoryKey,
+        content
+      )
+    }
+
+    /**
+     * 加载用户所有事实记忆
+     */
+    async loadUserMemories() {
+      return this.memoryManager.loadUserMemories(
+        this.currentTenantId,
+        this.currentUserId
+      )
+    }
+
+    /**
+     * 删除用户所有长期记忆
+     */
+    async deleteUserMemory() {
+      await this.memoryManager.deleteUserMemory(
+        this.currentTenantId,
+        this.currentUserId
+      )
+      // 清除 Agent 缓存，使下次对话重新加载记忆
+      this.clearAgentCache(this.currentTenantId)
     }
 
     // ============================================================
