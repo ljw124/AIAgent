@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-14 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-23 09:53:28
+ * @LastEditTime: 2026-09-23 12:59:04
  * @Description: 智能客服 Agent — LangChain 10 阶段综合实战
  *   融合全部 10 阶段知识：
  *     Stage1:  Prompt 模板（多租户 System Prompt）
@@ -344,7 +344,7 @@ export default {
       // === 统计 ===
       stats: {
         rounds: 0,
-        tokens: { promptTokens: 0, completionTokens: 0, total: 0 },
+        tokens: { promptTokens: 0, completionTokens: 0, total: 0 }
       },
 
       // === Agent 服务实例 ===
@@ -481,7 +481,7 @@ export default {
           msg.segments.push({
             type: 'thinking',
             content: segment.content,
-            collapsed: false,
+            collapsed: false
           })
           break
 
@@ -491,7 +491,7 @@ export default {
             type: 'tool_use',
             toolName: segment.toolName,
             toolInput: segment.toolInput,
-            collapsed: true,
+            collapsed: true
           })
           break
 

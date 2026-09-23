@@ -86,8 +86,8 @@ export function useCustomerAgent() {
         apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
         temperature: 0.7,
         configuration: {
-          baseURL: window.location.origin + '/inner/',
-        },
+          baseURL: window.location.origin + '/inner/'
+        }
       })
 
       return this.llm
@@ -139,7 +139,7 @@ export function useCustomerAgent() {
         llmReady: !!this.llm,
         ragReady: this.ragService?.isReady() || false,
         memoryReady: true,
-        userPreferences,
+        userPreferences
       }
     }
 
@@ -208,7 +208,7 @@ export function useCustomerAgent() {
       // Stage1: 构建 Prompt 模板
       const prompt = ChatPromptTemplate.fromMessages([
         ['system', systemPrompt],
-        ['placeholder', '{messages}'],
+        ['placeholder', '{messages}']
       ])
 
       // 构建 createReactAgent 参数
@@ -219,7 +219,7 @@ export function useCustomerAgent() {
         // Stage9: 短期记忆
         checkpointer: this.memoryManager.getCheckpointer(),
         // Stage10: 长期记忆
-        store: this.memoryManager.getStore(),
+        store: this.memoryManager.getStore()
       }
 
       // Stage4: 结构化输出（可选）
@@ -231,7 +231,7 @@ export function useCustomerAgent() {
             confidence: z.number().optional().describe('回答置信度 0-1'),
           }),
           prompt: '请将最终回复整理为结构化 JSON 输出。',
-          method: 'jsonSchema',
+          method: 'jsonSchema'
         }
       }
 
@@ -387,7 +387,7 @@ export function useCustomerAgent() {
             configurable: {
               thread_id: this.currentThreadId,
             },
-            callbacks: callbacks.list,
+            callbacks: callbacks.list
           })
 
           const allMessages = result.messages || []
@@ -457,7 +457,7 @@ export function useCustomerAgent() {
         userQuery: userInput.substring(0, 200),
         conversationSnippet: conversationText.substring(0, 500),
         tenantId: this.currentTenantId,
-        messageCount: historyMessages.length,
+        messageCount: historyMessages.length
       }
 
       await this.memoryManager.saveConversationSummary(
@@ -482,14 +482,14 @@ export function useCustomerAgent() {
 
       const extractPrompt = `你是一个信息提取助手。请从以下对话中提取用户的个人事实信息（如姓名、职业、偏好、重要事实等）。
 
-对话内容：
-${conversationText}
+        对话内容：
+        ${conversationText}
 
-请以 JSON 数组格式返回提取到的事实，每条事实为一个字符串。如果没有可提取的事实，返回空数组 []。
-只提取明确的事实，不要推测或编造。格式示例：
-["用户姓名是小米", "用户是前端工程师"]
+        请以 JSON 数组格式返回提取到的事实，每条事实为一个字符串。如果没有可提取的事实，返回空数组 []。
+        只提取明确的事实，不要推测或编造。格式示例：
+        ["用户姓名是小米", "用户是前端工程师"]
 
-请只返回 JSON 数组，不要包含其他文字：`
+        请只返回 JSON 数组，不要包含其他文字：`
 
       try {
         const response = await this.llm.invoke([
@@ -801,7 +801,7 @@ ${conversationText}
         messages: this.memoryManager.getThreadMessageCount(this.currentThreadId),
         tokens: { ...this.tokenStats },
         knowledge: this.getKnowledgeStats(),
-        features: { ...this.features },
+        features: { ...this.features }
       }
     }
 
@@ -837,7 +837,7 @@ ${conversationText}
   return {
     create(vm) {
       return new CustomerAgentService(vm)
-    },
+    }
   }
 }
 

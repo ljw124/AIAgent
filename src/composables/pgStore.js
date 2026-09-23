@@ -100,7 +100,7 @@ async function getItem(namespace, key) {
       key: row.key,
       value: row.value,
       createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      updatedAt: row.updated_at
     }
   } finally {
     client.release()
@@ -190,7 +190,7 @@ async function searchItems(namespacePrefix, options = {}) {
       key: row.key,
       value: row.value,
       createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      updatedAt: row.updated_at
     }))
   } finally {
     client.release()
@@ -233,5 +233,5 @@ module.exports = {
   deleteItem,
   searchItems,
   deleteByNamespace,
-  closePool,
+  closePool
 }
