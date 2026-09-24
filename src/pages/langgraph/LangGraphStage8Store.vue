@@ -2,14 +2,14 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-10 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-10 18:46:33
- * @Description: 阶段十：长期记忆 Store — LangChain.js InMemoryStore 长期记忆演示
+ * @LastEditTime: 2026-09-24 12:48:46
+ * @Description: 阶段八：长期记忆 Store — LangGraph InMemoryStore 长期记忆演示
  *   学习目标：理解 LangGraph 的 BaseStore/InMemoryStore 长期记忆机制，实现跨会话信息持久化
  *   核心 API：InMemoryStore、createReactAgent({ store })、namespace 命名空间隔离
 -->
 <template>
   <div>
-    <h1>阶段十：长期记忆 Store <span class="badge stage">学习</span></h1>
+    <h1>阶段八：长期记忆 Store <span class="badge stage">LangGraph</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>理解 LangGraph 的 <code>InMemoryStore</code> 长期记忆机制，实现跨会话信息持久化<br />
       <strong>核心 API：</strong><code>InMemoryStore</code>（长期存储）、<code>createReactAgent({ store })</code>（注入长期记忆）、<code>namespace</code>（命名空间隔离）
@@ -179,7 +179,7 @@ import { createReactAgent } from '@langchain/langgraph/prebuilt'
 import { z } from 'zod'
 
 export default {
-  name: 'LangChainStage10Store',
+  name: 'LangGraphStage8Store',
 
   data() {
     return {
@@ -215,7 +215,7 @@ export default {
       cachedAgent: null,
       cachedAgentConfig: null,  // 用于判断缓存是否失效
       // localStorage 持久化防抖定时器
-      persistTimer: null,
+      persistTimer: null
     }
   },
 
@@ -226,7 +226,7 @@ export default {
     },
     // 记忆相关配置变化时，清除 Agent 缓存以强制重建
     memoryMode() { this.cachedAgent = null; this.cachedAgentConfig = null },
-    enableLongTermMemory() { this.cachedAgent = null; this.cachedAgentConfig = null },
+    enableLongTermMemory() { this.cachedAgent = null; this.cachedAgentConfig = null }
   },
 
   computed: {
@@ -237,7 +237,7 @@ export default {
         hybrid: '🔀 混合模式',
       }
       return labels[this.memoryMode] || '未知'
-    },
+    }
   },
 
   created() {
@@ -426,14 +426,14 @@ export default {
               content,
               category,
               scope: effectiveScope,
-              timestamp: new Date().toISOString(),
+              timestamp: new Date().toISOString()
             })
             // 增量更新 localStorage + 防抖全量同步
             this._updateLocalStorageItem(namespace, key, {
               content,
               category,
               scope: effectiveScope,
-              timestamp: new Date().toISOString(),
+              timestamp: new Date().toISOString()
             })
             persistFn()
             const scopeLabel = namespace[0] === 'shared' ? '共享记忆' : '私有记忆'
@@ -454,7 +454,7 @@ export default {
             key: z.string().describe('信息的唯一标识，如 name、language、skill_vue'),
             content: z.string().describe('要记住的具体内容'),
             scope: z.enum(['private', 'shared', 'auto']).optional().default('auto').describe('记忆范围：private=仅自己可见，shared=所有人可见，auto=根据当前模式自动选择'),
-          }),
+          })
         }
       )
     },
@@ -531,7 +531,7 @@ export default {
           schema: z.object({
             category: z.string().optional().describe('信息分类筛选，如 profile、preference、skill、goal、fact，不填则搜索全部'),
             scope: z.enum(['private', 'shared', 'auto']).optional().default('auto').describe('搜索范围：private=仅私有记忆，shared=仅共享记忆，auto=根据当前模式自动选择'),
-          }),
+          })
         }
       )
     },
@@ -568,8 +568,8 @@ export default {
           schema: z.object({
             category: z.string().describe('信息分类'),
             key: z.string().describe('要删除的信息标识'),
-            scope: z.enum(['private', 'shared']).optional().default('private').describe('删除范围：private=私有记忆，shared=共享记忆'),
-          }),
+            scope: z.enum(['private', 'shared']).optional().default('private').describe('删除范围：private=私有记忆，shared=共享记忆')
+          })
         }
       )
     },
@@ -593,8 +593,8 @@ export default {
           name: 'calculator',
           description: '执行数学计算。支持加减乘除、括号、百分比。',
           schema: z.object({
-            expression: z.string().describe('数学表达式'),
-          }),
+            expression: z.string().describe('数学表达式')
+          })
         }
       )
     },
@@ -613,8 +613,8 @@ export default {
           name: 'get_current_time',
           description: '获取当前日期和时间。',
           schema: z.object({
-            timezone: z.string().optional().describe('时区'),
-          }),
+            timezone: z.string().optional().describe('时区')
+          })
         }
       )
     },
@@ -639,7 +639,7 @@ export default {
         this.createRecallTool(),
         this.createForgetTool(),
         this.createCalculatorTool(),
-        this.createTimeTool(),
+        this.createTimeTool()
       ]
 
       const llm = new ChatOpenAI({
@@ -647,7 +647,7 @@ export default {
         apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
         temperature: 0,
         configuration: {
-          baseURL: window.location.origin + '/inner/',
+          baseURL: window.location.origin + '/inner/'
         },
       })
 
@@ -781,8 +781,8 @@ export default {
         const config = {
           configurable: {
             thread_id: `${this.currentUserId}-${this.currentThreadId}`,
-            user_id: this.currentUserId,
-          },
+            user_id: this.currentUserId
+          }
         }
 
         if (this.enableStream) {
@@ -794,7 +794,7 @@ export default {
 
           const stream = await agent.stream(inputs, {
             ...config,
-            streamMode: 'values',
+            streamMode: 'values'
           })
 
           for await (const state of stream) {
@@ -819,7 +819,7 @@ export default {
           this.streamStats = {
             steps: stepCount,
             tokens: tokenCount,
-            duration: Date.now() - startTime,
+            duration: Date.now() - startTime
           }
 
           if (lastState) {
@@ -906,7 +906,7 @@ export default {
           steps.push({
             thought: msg.content || '(思考中...)',
             action: msg.tool_calls.map((tc) => `${tc.name}(${JSON.stringify(tc.args)})`).join(', '),
-            observation: toolResults.join(' | '),
+            observation: toolResults.join(' | ')
           })
         }
       }
@@ -923,7 +923,7 @@ export default {
         // 并行加载私有记忆和共享记忆
         const [privateResults, sharedResults] = await Promise.all([
           this.inMemoryStore.search(['users', this.currentUserId], { limit: 50 }),
-          this.inMemoryStore.search(['shared'], { limit: 50 }),
+          this.inMemoryStore.search(['shared'], { limit: 50 })
         ])
 
         const mapItems = (results) =>
@@ -933,7 +933,7 @@ export default {
             value: item.value,
             updatedAt: item.updatedAt
               ? new Date(item.updatedAt).toLocaleString('zh-CN')
-              : '?',
+              : '?'
           }))
 
         this.privateStoreItems = mapItems(privateResults)
@@ -1062,8 +1062,8 @@ export default {
     scrollToBottom() {
       const el = this.$refs.chatHistory
       if (el) el.scrollTop = el.scrollHeight
-    },
-  },
+    }
+  }
 }
 </script>
 

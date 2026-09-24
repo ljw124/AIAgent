@@ -194,20 +194,6 @@
               <span class="nav-label">Middleware 中间件</span>
             </div>
             <div
-              :class="['nav-item', { active: currentPage === 'lc-stage9' }]"
-              @click="currentPage = 'lc-stage9'"
-            >
-              <span class="nav-icon">9️⃣</span>
-              <span class="nav-label">Memory 短期记忆</span>
-            </div>
-            <div
-              :class="['nav-item', { active: currentPage === 'lc-stage10' }]"
-              @click="currentPage = 'lc-stage10'"
-            >
-              <span class="nav-icon">🔟</span>
-              <span class="nav-label">Store 长期记忆</span>
-            </div>
-            <div
               :class="['nav-item', { active: currentPage === 'lc-customer-agent' }]"
               @click="currentPage = 'lc-customer-agent'"
             >
@@ -265,6 +251,34 @@
               <span class="nav-icon">6️⃣</span>
               <span class="nav-label">Send 并行执行</span>
             </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lg-stage7' }]"
+              @click="currentPage = 'lg-stage7'"
+            >
+              <span class="nav-icon">7️⃣</span>
+              <span class="nav-label">MemorySaver 短期记忆</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lg-stage8' }]"
+              @click="currentPage = 'lg-stage8'"
+            >
+              <span class="nav-icon">8️⃣</span>
+              <span class="nav-label">Store 长期记忆</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lg-stage9' }]"
+              @click="currentPage = 'lg-stage9'"
+            >
+              <span class="nav-icon">9️⃣</span>
+              <span class="nav-label">Checkpoint 检查点</span>
+            </div>
+            <!-- <div
+              :class="['nav-item', { active: currentPage === 'lg-stage10' }]"
+              @click="currentPage = 'lg-stage10'"
+            >
+              <span class="nav-icon">🔟</span>
+              <span class="nav-label">Context 运行时上下文</span>
+            </div> -->
           </div>
         </div>
       </nav>
@@ -292,8 +306,6 @@
       <LangChainStage6Agent v-if="currentPage === 'lc-stage4'" />
       <LangChainStage7RAG v-if="currentPage === 'lc-stage5'" />
       <LangChainStage8Meddleware v-if="currentPage === 'lc-stage8'" />
-      <LangChainStage9Memory v-if="currentPage === 'lc-stage9'" />
-      <LangChainStage10Store v-if="currentPage === 'lc-stage10'" />
       <CustomerChat v-if="currentPage === 'lc-customer-agent'" />
       <LangGraphStage1StateGraph v-if="currentPage === 'lg-stage1'" />
       <LangGraphStage2Annotation v-if="currentPage === 'lg-stage2'" />
@@ -301,6 +313,10 @@
       <LangGraphStage4Command v-if="currentPage === 'lg-stage4'" />
       <LangGraphStage5Interrupt v-if="currentPage === 'lg-stage5'" />
       <LangGraphStage6Send v-if="currentPage === 'lg-stage6'" />
+      <LangGraphStage7Memory v-if="currentPage === 'lg-stage7'" />
+      <LangGraphStage8Store v-if="currentPage === 'lg-stage8'" />
+      <LangGraphStage9Checkpoint v-if="currentPage === 'lg-stage9'" />
+      <!-- <LangGraphStage10Context v-if="currentPage === 'lg-stage10'" /> -->
       <OllamaChat v-if="currentPage === 'ollama-chat'" />
       <OllamaPythonChat v-if="currentPage === 'ollama-python'" />
       <DeepSeekModelChat v-if="currentPage === 'deepseek-js'" />
@@ -324,8 +340,6 @@ import LangChainStage5Tool from '@/pages/langchain/LangChainStage5Tool.vue'
 import LangChainStage6Agent from '@/pages/langchain/LangChainStage6Agent.vue'
 import LangChainStage7RAG from '@/pages/langchain/LangChainStage7RAG.vue'
 import LangChainStage8Meddleware from '@/pages/langchain/LangChainStage8Meddleware.vue'
-import LangChainStage9Memory from '@/pages/langchain/LangChainStage9Memory.vue'
-import LangChainStage10Store from '@/pages/langchain/LangChainStage10Store.vue'
 import CustomerChat from '@/pages/CustomerAgent/CustomerChat.vue'
 import LangGraphStage1StateGraph from '@/pages/langgraph/LangGraphStage1StateGraph.vue'
 import LangGraphStage2Annotation from '@/pages/langgraph/LangGraphStage2Annotation.vue'
@@ -333,6 +347,10 @@ import LangGraphStage3Routing from '@/pages/langgraph/LangGraphStage3Routing.vue
 import LangGraphStage4Command from '@/pages/langgraph/LangGraphStage4Command.vue'
 import LangGraphStage5Interrupt from '@/pages/langgraph/LangGraphStage5Interrupt.vue'
 import LangGraphStage6Send from '@/pages/langgraph/LangGraphStage6Send.vue'
+import LangGraphStage7Memory from '@/pages/langgraph/LangGraphStage7Memory.vue'
+import LangGraphStage8Store from '@/pages/langgraph/LangGraphStage8Store.vue'
+import LangGraphStage9Checkpoint from '@/pages/langgraph/LangGraphStage9Checkpoint.vue'
+// import LangGraphStage10Context from '@/pages/langgraph/LangGraphStage10Context.vue'
 import OllamaChat from '@/pages/ollama/OllamaChat.vue'
 import OllamaPythonChat from '@/pages/ollama/OllamaPythonChat.vue'
 import DeepSeekModelChat from '@/pages/DeepSeek/DeepSeekModelChat.vue'
@@ -356,8 +374,6 @@ export default {
     LangChainStage6Agent,
     LangChainStage7RAG,
     LangChainStage8Meddleware,
-    LangChainStage9Memory,
-    LangChainStage10Store,
     CustomerChat,
     LangGraphStage1StateGraph,
     LangGraphStage2Annotation,
@@ -365,6 +381,10 @@ export default {
     LangGraphStage4Command,
     LangGraphStage5Interrupt,
     LangGraphStage6Send,
+    LangGraphStage7Memory,
+    LangGraphStage8Store,
+    LangGraphStage9Checkpoint,
+    // LangGraphStage10Context,
     OllamaChat,
     OllamaPythonChat,
     DeepSeekModelChat,

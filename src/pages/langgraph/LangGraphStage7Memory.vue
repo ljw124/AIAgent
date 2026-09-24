@@ -2,15 +2,15 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-09 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-09 14:25:04
- * @Description: 阶段九：短期记忆 Memory — LangChain.js MemorySaver 短期记忆演示
+ * @LastEditTime: 2026-09-24 10:53:53
+ * @Description: 阶段七：短期记忆 MemorySaver — LangGraph Checkpoint 短期记忆演示
  *   学习目标：理解 LangGraph 的 MemorySaver Checkpoint 机制，实现多轮对话记忆
- *   核心 API：MemorySaver、createReactAgent(checkpointer)、thread_id 隔离
+ *   核心 API：MemorySaver、createReactAgent({ checkpointer })、thread_id 隔离
  *   对比阶段六：Agent 每次调用都重新构建，无记忆能力；本阶段注入 MemorySaver 实现上下文保持
 -->
 <template>
   <div>
-    <h1>阶段九：短期记忆 Memory <span class="badge stage">学习</span></h1>
+    <h1>阶段七：短期记忆 MemorySaver <span class="badge stage">LangGraph</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>理解 LangGraph 的 <code>MemorySaver</code> Checkpoint 机制，实现多轮对话上下文记忆<br />
       <strong>核心 API：</strong><code>MemorySaver</code>（短期记忆）、<code>createReactAgent({ checkpointer })</code>（注入记忆）、<code>thread_id</code>（线程隔离）<br />
@@ -144,7 +144,7 @@ import { createReactAgent } from '@langchain/langgraph/prebuilt'
 import { z } from 'zod'
 
 export default {
-  name: 'LangChainStage9Memory',
+  name: 'LangGraphStage7Memory',
 
   data() {
     return {
@@ -169,7 +169,7 @@ export default {
       // Token 统计：当前线程累计消耗
       memoryTokens: { prompt: 0, completion: 0, total: 0 },
       // 线程 Token 统计：threadId → { prompt, completion, total }
-      threadTokens: {},
+      threadTokens: {}
     }
   },
 

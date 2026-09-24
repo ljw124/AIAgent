@@ -1,4 +1,4 @@
-# LangChain.js 短期记忆（Memory）详解
+# LangGraph.js 短期记忆（Memory）详解
 
 > 基于 `@langchain/core` v1.2.9 + `@langchain/langgraph` v1.4.13 实战验证
 >

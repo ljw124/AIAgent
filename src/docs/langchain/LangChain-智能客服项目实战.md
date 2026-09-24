@@ -148,7 +148,7 @@
 
 ### 3.2 与现有 Stage 架构一致
 
-本设计与项目已有的 [`LangChainStage6Agent.vue`](../src/pages/langchain/LangChainStage6Agent.vue)、[`LangChainStage10Store.vue`](../src/pages/langchain/LangChainStage10Store.vue) 等采用完全相同的架构模式：
+本设计与项目已有的 [`LangChainStage6Agent.vue`](../src/pages/langchain/LangChainStage6Agent.vue)、[`LangGraphStage8Store.vue`](../src/pages/langgraph/LangGraphStage8Store.vue) 等采用完全相同的架构模式：
 
 - `ChatOpenAI` 直接调用内网 API（API Key 通过 webpack `DefinePlugin` 注入 `INNER_API_KEY`）
 - `createReactAgent` 在浏览器中运行

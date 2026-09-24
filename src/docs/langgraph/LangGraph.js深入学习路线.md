@@ -17,10 +17,12 @@
 5. [阶段四：Command 命令式路由 — 节点内动态跳转](#5-阶段四command-命令式路由--节点内动态跳转)
 6. [阶段五：Human-in-the-Loop — interrupt 人机协同](#6-阶段五human-in-the-loop--interrupt-人机协同)
 7. [阶段六：Parallel & Map-Reduce — Send 并行执行](#7-阶段六parallel--map-reduce--send-并行执行)
-8. [阶段七：Subgraph — 子图嵌套与复用](#8-阶段七subgraph--子图嵌套与复用)
-9. [阶段八：Functional API — entrypoint & task 函数式工作流](#9-阶段八functional-api--entrypoint--task-函数式工作流)
-10. [进阶主题](#10-进阶主题)
-11. [🆕 Python 快速对照速查表](#11-python-快速对照速查表)
+8. [阶段七：MemorySaver 短期记忆 — Checkpoint 持久化](#8-阶段七memorysaver-短期记忆--checkpoint-持久化)
+9. [阶段八：Store 长期记忆 — InMemoryStore 跨会话记忆](#9-阶段八store-长期记忆--inmemorystore-跨会话记忆)
+10. [阶段九：Checkpoint 检查点 — getState/getStateHistory + Time Travel](#10-阶段九checkpoint-检查点--getstategetstatehistory--time-travel)
+11. [阶段十：Context 运行时上下文 — runtime.context 注入](#11-阶段十context-运行时上下文--runtimecontext-注入)
+12. [进阶主题](#12-进阶主题)
+13. [🆕 Python 快速对照速查表](#13-python-快速对照速查表)
 
 ---
 
@@ -28,7 +30,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
-│                      LangGraph.js 深入学习路线（8 个阶段）                               │
+│                      LangGraph.js 深入学习路线（10 个阶段）                              │
 ├──────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                      │
 │  起点（LangChain 阶段六）                                                              │
@@ -46,9 +48,15 @@
 │                                                                                      │
 │  阶段五          阶段六          阶段七          阶段八                                 │
 │  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐                          │
-│  │interrupt │ → │  Send    │ → │ Subgraph │ → │Functional│                          │
-│  │ 人机协同 │   │ 并行执行 │   │ 子图嵌套 │   │ 函数式API│                          │
+│  │interrupt │ → │  Send    │ → │MemorySaver│ → │  Store   │                          │
+│  │ 人机协同 │   │ 并行执行 │   │ 短期记忆 │   │ 长期记忆 │                          │
 │  └──────────┘   └──────────┘   └──────────┘   └──────────┘                          │
+│                                                                                      │
+│  阶段九          阶段十                                                                │
+│  ┌──────────┐   ┌──────────┐                                                        │
+│  │Checkpoint│ → │ Context  │                                                        │
+│  │TimeTravel│   │ 运行时上下文│                                                       │
+│  └──────────┘   └──────────┘                                                        │
 │                                                                                      │
 │  每个阶段 = 概念讲解 + 可运行示例代码（Vue 组件） + JS/Python 对比 + 与官网文档对照         │
 │                                                                                      │
@@ -91,8 +99,10 @@ src/pages/langgraph/
 ├── LangGraphStage4Command.vue       ← 阶段四：Command 命令式路由
 ├── LangGraphStage5Interrupt.vue     ← 阶段五：Human-in-the-Loop
 ├── LangGraphStage6Send.vue          ← 阶段六：Send 并行执行
-├── LangGraphStage7Subgraph.vue      ← 阶段七：子图嵌套
-└── LangGraphStage8Functional.vue    ← 阶段八：Functional API
+├── LangGraphStage7Memory.vue        ← 阶段七：MemorySaver 短期记忆
+├── LangGraphStage8Store.vue         ← 阶段八：Store 长期记忆
+├── LangGraphStage9Checkpoint.vue    ← 阶段九：Checkpoint 检查点 + Time Travel
+└── LangGraphStage10Context.vue      ← 阶段十：runtime.context 运行时上下文
 ```
 
 ### 与 LangChain 阶段六的关系
@@ -1373,14 +1383,382 @@ result = await document_analysis.ainvoke('这是一篇关于AI发展的文章...
 
 ---
 
-## 10. 进阶主题
+## 8. 阶段七：MemorySaver 短期记忆 — Checkpoint 持久化
 
-完成八个阶段后，可以进一步探索：
+> **文件：** [`LangGraphStage7Memory.vue`](../../src/pages/langgraph/LangGraphStage7Memory.vue)
+>
+> **核心 API：** `MemorySaver`、`createReactAgent({ checkpointer })`、`thread_id`
+>
+> **前置条件：** 阶段六（Agent），理解 `createReactAgent` 的基本用法
+
+### 8.1 学习目标
+
+- 理解 LangGraph 的 Checkpoint 持久化机制
+- 掌握 `MemorySaver` 的创建和注入
+- 理解 `thread_id` 线程隔离的概念
+- 实现多轮对话上下文记忆
+- 对比「无记忆 Agent」与「有记忆 Agent」的区别
+
+### 8.2 核心概念
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                  MemorySaver Checkpoint 机制                    │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  createReactAgent({                                          │
+│    llm,                                                      │
+│    tools,                                                    │
+│    checkpointer: new MemorySaver()  ← 注入短期记忆             │
+│  })                                                          │
+│                                                              │
+│  调用时传入 thread_id：                                        │
+│  agent.invoke(input, {                                       │
+│    configurable: { thread_id: 'user-session-001' }            │
+│  })                                                          │
+│                                                              │
+│  ┌─────────┐    ┌─────────┐    ┌─────────┐                  │
+│  │ 第1轮   │ → │ 第2轮   │ → │ 第3轮   │  ...               │
+│  │ 对话    │    │ 对话    │    │ 对话    │                    │
+│  └────┬────┘    └────┬────┘    └────┬────┘                  │
+│       │              │              │                        │
+│       ▼              ▼              ▼                        │
+│  Checkpoint#1   Checkpoint#2   Checkpoint#3                  │
+│  (自动保存)      (自动保存)      (自动保存)                     │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 8.3 关键代码
+
+```js
+import { MemorySaver } from '@langchain/langgraph'
+import { createReactAgent } from '@langchain/langgraph/prebuilt'
+
+// 创建全局 MemorySaver 实例（所有线程共享）
+const memorySaver = new MemorySaver()
+
+// 构建带记忆的 Agent
+const agent = createReactAgent({
+  llm,
+  tools,
+  checkpointer: memorySaver,  // 核心：注入 MemorySaver
+})
+
+// 调用时指定 thread_id
+const config = { configurable: { thread_id: 'user-session-001' } }
+const result = await agent.invoke({ messages: [...] }, config)
+
+// 同一 thread_id 的后续调用会自动加载历史上下文
+const result2 = await agent.invoke({ messages: [...] }, config)
+```
+
+### 8.4 线程管理
+
+```js
+// 切换线程 → 新会话，不共享历史
+const newConfig = { configurable: { thread_id: 'user-session-002' } }
+
+// 查看 Checkpoint 历史
+for await (const tuple of memorySaver.list(config, { limit: 20 })) {
+  console.log(tuple.checkpoint.id, tuple.checkpoint.ts)
+}
+
+// 删除线程
+await memorySaver.deleteThread('user-session-001')
+```
+
+### 8.5 官网对照
+
+| 官网章节 | JS 文档 | Python 文档 |
+|----------|--------|-------------|
+| Persistence | [JS Persistence](https://langchain-ai.github.io/langgraphjs/concepts/persistence/) | [Python Persistence](https://langchain-ai.github.io/langgraph/concepts/persistence/) |
+| MemorySaver | [JS MemorySaver](https://langchain-ai.github.io/langgraphjs/reference/checkpoints/) | [Python InMemorySaver](https://langchain-ai.github.io/langgraph/reference/checkpoints/) |
+
+---
+
+## 9. 阶段八：Store 长期记忆 — InMemoryStore 跨会话记忆
+
+> **文件：** [`LangGraphStage8Store.vue`](../../src/pages/langgraph/LangGraphStage8Store.vue)
+>
+> **核心 API：** `InMemoryStore`、`createReactAgent({ store })`、`namespace` 命名空间隔离
+>
+> **前置条件：** 阶段七（MemorySaver），理解短期记忆和 thread_id 概念
+
+### 9.1 学习目标
+
+- 理解短期记忆（Checkpoint）与长期记忆（Store）的区别
+- 掌握 `InMemoryStore` 的创建和注入
+- 理解 `namespace` 命名空间隔离机制
+- 实现跨会话信息持久化（用户偏好、知识库等）
+
+### 9.2 核心概念
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│              短期记忆 vs 长期记忆                               │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  短期记忆（MemorySaver / Checkpoint）                          │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ • 作用域：同一 thread_id 内                           │    │
+│  │ • 生命周期：会话期间（内存）或持久化（数据库）           │    │
+│  │ • 内容：对话历史、图状态                               │    │
+│  │ • 自动保存：每个节点执行后自动 Checkpoint               │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  长期记忆（InMemoryStore / BaseStore）                         │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │ • 作用域：跨 thread_id、跨会话                         │    │
+│  │ • 生命周期：持久化存储                                 │    │
+│  │ • 内容：用户偏好、知识库、全局配置                      │    │
+│  │ • 手动管理：put/get/search/delete                     │    │
+│  │ • 命名空间：namespace 实现多租户隔离                    │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 9.3 关键代码
+
+```js
+import { InMemoryStore } from '@langchain/langgraph'
+import { createReactAgent } from '@langchain/langgraph/prebuilt'
+
+// 创建长期记忆存储
+const store = new InMemoryStore()
+
+// 构建带长期记忆的 Agent
+const agent = createReactAgent({
+  llm,
+  tools,
+  store,  // 核心：注入 Store
+})
+
+// 在节点中通过 runtime.store 访问长期记忆
+const myNode = async (state, runtime) => {
+  // 读取用户偏好
+  const items = await runtime.store.search(
+    ['users', 'preferences'],
+    { filter: { userId: 'user-001' } }
+  )
+  // 保存用户偏好
+  await runtime.store.put(
+    ['users', 'preferences', 'user-001'],
+    'profile',
+    { name: '张三', language: 'zh-CN' }
+  )
+}
+```
+
+### 9.4 官网对照
+
+| 官网章节 | JS 文档 | Python 文档 |
+|----------|--------|-------------|
+| Store | [JS Store](https://langchain-ai.github.io/langgraphjs/concepts/persistence/) | [Python Store](https://langchain-ai.github.io/langgraph/concepts/persistence/) |
+| InMemoryStore | [JS InMemoryStore](https://langchain-ai.github.io/langgraphjs/reference/store/) | [Python InMemoryStore](https://langchain-ai.github.io/langgraph/reference/store/) |
+
+---
+
+## 10. 阶段九：Checkpoint 检查点 — getState/getStateHistory + Time Travel
+
+> **文件：** [`LangGraphStage9Checkpoint.vue`](../../src/pages/langgraph/LangGraphStage9Checkpoint.vue)
+>
+> **核心 API：** `graph.getState()`、`graph.getStateHistory()`、`graph.updateState()`、`StateSnapshot`
+>
+> **前置条件：** 阶段七（MemorySaver），理解 Checkpoint 和 thread_id 概念
+
+### 10.1 学习目标
+
+- 掌握 `getState()` 查看当前状态快照
+- 掌握 `getStateHistory()` 遍历历史检查点
+- 理解 `StateSnapshot` 的结构（values、next、config、metadata）
+- 实现 Time Travel：回放（Replay）和分叉（Fork）
+
+### 10.2 核心概念
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                  Checkpoint 检查点与 Time Travel                │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  时间线：                                                     │
+│  Checkpoint#1 → Checkpoint#2 → Checkpoint#3 → Checkpoint#4  │
+│       │              │              │              │         │
+│       │              │              │              │         │
+│       │              └──────┐       │              │         │
+│       │                     │       │              │         │
+│       │    getStateHistory() 遍历    │              │         │
+│       │                     │       │              │         │
+│       │              ┌──────┘       │              │         │
+│       │              │              │              │         │
+│       ▼              ▼              ▼              ▼         │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  getState(config) → StateSnapshot                    │    │
+│  │  {                                                   │    │
+│  │    values: { messages: [...] },  // 当前状态值         │    │
+│  │    next: ['agent'],              // 下一步节点         │    │
+│  │    config: { checkpoint_id },    // 检查点配置         │    │
+│  │    metadata: { step: 3 },        // 元数据             │    │
+│  │    parentConfig: { ... }         // 父检查点配置       │    │
+│  │  }                                                   │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│  Time Travel 操作：                                           │
+│  ┌──────────────────┐    ┌──────────────────┐               │
+│  │ 回放（Replay）    │    │ 分叉（Fork）      │               │
+│  │                  │    │                  │               │
+│  │ 从历史检查点      │    │ 从历史检查点      │               │
+│  │ 重新执行          │    │ 修改状态后        │               │
+│  │ agent.invoke(     │    │ 继续执行          │               │
+│  │   null,           │    │ agent.invoke(     │               │
+│  │   historyConfig   │    │   newInput,       │               │
+│  │ )                 │    │   historyConfig   │               │
+│  │                  │    │ )                 │               │
+│  └──────────────────┘    └──────────────────┘               │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 10.3 关键代码
+
+```js
+// 查看当前状态快照
+const snapshot = await graph.getState(config)
+console.log(snapshot.values)    // 当前状态值
+console.log(snapshot.next)      // 下一步待执行节点
+
+// 遍历历史检查点
+for await (const snapshot of graph.getStateHistory(config)) {
+  console.log(snapshot.config.configurable.checkpoint_id)
+  console.log(snapshot.metadata.step)
+}
+
+// Time Travel: 回放（Replay）
+const historyConfig = historyCheckpoint.config
+const result = await graph.invoke(null, historyConfig)
+
+// Time Travel: 分叉（Fork）
+const result = await graph.invoke(
+  { messages: [new HumanMessage('新消息')] },
+  historyConfig
+)
+```
+
+### 10.4 官网对照
+
+| 官网章节 | JS 文档 | Python 文档 |
+|----------|--------|-------------|
+| StateSnapshot | [JS StateSnapshot](https://langchain-ai.github.io/langgraphjs/concepts/persistence/) | [Python StateSnapshot](https://langchain-ai.github.io/langgraph/concepts/persistence/) |
+| Time Travel | [JS Time Travel](https://langchain-ai.github.io/langgraphjs/how-tos/time-travel/) | [Python Time Travel](https://langchain-ai.github.io/langgraph/how-tos/time-travel/) |
+
+---
+
+## 11. 阶段十：Context 运行时上下文 — runtime.context 注入
+
+> **文件：** [`LangGraphStage10Context.vue`](../../src/pages/langgraph/LangGraphStage10Context.vue)
+>
+> **核心 API：** `contextSchema`（定义上下文结构）、`config.context`（传入上下文）、`runtime.context`（节点中访问）
+>
+> **前置条件：** 阶段七（MemorySaver），理解 StateGraph 基础
+
+### 11.1 学习目标
+
+- 理解 `runtime.context` 与图状态（State）的区别
+- 掌握 `contextSchema` 定义上下文结构
+- 掌握通过 `config.context` 传入运行时上下文
+- 在节点中通过 `runtime.context` 访问上下文信息
+
+### 11.2 核心概念
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│              runtime.context 运行时上下文                       │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  State（图状态） vs Context（运行时上下文）                      │
+│  ┌─────────────────────────┐  ┌─────────────────────────┐   │
+│  │ State                    │  │ Context                  │   │
+│  ├─────────────────────────┤  ├─────────────────────────┤   │
+│  │ • 节点间传递和更新        │  │ • 调用时传入，只读         │   │
+│  │ • 会被 Checkpoint 保存    │  │ • 不会被 Checkpoint 保存  │   │
+│  │ • 适合：对话历史、中间结果 │  │ • 适合：用户身份、权限、    │   │
+│  │                          │  │   配置、语言偏好等        │   │
+│  └─────────────────────────┘  └─────────────────────────┘   │
+│                                                              │
+│  工作流程：                                                    │
+│  ┌──────────┐    ┌──────────┐    ┌──────────────────┐       │
+│  │ 1. 定义   │ → │ 2. 传入   │ → │ 3. 节点中访问      │       │
+│  │ context   │    │ config.   │    │ runtime.context   │       │
+│  │ Schema    │    │ context   │    │ .username         │       │
+│  └──────────┘    └──────────┘    └──────────────────┘       │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 11.3 关键代码
+
+```js
+import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
+
+// 1. 定义上下文结构
+const ContextSchema = Annotation.Root({
+  username: Annotation<string>,
+  level: Annotation<string>,     // 'normal' | 'VIP' | 'SVIP'
+  lang: Annotation<string>,      // 'zh-CN' | 'en'
+})
+
+// 2. 构建图时传入 contextSchema
+const graph = new StateGraph(GraphState, ContextSchema)
+  .addNode('chat', chatNode)
+  .addEdge(START, 'chat')
+  .addEdge('chat', END)
+  .compile({ checkpointer: memorySaver })
+
+// 3. 节点中通过 runtime.context 访问
+const chatNode = async (state, runtime) => {
+  const ctx = runtime.context || {}
+  const username = ctx.username || '用户'
+  const level = ctx.level || 'normal'
+
+  // 根据上下文定制行为
+  const systemPrompt = level === 'VIP'
+    ? `你是VIP客服，当前用户是${username}，请提供优先服务。`
+    : `你是普通客服，当前用户是${username}。`
+
+  // ...
+}
+
+// 4. 调用时传入上下文
+const config = {
+  configurable: { thread_id: 'session-001' },
+  context: {
+    username: '张三',
+    level: 'VIP',
+    lang: 'zh-CN',
+  }
+}
+const result = await graph.invoke(input, config)
+```
+
+### 11.4 官网对照
+
+| 官网章节 | JS 文档 | Python 文档 |
+|----------|--------|-------------|
+| Runtime Context | [JS Runtime](https://langchain-ai.github.io/langgraphjs/concepts/low_level/) | [Python Runtime](https://langchain-ai.github.io/langgraph/concepts/low_level/) |
+| contextSchema | [JS StateGraph](https://langchain-ai.github.io/langgraphjs/reference/graphs/) | [Python StateGraph](https://langchain-ai.github.io/langgraph/reference/graphs/) |
+
+---
+
+## 12. 进阶主题
+
+完成十个阶段后，可以进一步探索：
 
 | 主题 | 说明 | JS API | Python API |
 |------|------|--------|------------|
-| **Checkpointer** | 持久化图状态 | [`BaseCheckpointSaver`](node_modules/@langchain/langgraph-checkpoint/dist/base.d.ts) | `langgraph.checkpoint.base.BaseCheckpointSaver` |
-| **Store** | 长期记忆存储 | [`BaseStore`](node_modules/@langchain/langgraph-checkpoint/dist/store/base.d.ts)、[`InMemoryStore`](node_modules/@langchain/langgraph-checkpoint/dist/store/memory.d.ts) | `langgraph.store.base.BaseStore`、`InMemoryStore` |
+| **Subgraph** | 子图嵌套与复用 | [`StateGraph.addNode`](node_modules/@langchain/langgraph/dist/graph/state.d.ts) | `StateGraph.add_node` |
+| **Functional API** | entrypoint & task 函数式工作流 | [`entrypoint`](node_modules/@langchain/langgraph/dist/func/index.d.ts) | `langgraph.func` |
+| **PostgresSaver** | 生产环境持久化 | `@langchain/langgraph-checkpoint-postgres` | `langgraph.checkpoint.postgres` |
 | **Stream Mode** | 多种流式模式 | [`StreamMode`](node_modules/@langchain/langgraph/dist/pregel/types.d.ts) | `langgraph.types.StreamMode` |
 | **RetryPolicy** | 节点级重试策略 | [`RetryPolicy`](node_modules/@langchain/langgraph/dist/pregel/utils/index.d.ts) | `langgraph.types.RetryPolicy` |
 | **CachePolicy** | 节点级缓存策略 | [`CachePolicy`](node_modules/@langchain/langgraph/dist/pregel/utils/index.d.ts) | `langgraph.types.CachePolicy` |
@@ -1489,6 +1867,6 @@ result = await document_analysis.ainvoke('这是一篇关于AI发展的文章...
 
 ### 本项目相关文档
 - [本项目 LangChain.js 深入学习路线](../langchain/LangChain.js深入学习路线.md)
-- [本项目 LangChain.js 短期记忆 Memory 详解](../langchain/LangChain.js短期记忆Memory详解.md)
-- [本项目 LangChain.js 长期记忆 Store 详解](../langchain/LangChain.js长期记忆Store详解.md)
+- [本项目 LangGraph.js 短期记忆 Memory 详解](./LangGraph.js短期记忆Memory详解.md)
+- [本项目 LangGraph.js 长期记忆 Store 详解](./LangGraph.js长期记忆Store详解.md)
 - [本项目 LangChain 详细指南（含 Python 版）](../langchain/LangChain详细指南.md)
