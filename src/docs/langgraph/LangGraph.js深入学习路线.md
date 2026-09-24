@@ -90,7 +90,7 @@ src/pages/langgraph/
 ├── LangGraphStage3Routing.vue       ← 阶段三：条件边与路由
 ├── LangGraphStage4Command.vue       ← 阶段四：Command 命令式路由
 ├── LangGraphStage5Interrupt.vue     ← 阶段五：Human-in-the-Loop
-├── LangGraphStage6Parallel.vue      ← 阶段六：Send 并行执行
+├── LangGraphStage6Send.vue          ← 阶段六：Send 并行执行
 ├── LangGraphStage7Subgraph.vue      ← 阶段七：子图嵌套
 └── LangGraphStage8Functional.vue    ← 阶段八：Functional API
 ```
@@ -1019,7 +1019,7 @@ graph.add_edge('aggregator', END)
 
 ### 7.4 示例代码
 
-→ [`LangGraphStage6Parallel.vue`](../../pages/langgraph/LangGraphStage6Parallel.vue)
+→ [`LangGraphStage6Send.vue`](../../pages/langgraph/LangGraphStage6Send.vue)
 
 **学习要点：**
 - `Send` 的用法：在条件边中返回 `Send[]` 数组

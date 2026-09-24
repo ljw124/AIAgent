@@ -258,6 +258,13 @@
               <span class="nav-icon">5️⃣</span>
               <span class="nav-label">Interrupt 人机协同</span>
             </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lg-stage6' }]"
+              @click="currentPage = 'lg-stage6'"
+            >
+              <span class="nav-icon">6️⃣</span>
+              <span class="nav-label">Send 并行执行</span>
+            </div>
           </div>
         </div>
       </nav>
@@ -293,6 +300,7 @@
       <LangGraphStage3Routing v-if="currentPage === 'lg-stage3'" />
       <LangGraphStage4Command v-if="currentPage === 'lg-stage4'" />
       <LangGraphStage5Interrupt v-if="currentPage === 'lg-stage5'" />
+      <LangGraphStage6Send v-if="currentPage === 'lg-stage6'" />
       <OllamaChat v-if="currentPage === 'ollama-chat'" />
       <OllamaPythonChat v-if="currentPage === 'ollama-python'" />
       <DeepSeekModelChat v-if="currentPage === 'deepseek-js'" />
@@ -324,6 +332,7 @@ import LangGraphStage2Annotation from '@/pages/langgraph/LangGraphStage2Annotati
 import LangGraphStage3Routing from '@/pages/langgraph/LangGraphStage3Routing.vue'
 import LangGraphStage4Command from '@/pages/langgraph/LangGraphStage4Command.vue'
 import LangGraphStage5Interrupt from '@/pages/langgraph/LangGraphStage5Interrupt.vue'
+import LangGraphStage6Send from '@/pages/langgraph/LangGraphStage6Send.vue'
 import OllamaChat from '@/pages/ollama/OllamaChat.vue'
 import OllamaPythonChat from '@/pages/ollama/OllamaPythonChat.vue'
 import DeepSeekModelChat from '@/pages/DeepSeek/DeepSeekModelChat.vue'
@@ -355,6 +364,7 @@ export default {
     LangGraphStage3Routing,
     LangGraphStage4Command,
     LangGraphStage5Interrupt,
+    LangGraphStage6Send,
     OllamaChat,
     OllamaPythonChat,
     DeepSeekModelChat,
