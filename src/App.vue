@@ -256,7 +256,7 @@
               @click="currentPage = 'lg-stage7'"
             >
               <span class="nav-icon">7️⃣</span>
-              <span class="nav-label">MemorySaver 短期记忆</span>
+              <span class="nav-label">Memory 短期记忆</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lg-stage8' }]"
@@ -272,13 +272,13 @@
               <span class="nav-icon">9️⃣</span>
               <span class="nav-label">Checkpoint 检查点</span>
             </div>
-            <!-- <div
+            <div
               :class="['nav-item', { active: currentPage === 'lg-stage10' }]"
               @click="currentPage = 'lg-stage10'"
             >
               <span class="nav-icon">🔟</span>
               <span class="nav-label">Context 运行时上下文</span>
-            </div> -->
+            </div>
           </div>
         </div>
       </nav>
@@ -316,7 +316,7 @@
       <LangGraphStage7Memory v-if="currentPage === 'lg-stage7'" />
       <LangGraphStage8Store v-if="currentPage === 'lg-stage8'" />
       <LangGraphStage9Checkpoint v-if="currentPage === 'lg-stage9'" />
-      <!-- <LangGraphStage10Context v-if="currentPage === 'lg-stage10'" /> -->
+      <LangGraphStage10Context v-if="currentPage === 'lg-stage10'" />
       <OllamaChat v-if="currentPage === 'ollama-chat'" />
       <OllamaPythonChat v-if="currentPage === 'ollama-python'" />
       <DeepSeekModelChat v-if="currentPage === 'deepseek-js'" />
@@ -350,7 +350,7 @@ import LangGraphStage6Send from '@/pages/langgraph/LangGraphStage6Send.vue'
 import LangGraphStage7Memory from '@/pages/langgraph/LangGraphStage7Memory.vue'
 import LangGraphStage8Store from '@/pages/langgraph/LangGraphStage8Store.vue'
 import LangGraphStage9Checkpoint from '@/pages/langgraph/LangGraphStage9Checkpoint.vue'
-// import LangGraphStage10Context from '@/pages/langgraph/LangGraphStage10Context.vue'
+import LangGraphStage10Context from '@/pages/langgraph/LangGraphStage10Context.vue'
 import OllamaChat from '@/pages/ollama/OllamaChat.vue'
 import OllamaPythonChat from '@/pages/ollama/OllamaPythonChat.vue'
 import DeepSeekModelChat from '@/pages/DeepSeek/DeepSeekModelChat.vue'
@@ -384,7 +384,7 @@ export default {
     LangGraphStage7Memory,
     LangGraphStage8Store,
     LangGraphStage9Checkpoint,
-    // LangGraphStage10Context,
+    LangGraphStage10Context,
     OllamaChat,
     OllamaPythonChat,
     DeepSeekModelChat,
