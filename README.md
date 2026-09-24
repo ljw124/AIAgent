@@ -1,6 +1,6 @@
 # 🤖 AI Agent
 
-> 基于 **LangChain.js** 与 **Vue 2** 构建的多模型 AI Agent 交互平台，支持内网大模型、本地 Ollama、百炼 DashScope、DeepSeek、魔搭 ModelScope 等多种大模型接入，并内置完整的 LangChain.js 知识体系学习模块。
+> 基于 **LangChain.js** / **LangGraph.js** 与 **Vue 2** 构建的多模型 AI Agent 交互平台，支持内网大模型、本地 Ollama、百炼 DashScope、DeepSeek、魔搭 ModelScope 等多种大模型接入，并内置完整的 LangChain.js 与 LangGraph.js 知识体系学习模块。
 
 ---
 
@@ -11,6 +11,7 @@
 - [技术栈](#-技术栈)
 - [支持的模型平台](#-支持的模型平台)
 - [LangChain.js 知识体系](#-langchainjs-知识体系)
+- [LangGraph.js 知识体系](#-langgraphjs-知识体系)
 - [项目结构](#-项目结构)
 - [环境配置](#-环境配置)
 - [快速开始](#-快速开始)
@@ -23,9 +24,9 @@
 
 ## 🚀 项目简介
 
-本项目是一个面向大模型应用开发的学习与演示平台，通过统一的 Web 界面接入多种大模型服务，并配套完整的 **LangChain.js** 学习路径（从 Prompt 模板到 RAG 检索增强的七阶段进阶）。项目同时提供 **JavaScript** 与 **Python** 两种调用方式，方便对比学习不同语言生态下的 LangChain 用法。
+本项目是一个面向大模型应用开发的学习与演示平台，通过统一的 Web 界面接入多种大模型服务，并配套完整的 **LangChain.js**（8 阶段）与 **LangGraph.js**（10 阶段）学习路径。项目同时提供 **JavaScript** 与 **Python** 两种调用方式，方便对比学习不同语言生态下的 LangChain/LangGraph 用法。
 
-前端基于 Vue 2 + Vue CLI 5，通过 `vue.config.js` 配置多路代理解决跨域与公司网络限制问题；后端使用 Node.js 原生 `http` 模块（[`server.js`](server.js)）调用 Python 脚本完成内网模型与本地模型的推理。
+前端基于 Vue 2 + Vue CLI 5，通过 [`vue.config.js`](vue.config.js) 配置多路代理解决跨域与公司网络限制问题；后端使用 Node.js 原生 `http` 模块（[`server.js`](server.js)）调用 Python 脚本完成内网模型与本地模型的推理，并提供 PostgreSQL 长期记忆 Store API。
 
 ---
 
@@ -33,10 +34,15 @@
 
 - **多模型平台接入**：内网 hikvision、本地 Ollama、百炼 DashScope、DeepSeek、魔搭 ModelScope 五大平台统一接入。
 - **双语言调用**：每个模型平台均提供 JS 与 Python 两种调用示例，便于对比学习。
-- **LangChain.js 十阶段学习**：从 Prompt Template 到 Store 长期记忆的完整进阶路线。
-- **🎯 综合实战：智能客服**：串联全部 10 阶段知识的完整 Agent 应用，支持多租户（技术文档 / 学习辅导 / 通用助手）、流式对话、工具调用（计算器 / 天气 / 知识库搜索）、RAG 知识库检索、短期记忆（MemorySaver）+ 长期记忆（InMemoryStore）、中间件日志与 Token 统计。
+- **LangChain.js 八阶段学习**：从 Prompt Template 到 Middleware 中间件的完整进阶路线。
+- **LangGraph.js 十阶段学习**：从 StateGraph 基础图到 Checkpoint 检查点、Context 运行时上下文的完整进阶路线。
+- **🎯 综合实战：智能客服**：串联 LangChain.js 全部 8 阶段 + LangGraph.js 全部 10 阶段知识的完整 Agent 应用，支持多租户（技术文档 / 学习辅导 / 通用助手）、流式对话、工具调用（计算器 / 天气 / 知识库搜索）、RAG 知识库检索、短期记忆（MemorySaver）+ 长期记忆（InMemoryStore / PostgreSQL）、中间件日志与 Token 统计。
 - **短期记忆（Memory）**：基于 LangGraph `MemorySaver` Checkpoint 机制实现多轮对话上下文记忆，支持 `thread_id` 线程隔离、Checkpoint 历史查看、线程切换/删除管理。
-- **长期记忆（Store）**：基于 LangGraph `InMemoryStore` 实现跨会话信息持久化，支持三种记忆模式（完全隔离/共享记忆/混合模式）、namespace 命名空间隔离、localStorage 持久化备份。
+- **长期记忆（Store）**：基于 LangGraph `InMemoryStore` 实现跨会话信息持久化，支持三种记忆模式（完全隔离/共享记忆/混合模式）、namespace 命名空间隔离、localStorage 持久化备份，同时支持 PostgreSQL 后端存储。
+- **Checkpoint 检查点**：基于 `getState()` / `getStateHistory()` API 实现 Time Travel（回放/分叉），支持查看状态快照、遍历历史检查点、从任意检查点回放或分叉执行。
+- **运行时上下文（Context）**：基于 `runtime.context` 机制实现运行时上下文注入，支持用户名、会员等级、语言偏好等动态上下文。
+- **人机协同（Interrupt）**：基于 `interrupt()` API 实现人机协同，支持审批流程、动态决策等场景。
+- **并行执行（Send）**：基于 `Send()` API 实现多节点并行执行，支持扇出（fan-out）模式。
 - **RAG 检索增强生成**：基于 `RecursiveCharacterTextSplitter` 文档分片 + 混合相似度检索（Bigram Jaccard + 短查询加权 + 子串包含加分），支持内置知识库与文件上传（.txt/.md）两种文档来源，将检索结果注入 System Prompt 让 LLM 基于真实数据回答，有效解决幻觉问题。
 - **中间件机制**：双层架构 — 自定义中间件（`BaseCallbackHandler`）处理 LLM 级别关注点（日志、计时、脱敏、重试），官方内置中间件（`AgentMiddleware`）处理 Agent 级别关注点（摘要、人机协同、PII 检测、待办列表、调用限制），通过 `create_agent(middleware=)` 统一编排。
 - **流式输出**：支持 Streaming 流式响应，实时展示模型输出。
@@ -54,9 +60,11 @@
 | 前端框架 | Vue 2.6、Vue CLI 5 |
 | 构建工具 | Webpack 5、Babel |
 | 包管理器 | pnpm（`.npmrc` 配置了 npmmirror 镜像） |
-| AI 框架 | LangChain.js（`@langchain/core`、`@langchain/langgraph`、`@langchain/openai`、`@langchain/textsplitters`） |
+| AI 框架 | LangChain.js（`@langchain/core`、`@langchain/openai`、`@langchain/textsplitters`） |
+| 图编排框架 | LangGraph.js（`@langchain/langgraph`） |
 | 数据校验 | Zod |
 | 后端服务 | Node.js 原生 `http` 模块（[`server.js`](server.js)） |
+| 数据库 | PostgreSQL（长期记忆 Store 持久化） |
 | Python 运行时 | Python 3.13（调用内网 / 本地模型推理） |
 | 监控追踪 | LangSmith |
 
@@ -76,7 +84,7 @@
 
 ## 📚 LangChain.js 知识体系
 
-项目内置了从入门到进阶的 **十阶段** LangChain 学习模块，每个阶段对应一个独立的 Vue 组件：
+项目内置了从入门到进阶的 **八阶段** LangChain 学习模块，每个阶段对应一个独立的 Vue 组件：
 
 | 阶段 | 主题 | 组件 | 说明 |
 | --- | --- | --- | --- |
@@ -88,9 +96,26 @@
 | 6️⃣ | **Agent 智能体** | [`LangChainStage6Agent.vue`](src/pages/langchain/LangChainStage6Agent.vue) | JS |
 | 7️⃣ | **RAG 检索增强** | [`LangChainStage7RAG.vue`](src/pages/langchain/LangChainStage7RAG.vue) | JS |
 | 8️⃣ | **Middleware 中间件** | [`LangChainStage8Meddleware.vue`](src/pages/langchain/LangChainStage8Meddleware.vue) | Python |
-| 9️⃣ | **Memory 短期记忆** | [`LangChainStage9Memory.vue`](src/pages/langchain/LangChainStage9Memory.vue) | JS |
-| 🔟 | **Store 长期记忆** | [`LangChainStage10Store.vue`](src/pages/langchain/LangChainStage10Store.vue) | JS |
-| 🎯 | **综合实战：智能客服** | [`CustomerChat.vue`](src/pages/CustomerAgent/CustomerChat.vue) | JS — 串联全部 10 阶段 |
+| 🎯 | **综合实战：智能客服** | [`CustomerChat.vue`](src/pages/CustomerAgent/CustomerChat.vue) | JS — 串联全部阶段 |
+
+---
+
+## 🔀 LangGraph.js 知识体系
+
+项目内置了从基础到高级的 **十阶段** LangGraph 学习模块，每个阶段对应一个独立的 Vue 组件：
+
+| 阶段 | 主题 | 组件 | 核心 API |
+| --- | --- | --- | --- |
+| 1️⃣ | **StateGraph 基础图** | [`LangGraphStage1StateGraph.vue`](src/pages/langgraph/LangGraphStage1StateGraph.vue) | `StateGraph`、`addNode`、`addEdge`、`compile` |
+| 2️⃣ | **Annotation 状态定义** | [`LangGraphStage2Annotation.vue`](src/pages/langgraph/LangGraphStage2Annotation.vue) | `Annotation.Root`、`reducer`、`default` |
+| 3️⃣ | **Routing 条件路由** | [`LangGraphStage3Routing.vue`](src/pages/langgraph/LangGraphStage3Routing.vue) | `addConditionalEdges`、条件分支 |
+| 4️⃣ | **Command 命令式路由** | [`LangGraphStage4Command.vue`](src/pages/langgraph/LangGraphStage4Command.vue) | `Command`、`goto`、`update` |
+| 5️⃣ | **Interrupt 人机协同** | [`LangGraphStage5Interrupt.vue`](src/pages/langgraph/LangGraphStage5Interrupt.vue) | `interrupt()`、审批流程 |
+| 6️⃣ | **Send 并行执行** | [`LangGraphStage6Send.vue`](src/pages/langgraph/LangGraphStage6Send.vue) | `Send()`、扇出（fan-out） |
+| 7️⃣ | **Memory 短期记忆** | [`LangGraphStage7Memory.vue`](src/pages/langgraph/LangGraphStage7Memory.vue) | `MemorySaver`、`thread_id`、Checkpoint |
+| 8️⃣ | **Store 长期记忆** | [`LangGraphStage8Store.vue`](src/pages/langgraph/LangGraphStage8Store.vue) | `InMemoryStore`、`namespace`、跨会话持久化 |
+| 9️⃣ | **Checkpoint 检查点** | [`LangGraphStage9Checkpoint.vue`](src/pages/langgraph/LangGraphStage9Checkpoint.vue) | `getState()`、`getStateHistory()`、Time Travel |
+| 🔟 | **Context 运行时上下文** | [`LangGraphStage10Context.vue`](src/pages/langgraph/LangGraphStage10Context.vue) | `contextSchema`、`runtime.context` |
 
 ### 📄 配套学习文档
 
@@ -110,11 +135,15 @@
 - [LangChain.js深入学习路线.md](src/docs/langchain/LangChain.js深入学习路线.md)
 - [学习LangChain所需的Python知识.md](src/docs/langchain/学习LangChain所需的Python知识.md)
 - [LangChain-Python中间件Middleware详解.md](src/docs/langchain/LangChain-Python中间件Middleware详解.md)
-- [LangChain.js短期记忆Memory详解.md](src/docs/langchain/LangChain.js短期记忆Memory详解.md)
-- [LangChain.js长期记忆Store详解.md](src/docs/langchain/LangChain.js长期记忆Store详解.md)
 - [LangChain.js RAG 检索增强生成详解.md](src/docs/langchain/LangChain.js%20RAG%20检索增强生成详解.md)
 - [LangSmith追踪集成总结.md](src/docs/langchain/LangSmith追踪集成总结.md)
 - [LangChain-智能客服项目实战.md](src/docs/langchain/LangChain-智能客服项目实战.md)
+
+**LangGraph 学习文档**（位于 [`src/docs/langgraph/`](src/docs/langgraph)）：
+
+- [LangGraph.js深入学习路线.md](src/docs/langgraph/LangGraph.js深入学习路线.md)
+- [LangGraph.js短期记忆Memory详解.md](src/docs/langgraph/LangGraph.js短期记忆Memory详解.md)
+- [LangGraph.js长期记忆Store详解.md](src/docs/langgraph/LangGraph.js长期记忆Store详解.md)
 
 ---
 
@@ -124,35 +153,42 @@
 ├── .env                      # 环境变量（API Key、Base URL、LangSmith 配置）
 ├── .npmrc                    # pnpm 配置（shamefully-hoist、npmmirror 镜像）
 ├── package.json              # 项目依赖与脚本
-├── server.js                 # Node.js 后端服务（调用 Python 脚本、LangSmith 代理）
+├── server.js                 # Node.js 后端服务（调用 Python 脚本、LangSmith 代理、Store API）
 ├── vue.config.js             # Vue CLI 配置（DefinePlugin 注入、多路代理）
 ├── public/                   # 静态资源
+├── scripts/                  # 辅助脚本（示例数据生成等）
 └── src/
     ├── App.vue               # 主入口（左侧菜单 + 右侧内容区）
-    ├── main.js               # 应用入口
+    ├── main.js               # 应用入口（LangSmith 追踪初始化、AsyncLocalStorage 兼容）
     ├── assets/               # 静态资源（logo 等）
-    ├── composables/          # 模型调用封装（JS / Python）
+    ├── composables/          # 模型调用封装与工具模块
     │   ├── DashScopeModel.py   # 百炼模型 Python 脚本
     │   ├── DeepSeekModel.py  # DeepSeek 模型 Python 脚本
     │   ├── InnerModel.py     # 内网模型 Python 脚本
     │   ├── MiddlewareModel.py # LangChain 中间件演示 Python 脚本
     │   ├── ModelScopeModel.py # 魔搭 ModelScope 模型 Python 脚本
     │   ├── OllamaModel.py    # Ollama 模型 Python 脚本
+    │   ├── langgraphSamples.js # LangGraph 示例数据
+    │   ├── pgStore.js        # PostgreSQL 长期记忆存储模块
     │   └── useCustomerAgent.js # 智能客服 Agent 核心 Composable
     ├── docs/                 # 学习文档
+    │   ├── agent/            # AI-Agent 理论文档
+    │   ├── langchain/        # LangChain.js 学习文档
+    │   └── langgraph/        # LangGraph.js 学习文档
     └── pages/                # 页面组件
-        ├── CustomerAgent/    # 🎯 综合实战：智能客服（串联全部 10 阶段）
+        ├── CustomerAgent/    # 🎯 综合实战：智能客服（串联全部阶段）
         │   ├── CustomerChat.vue   # 主页面
         │   └── modules/           # 模块化拆分
-        │       ├── tools.js       # Stage5: 工具定义（计算器/天气/知识库搜索）
-        │       ├── rag.js         # Stage2+7: RAG 知识库服务
-        │       ├── middleware.js  # Stage8: 日志 + Token 统计中间件
-        │       ├── memory.js      # Stage9+10: 短期记忆 + 长期记忆管理
+        │       ├── tools.js       # 工具定义（计算器/天气/知识库搜索）
+        │       ├── rag.js         # RAG 知识库服务
+        │       ├── middleware.js  # 日志 + Token 统计中间件
+        │       ├── memory.js      # 短期记忆 + 长期记忆管理
         │       └── tenants.js     # 多租户配置（技术文档/学习辅导/通用助手）
         ├── DashScope/          # 百炼 DashScope（平台）
         ├── DeepSeek/           # DeepSeek 大模型（平台）
         ├── inner/            # 内网大模型（平台）
-        ├── langchain/        # LangChain.js 知识体系（学习）
+        ├── langchain/        # LangChain.js 知识体系（8 阶段学习）
+        ├── langgraph/        # LangGraph.js 知识体系（10 阶段学习）
         ├── modelscope/       # 魔搭 ModelScope（平台）
         └── ollama/           # 本地 Ollama（平台）
 ```
@@ -187,6 +223,13 @@ LANGSMITH_ENDPOINT="https://api.smith.langchain.com"
 LANGSMITH_API_KEY="your-langsmith-api-key"
 LANGSMITH_PROJECT="ai-agent"
 LANGSMITH_ENDPOINT_FRONTEND="/langsmith"
+
+# PostgreSQL 长期记忆存储（可选）
+PGHOST="localhost"
+PGPORT="5432"
+PGDATABASE="ai_agent"
+PGUSER="postgres"
+PGPASSWORD="your-password"
 ```
 
 > ⚠️ **安全提示**：`.env` 文件包含敏感 API Key，请勿提交到版本库。建议在 `.gitignore` 中忽略该文件。
@@ -201,6 +244,7 @@ LANGSMITH_ENDPOINT_FRONTEND="/langsmith"
 - **pnpm**（包管理器）
 - **Python 3.13**（用于内网 / 本地模型推理，需安装 `langchain_openai` 等依赖）
 - **Ollama**（使用本地模型时需要，默认监听 `127.0.0.1:11434`）
+- **PostgreSQL**（使用长期记忆 Store 持久化时需要，可选）
 
 ### 安装依赖
 
@@ -216,13 +260,21 @@ pnpm run serve
 
 ### 启动后端服务（可选）
 
-内网模型与本地模型的 **Python 调用** 需要后端服务支持：
+内网模型与本地模型的 **Python 调用** 以及长期记忆 Store 需要后端服务支持：
 
 ```bash
 node server.js
 ```
 
-后端服务监听 `22223` 端口，提供 `/api/inner/chat` 等端点，通过 `spawn` 调用 Python 脚本执行推理。
+后端服务监听 `22223` 端口，提供以下端点：
+- `/api/inner/chat` — 内网模型 Python 调用
+- `/api/ollama/chat` — 本地 Ollama Python 调用
+- `/api/modelscope/chat` — 魔搭 ModelScope Python 调用
+- `/api/DashScope/chat` — 百炼 DashScope Python 调用
+- `/api/deepseek/chat` — DeepSeek Python 调用
+- `/api/middleware/chat` — LangChain 中间件演示 Python 调用
+- `/api/store/{get,put,search,delete}` — PostgreSQL 长期记忆 Store API
+- `/langsmith-proxy/*` — LangSmith API 代理转发
 
 ### 生产构建
 
@@ -248,6 +300,7 @@ pnpm run lint
 
 - **调用 Python 脚本**：通过 `spawn` 启动 Python 子进程，执行内网模型（[`InnerModel.py`](src/composables/InnerModel.py)）、本地模型（[`OllamaModel.py`](src/composables/OllamaModel.py)）、魔搭模型（[`ModelScopeModel.py`](src/composables/ModelScopeModel.py)）、百炼模型（[`DashScopeModel.py`](src/composables/DashScopeModel.py)）、DeepSeek 模型（[`DeepSeekModel.py`](src/composables/DeepSeekModel.py)）以及中间件演示（[`MiddlewareModel.py`](src/composables/MiddlewareModel.py)）的推理，并解析 JSON 结果返回。
 - **LangSmith 代理**：将浏览器端无法直连的 `api.smith.langchain.com` 请求转发到真实地址，解决公司网络 ALPN 协商失败问题。
+- **PostgreSQL Store API**：提供长期记忆的 CRUD 操作（get/put/search/delete），基于 [`pgStore.js`](src/composables/pgStore.js) 模块实现。
 
 > **注意**：`server.js` 中硬编码了 Windows 下的 Python 路径（`C:\Users\lujinwei\AppData\Local\Programs\Python\Python313\python.exe`），如环境不同请自行修改。
 
@@ -259,7 +312,7 @@ pnpm run lint
 
 | 代理路径 | 目标 | 用途 |
 | --- | --- | --- |
-| `/api` | `http://localhost:22223` | 转发到后端服务（Python 调用） |
+| `/api` | `http://localhost:22223` | 转发到后端服务（Python 调用 + Store API） |
 | `/dashscope` | `https://ws-j6nf3ofbsu23jbhk.cn-beijing.maas.aliyuncs.com` | 百炼 API（专属网关，解决 CORS 与网络封锁） |
 | `/modelscope` | `https://api-inference.modelscope.cn` | 魔搭 API（备选方案） |
 | `/inner` | 内网大模型地址 | 内网模型 API |
@@ -276,6 +329,7 @@ pnpm run lint
 - 前端通过 `vue.config.js` 的 `DefinePlugin` 注入 `process.env.LANGSMITH_*` 变量。
 - 浏览器端 LangSmith SDK 的请求被拦截并替换为 `/langsmith-proxy`，经 devServer 代理到后端 `server.js`，再转发到 `api.smith.langchain.com`。
 - Python 后端直接使用 `.env` 中的真实地址。
+- `main.js` 中提供了浏览器兼容的 `AsyncLocalStorage` 实现，确保 LangGraph `interrupt()` 在浏览器中正常工作。
 
 > 详细集成过程可参考 [LangSmith追踪集成总结.md](src/docs/langchain/LangSmith追踪集成总结.md)。
 
@@ -294,6 +348,12 @@ pnpm run lint
 
 **Q4：生产构建后 LangSmith 追踪失效？**
 `vue.config.js` 中针对 `langsmith` 和 `@langchain/core` 的 `sideEffects` 配置用于防止 tree-shaking 移除追踪模块，请勿删除该配置。
+
+**Q5：LangGraph interrupt() 报错「Called interrupt() outside the context of a graph」？**
+`main.js` 中已提供浏览器兼容的 `AsyncLocalStorage` 实现，确保该初始化代码未被移除。
+
+**Q6：长期记忆 Store 无法使用？**
+确保 PostgreSQL 服务已启动，并在 `.env` 中配置正确的数据库连接信息。如不需要 PostgreSQL，Store 功能仍可使用 `InMemoryStore`（浏览器内存模式）。
 
 ---
 
