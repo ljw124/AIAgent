@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-16 10:58:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-18 16:09:07
+ * @LastEditTime: 2026-09-24 10:17:21
  * @Description: 阶段一：StateGraph 入门 — 构建第一个状态图
  *   学习目标：掌握 StateGraph 的基本结构（定义状态 → 添加节点 → 添加边 → 编译 → 执行）
  *   核心 API：StateGraph、Annotation.Root、addNode、addEdge、START、END、compile、invoke
@@ -19,31 +19,37 @@
       <strong>对比：</strong><code>createReactAgent</code>（预构建黑盒） vs <code>StateGraph</code>（自定义图，打开黑盒）
     </div>
 
-    <!-- 图结构可视化 -->
-    <div class="graph-viz">
-      <div class="graph-viz-title">📐 当前图结构</div>
-      <div class="graph-viz-diagram">
-        <div class="graph-node start-node">START</div>
-        <div class="graph-arrow">→</div>
-        <div class="graph-node node-a">nodeA<br /><small>文本处理</small></div>
-        <div class="graph-arrow">→</div>
-        <div class="graph-node node-b">nodeB<br /><small>文本追加</small></div>
-        <div class="graph-arrow">→</div>
-        <div class="graph-node end-node">END</div>
+    <!-- 图结构可视化：左右并排 -->
+    <div class="graph-viz-row">
+      <!-- 左侧：当前图结构（手绘） -->
+      <div class="graph-viz graph-viz-half">
+        <div class="graph-viz-title">📐 当前图结构 — StateGraph 基础图（START → nodeA → nodeB → END）</div>
+        <div class="graph-viz-diagram">
+          <div class="graph-node start-node">START</div>
+          <div class="graph-arrow">→</div>
+          <div class="graph-node node-a">nodeA<br /><small>文本处理</small></div>
+          <div class="graph-arrow">→</div>
+          <div class="graph-node node-b">nodeB<br /><small>文本追加</small></div>
+          <div class="graph-arrow">→</div>
+          <div class="graph-node end-node">END</div>
+        </div>
+        <div class="graph-viz-legend">
+          <span>START → nodeA（普通边）</span>
+          <span>nodeA → nodeB（普通边）</span>
+          <span>nodeB → END（普通边）</span>
+        </div>
       </div>
-      <div class="graph-viz-legend">
-        <span>START → nodeA（普通边）</span>
-        <span>nodeA → nodeB（普通边）</span>
-        <span>nodeB → END（普通边）</span>
-      </div>
-    </div>
 
-    <!-- Mermaid 图结构（等价于 Python display(graph)） -->
-    <div v-if="mermaidGraph" class="graph-viz" style="margin-top: 12px;">
-      <div class="graph-viz-title">
-        📐 LangGraph 官方图结构（getGraphAsync + drawMermaid）
+      <!-- 右侧：LangGraph 官方图结构（Mermaid） -->
+      <div class="graph-viz graph-viz-half">
+        <div class="graph-viz-title">
+          📐 LangGraph 官方图结构（getGraphAsync + drawMermaid）
+        </div>
+        <div v-if="mermaidGraph" ref="mermaidContainer" class="mermaid-container"></div>
+        <div v-else class="mermaid-placeholder">
+          <p>执行 StateGraph 后将自动生成</p>
+        </div>
       </div>
-      <div ref="mermaidContainer" class="mermaid-container"></div>
     </div>
 
     <!-- 配置区域 -->
@@ -516,6 +522,38 @@ export default {
 }
 
 /* ============================================================
+  图结构左右并排布局
+  ============================================================ */
+.graph-viz-row {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0;
+}
+
+.graph-viz-half {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.graph-viz-half:last-child {
+  flex: 0 0 38%;
+}
+
+/* Mermaid 占位提示 */
+.mermaid-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  color: #94a3b8;
+  font-size: 13px;
+  background: white;
+  border-radius: 6px;
+  border: 1px dashed #cbd5e1;
+}
+
+/* ============================================================
   Mermaid 图结构容器
   ============================================================ */
 .mermaid-container {
@@ -528,5 +566,12 @@ export default {
 .mermaid-container :deep(svg) {
   max-width: 100%;
   height: auto;
+}
+
+/* 响应式：小屏幕时图结构上下堆叠 */
+@media (max-width: 900px) {
+  .graph-viz-row {
+    flex-direction: column;
+  }
 }
 </style>

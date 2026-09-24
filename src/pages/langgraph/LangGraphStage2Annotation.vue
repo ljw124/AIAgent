@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-17 11:02:22
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-21 18:42:44
+ * @LastEditTime: 2026-09-24 10:16:55
  * @Description: 
 -->
 <!--
@@ -26,31 +26,37 @@
       <strong>对比：</strong>LastValue（覆盖） vs 自定义 reducer（追加/累加） vs MessagesAnnotation（预构建） vs messagesStateReducer（官方推荐）
     </div>
 
-    <!-- 图结构可视化 -->
-    <div class="graph-viz">
-      <div class="graph-viz-title">📐 当前图结构</div>
-      <div class="graph-viz-diagram">
-        <div class="graph-node start-node">START</div>
-        <div class="graph-arrow">→</div>
-        <div class="graph-node node-a">nodeA<br /><small>发送消息<br />+ 计数器 +1</small></div>
-        <div class="graph-arrow">→</div>
-        <div class="graph-node node-b">nodeB<br /><small>追加消息<br />+ 计数器 +1</small></div>
-        <div class="graph-arrow">→</div>
-        <div class="graph-node end-node">END</div>
+    <!-- 图结构可视化：左右并排 -->
+    <div class="graph-viz-row">
+      <!-- 左侧：当前图结构（手绘） -->
+      <div class="graph-viz graph-viz-half">
+        <div class="graph-viz-title">📐 当前图结构 — Annotation 状态管理（START → nodeA → nodeB → END）</div>
+        <div class="graph-viz-diagram">
+          <div class="graph-node start-node">START</div>
+          <div class="graph-arrow">→</div>
+          <div class="graph-node node-a">nodeA<br /><small>发送消息<br />+ 计数器 +1</small></div>
+          <div class="graph-arrow">→</div>
+          <div class="graph-node node-b">nodeB<br /><small>追加消息<br />+ 计数器 +1</small></div>
+          <div class="graph-arrow">→</div>
+          <div class="graph-node end-node">END</div>
+        </div>
+        <div class="graph-viz-legend">
+          <span>START → nodeA（普通边）</span>
+          <span>nodeA → nodeB（普通边）</span>
+          <span>nodeB → END（普通边）</span>
+        </div>
       </div>
-      <div class="graph-viz-legend">
-        <span>START → nodeA（普通边）</span>
-        <span>nodeA → nodeB（普通边）</span>
-        <span>nodeB → END（普通边）</span>
-      </div>
-    </div>
 
-    <!-- Mermaid 图结构（等价于 Python display(graph)） -->
-    <div v-if="mermaidGraph" class="graph-viz" style="margin-top: 12px;">
-      <div class="graph-viz-title">
-        📐 LangGraph 官方图结构（getGraphAsync + drawMermaid）
+      <!-- 右侧：LangGraph 官方图结构（Mermaid） -->
+      <div class="graph-viz graph-viz-half">
+        <div class="graph-viz-title">
+          📐 LangGraph 官方图结构（getGraphAsync + drawMermaid）
+        </div>
+        <div v-if="mermaidGraph" ref="mermaidContainer" class="mermaid-container"></div>
+        <div v-else class="mermaid-placeholder">
+          <p>执行 StateGraph 后将自动生成</p>
+        </div>
       </div>
-      <div ref="mermaidContainer" class="mermaid-container"></div>
     </div>
 
     <!-- 状态定义展示 -->
@@ -864,6 +870,38 @@ export default {
 }
 
 /* ============================================================
+  图结构左右并排布局
+  ============================================================ */
+.graph-viz-row {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0;
+}
+
+.graph-viz-half {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.graph-viz-half:last-child {
+  flex: 0 0 38%;
+}
+
+/* Mermaid 占位提示 */
+.mermaid-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  color: #94a3b8;
+  font-size: 13px;
+  background: white;
+  border-radius: 6px;
+  border: 1px dashed #cbd5e1;
+}
+
+/* ============================================================
   Mermaid 图结构容器
   ============================================================ */
 .mermaid-container {
@@ -876,5 +914,12 @@ export default {
 .mermaid-container :deep(svg) {
   max-width: 100%;
   height: auto;
+}
+
+/* 响应式：小屏幕时图结构上下堆叠 */
+@media (max-width: 900px) {
+  .graph-viz-row {
+    flex-direction: column;
+  }
 }
 </style>

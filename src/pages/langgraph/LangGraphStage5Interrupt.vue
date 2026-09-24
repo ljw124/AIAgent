@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-21 12:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-22 16:27:54
+ * @LastEditTime: 2026-09-24 10:29:50
  * @Description: 阶段五：Human-in-the-Loop — interrupt 人机协同
  *   学习目标：掌握 interrupt() 的用法，理解人机协同工作流
  *   核心 API：interrupt()、new Command({ resume })、MemorySaver、checkpointer
@@ -996,7 +996,7 @@ export default {
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
-  min-width: 56px;
+  min-width: 50px;
   text-align: right;
 }
 

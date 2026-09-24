@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-18 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-21 18:47:27
+ * @LastEditTime: 2026-09-24 10:17:51
  * @Description: 阶段三：条件边与路由 — 动态流程控制
  *   学习目标：掌握 addConditionalEdges 的用法，理解条件边如何让图拥有「决策能力」
  *   核心 API：addConditionalEdges、router 函数、toolsCondition、ToolNode
@@ -20,40 +20,46 @@
       <strong>⚡ 真实 LLM：</strong>使用 <code>ChatOpenAI</code> + <code>bindTools</code> 调用内网大模型，LLM 自主决定是否调用工具
     </div>
 
-    <!-- 图结构可视化 -->
-    <div class="graph-viz">
-      <div class="graph-viz-title">📐 当前图结构 — ReAct 循环（条件边）</div>
-      <div class="graph-viz-diagram">
-        <div class="graph-node start-node">START</div>
-        <div class="graph-arrow">→</div>
-        <div class="graph-node node-agent">agent<br /><small>LLM 决策</small></div>
-        <div class="graph-arrow">→</div>
-        <div class="graph-node node-router">🔀 条件边<br /><small>router(state)</small></div>
-        <div class="graph-branch">
-          <div class="branch-line">
-            <div class="graph-arrow">→</div>
-            <div class="graph-node node-tools">tools<br /><small>执行工具</small></div>
-            <div class="graph-arrow branch-back">↩</div>
-          </div>
-          <div class="branch-line">
-            <div class="graph-arrow">→</div>
-            <div class="graph-node end-node">END<br /><small>结束</small></div>
+    <!-- 图结构可视化：左右并排 -->
+    <div class="graph-viz-row">
+      <!-- 左侧：当前图结构（手绘） -->
+      <div class="graph-viz graph-viz-half">
+        <div class="graph-viz-title">📐 当前图结构 — ReAct 循环（条件边）</div>
+        <div class="graph-viz-diagram">
+          <div class="graph-node start-node">START</div>
+          <div class="graph-arrow">→</div>
+          <div class="graph-node node-agent">agent<br /><small>LLM 决策</small></div>
+          <div class="graph-arrow">→</div>
+          <div class="graph-node node-router">🔀 条件边<br /><small>router(state)</small></div>
+          <div class="graph-branch">
+            <div class="branch-line">
+              <div class="graph-arrow">→</div>
+              <div class="graph-node node-tools">tools<br /><small>执行工具</small></div>
+              <div class="graph-arrow branch-back">↩</div>
+            </div>
+            <div class="branch-line">
+              <div class="graph-arrow">→</div>
+              <div class="graph-node end-node">END<br /><small>结束</small></div>
+            </div>
           </div>
         </div>
+        <div class="graph-viz-legend">
+          <span>START → agent（普通边）</span>
+          <span>agent → router（条件边：有 tool_calls → tools，无 → END）</span>
+          <span>tools → agent（普通边：循环回 agent）</span>
+        </div>
       </div>
-      <div class="graph-viz-legend">
-        <span>START → agent（普通边）</span>
-        <span>agent → router（条件边：有 tool_calls → tools，无 → END）</span>
-        <span>tools → agent（普通边：循环回 agent）</span>
-      </div>
-    </div>
 
-    <!-- Mermaid 图结构（等价于 Python display(graph)） -->
-    <div v-if="mermaidGraph" class="graph-viz" style="margin-top: 12px;">
-      <div class="graph-viz-title">
-        📐 LangGraph 官方图结构（getGraphAsync + drawMermaid）
+      <!-- 右侧：LangGraph 官方图结构（Mermaid） -->
+      <div class="graph-viz graph-viz-half">
+        <div class="graph-viz-title">
+          📐 LangGraph 官方图结构（getGraphAsync + drawMermaid）
+        </div>
+        <div v-if="mermaidGraph" ref="mermaidContainer" class="mermaid-container"></div>
+        <div v-else class="mermaid-placeholder">
+          <p>执行 StateGraph 后将自动生成</p>
+        </div>
       </div>
-      <div ref="mermaidContainer" class="mermaid-container"></div>
     </div>
 
     <!-- 配置区域 -->
@@ -884,6 +890,38 @@ export default {
 }
 
 /* ============================================================
+  图结构左右并排布局
+  ============================================================ */
+.graph-viz-row {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0;
+}
+
+.graph-viz-half {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.graph-viz-half:last-child {
+  flex: 0 0 38%;
+}
+
+/* Mermaid 占位提示 */
+.mermaid-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  color: #94a3b8;
+  font-size: 13px;
+  background: white;
+  border-radius: 6px;
+  border: 1px dashed #cbd5e1;
+}
+
+/* ============================================================
   Mermaid 图结构容器
   ============================================================ */
 .mermaid-container {
@@ -896,5 +934,12 @@ export default {
 .mermaid-container :deep(svg) {
   max-width: 100%;
   height: auto;
+}
+
+/* 响应式：小屏幕时图结构上下堆叠 */
+@media (max-width: 900px) {
+  .graph-viz-row {
+    flex-direction: column;
+  }
 }
 </style>
