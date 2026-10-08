@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-10 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-08 11:13:52
+ * @LastEditTime: 2026-10-08 19:57:43
  * @Description: 阶段八：长期记忆 Store — LangGraph InMemoryStore 长期记忆演示
  *   学习目标：理解 LangGraph 的 BaseStore/InMemoryStore 长期记忆机制，实现跨会话信息持久化
  *   核心 API：InMemoryStore、createReactAgent({ store })、namespace 命名空间隔离
@@ -128,6 +128,12 @@
             <span class="store-ns">{{ item.namespace.join(' / ') }}</span>
             <span class="store-key">{{ item.key }}</span>
             <span class="store-time">{{ item.updatedAt }}</span>
+            <button
+              class="btn-store-delete"
+              title="删除此条记忆"
+              @click="deleteStoreItem(item)"
+              :disabled="loading"
+            >🗑️</button>
           </div>
           <div class="store-item-value">
             <pre>{{ JSON.stringify(item.value, null, 2) }}</pre>
@@ -143,6 +149,12 @@
             <span class="store-ns">{{ item.namespace.join(' / ') }}</span>
             <span class="store-key">{{ item.key }}</span>
             <span class="store-time">{{ item.updatedAt }}</span>
+            <button
+              class="btn-store-delete"
+              title="删除此条记忆"
+              @click="deleteStoreItem(item)"
+              :disabled="loading"
+            >🗑️</button>
           </div>
           <div class="store-item-value">
             <pre>{{ JSON.stringify(item.value, null, 2) }}</pre>
@@ -958,6 +970,38 @@ export default {
     },
 
     // ============================================================
+    // 删除 Store 中的单条记忆
+    // ============================================================
+    async deleteStoreItem(item) {
+      if (this.loading || !this.inMemoryStore) return
+
+      try {
+        await this.inMemoryStore.delete(item.namespace, item.key)
+        // 同步更新 localStorage
+        this._updateLocalStorageItem(item.namespace, item.key, null)
+        this.schedulePersist()
+
+        // 从本地列表中移除
+        this.privateStoreItems = this.privateStoreItems.filter(
+          (i) => !(i.namespace.join(':') === item.namespace.join(':') && i.key === item.key)
+        )
+        this.sharedStoreItems = this.sharedStoreItems.filter(
+          (i) => !(i.namespace.join(':') === item.namespace.join(':') && i.key === item.key)
+        )
+        this.storeItems = [...this.privateStoreItems, ...this.sharedStoreItems]
+
+        // 更新命名空间列表
+        const nsSet = new Set()
+        for (const si of this.storeItems) {
+          nsSet.add(si.namespace.join('/'))
+        }
+        this.storeNamespaces = [...nsSet]
+      } catch (err) {
+        console.error('[Store] 删除记忆失败:', err)
+      }
+    },
+
+    // ============================================================
     // 用户管理
     // ============================================================
     saveUserMessages() {
@@ -1380,6 +1424,29 @@ export default {
 .store-time {
   color: #a16207;
   font-size: 11px;
+}
+
+.btn-store-delete {
+  margin-left: auto;
+  padding: 2px 6px;
+  background: transparent;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: all 0.2s;
+}
+
+.btn-store-delete:hover {
+  opacity: 1;
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+.btn-store-delete:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .store-item-value {
