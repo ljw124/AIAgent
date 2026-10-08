@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-10 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-24 12:48:46
+ * @LastEditTime: 2026-10-08 11:13:52
  * @Description: 阶段八：长期记忆 Store — LangGraph InMemoryStore 长期记忆演示
  *   学习目标：理解 LangGraph 的 BaseStore/InMemoryStore 长期记忆机制，实现跨会话信息持久化
  *   核心 API：InMemoryStore、createReactAgent({ store })、namespace 命名空间隔离
@@ -225,8 +225,14 @@ export default {
       handler() { this.$nextTick(() => this.scrollToBottom()) }
     },
     // 记忆相关配置变化时，清除 Agent 缓存以强制重建
-    memoryMode() { this.cachedAgent = null; this.cachedAgentConfig = null },
-    enableLongTermMemory() { this.cachedAgent = null; this.cachedAgentConfig = null }
+    memoryMode() {
+      this.cachedAgent = null;
+      this.cachedAgentConfig = null
+    },
+    enableLongTermMemory() {
+      this.cachedAgent = null;
+      this.cachedAgentConfig = null
+    }
   },
 
   computed: {
@@ -234,7 +240,7 @@ export default {
       const labels = {
         isolated: '🔒 完全隔离',
         shared: '🌐 共享记忆',
-        hybrid: '🔀 混合模式',
+        hybrid: '🔀 混合模式'
       }
       return labels[this.memoryMode] || '未知'
     }
@@ -377,7 +383,7 @@ export default {
             allItems.push({
               namespace: item.namespace,
               key: item.key,
-              value: item.value,
+              value: item.value
             })
           }
         }
@@ -453,7 +459,7 @@ export default {
             category: z.string().describe('信息分类，如 profile（档案）、preference（偏好）、skill（技能）、goal（目标）、fact（事实）'),
             key: z.string().describe('信息的唯一标识，如 name、language、skill_vue'),
             content: z.string().describe('要记住的具体内容'),
-            scope: z.enum(['private', 'shared', 'auto']).optional().default('auto').describe('记忆范围：private=仅自己可见，shared=所有人可见，auto=根据当前模式自动选择'),
+            scope: z.enum(['private', 'shared', 'auto']).optional().default('auto').describe('记忆范围：private=仅自己可见，shared=所有人可见，auto=根据当前模式自动选择')
           })
         }
       )
@@ -530,7 +536,7 @@ export default {
             - "混合模式"：同时搜索私有记忆和共享记忆`,
           schema: z.object({
             category: z.string().optional().describe('信息分类筛选，如 profile、preference、skill、goal、fact，不填则搜索全部'),
-            scope: z.enum(['private', 'shared', 'auto']).optional().default('auto').describe('搜索范围：private=仅私有记忆，shared=仅共享记忆，auto=根据当前模式自动选择'),
+            scope: z.enum(['private', 'shared', 'auto']).optional().default('auto').describe('搜索范围：private=仅私有记忆，shared=仅共享记忆，auto=根据当前模式自动选择')
           })
         }
       )
@@ -626,7 +632,7 @@ export default {
       // 构建配置指纹：当关键配置变化时重建 Agent
       const configFingerprint = JSON.stringify({
         memoryMode: this.memoryMode,
-        enableLongTermMemory: this.enableLongTermMemory,
+        enableLongTermMemory: this.enableLongTermMemory
       })
 
       // 缓存命中：直接返回已有 Agent 实例
@@ -648,7 +654,7 @@ export default {
         temperature: 0,
         configuration: {
           baseURL: window.location.origin + '/inner/'
-        },
+        }
       })
 
       const params = {
@@ -675,7 +681,7 @@ export default {
 
           重要：当用户问"我是谁"、"我的名字"等个人问题时，必须先用 recall 工具检索记忆，而不是凭猜测回答！
 
-          请用中文回答。`,
+          请用中文回答。`
       }
 
       // 注入 InMemoryStore（长期记忆）
@@ -710,7 +716,7 @@ export default {
           // hybrid: 同时搜索私有和共享记忆
           const [privateResults, sharedResults] = await Promise.all([
             this.inMemoryStore.search(this.getPrivateNamespace(), { limit: 50 }),
-            this.inMemoryStore.search(this.getSharedNamespace(), { limit: 50 }),
+            this.inMemoryStore.search(this.getSharedNamespace(), { limit: 50 })
           ])
           allResults = [...privateResults, ...sharedResults]
         }

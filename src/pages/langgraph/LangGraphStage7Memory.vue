@@ -2,19 +2,21 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-09 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-24 10:53:53
+ * @LastEditTime: 2026-10-08 19:34:05
  * @Description: 阶段七：短期记忆 MemorySaver — LangGraph Checkpoint 短期记忆演示
  *   学习目标：理解 LangGraph 的 MemorySaver Checkpoint 机制，实现多轮对话记忆
- *   核心 API：MemorySaver、createReactAgent({ checkpointer })、thread_id 隔离
+ *   核心 API：MemorySaver、createReactAgent({ checkpointer })、thread_id/checkpoint_ns 隔离
+ *            graph.getState()（状态快照）、graph.getStateHistory()（历史检查点）、graph.updateState()（状态回退）
  *   对比阶段六：Agent 每次调用都重新构建，无记忆能力；本阶段注入 MemorySaver 实现上下文保持
+ *   关联阶段：MemorySaver 是 interrupt（阶段五）和 Time Travel（阶段九）的基础设施
 -->
 <template>
   <div>
     <h1>阶段七：短期记忆 MemorySaver <span class="badge stage">LangGraph</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>理解 LangGraph 的 <code>MemorySaver</code> Checkpoint 机制，实现多轮对话上下文记忆<br />
-      <strong>核心 API：</strong><code>MemorySaver</code>（短期记忆）、<code>createReactAgent({ checkpointer })</code>（注入记忆）、<code>thread_id</code>（线程隔离）<br />
-      <strong>对比阶段六：</strong>Agent 每次调用都重新构建，无记忆能力；本阶段注入 <code>MemorySaver</code> 实现上下文保持
+      <strong>核心 API：</strong><code>MemorySaver</code>（短期记忆）、<code>createReactAgent({ checkpointer })</code>（注入记忆，别名 <code>checkpointSaver</code>）、<code>thread_id</code> + <code>checkpoint_ns</code>（双层隔离）<br />
+      <strong>状态管理：</strong><code>graph.getState(config)</code>（查看状态快照）、<code>graph.getStateHistory(config)</code>（遍历历史检查点）、<code>graph.updateState(config, values)</code>（回退/修改状态）<br />
     </div>
 
     <!-- 记忆配置 -->
@@ -48,6 +50,15 @@
         </div>
       </div>
       <div class="config-row">
+        <label>命名空间 NS：</label>
+        <input
+          v-model="currentCheckpointNs"
+          class="config-input ns-input"
+          placeholder="如：subtask-1（可选，用于同一线程内进一步隔离 checkpoint）"
+        />
+        <span class="ns-hint" title="checkpoint_ns 允许在同一 thread_id 内进一步隔离不同子任务的 checkpoint，实现双层隔离">ℹ️ thread_id + checkpoint_ns 双层隔离</span>
+      </div>
+      <div class="config-row">
         <label>功能开关：</label>
         <label class="checkbox-label">
           <input type="checkbox" v-model="enableMemory" />
@@ -58,8 +69,8 @@
           <span>流式输出（stream）</span>
         </label>
         <label class="checkbox-label">
-          <input type="checkbox" v-model="showCheckpoints" />
-          <span>显示 Checkpoint 详情</span>
+          <input type="checkbox" v-model="showStateSnapshot" />
+          <span>显示状态快照（getState/getStateHistory）</span>
         </label>
       </div>
     </div>
@@ -101,18 +112,99 @@
       </div>
     </div>
 
-    <!-- Checkpoint 详情面板 -->
-    <div v-if="showCheckpoints && checkpointInfo.length > 0" class="checkpoint-panel">
-      <div class="checkpoint-title">📋 Checkpoint 历史（线程：{{ currentThreadId }}）</div>
-      <div v-for="(cp, i) in checkpointInfo" :key="i" class="checkpoint-item">
-        <div class="cp-header">
-          <span class="cp-id">#{{ i + 1 }} ID: {{ cp.id }}</span>
-          <span class="cp-time">{{ cp.timestamp }}</span>
+    <!-- getState — 当前状态快照面板 -->
+    <div v-if="showStateSnapshot && enableMemory" class="state-snapshot-panel">
+      <div class="snapshot-title">
+        📋 当前状态快照（graph.getState）
+        <button @click="refreshStateSnapshot" class="btn-refresh-sm" :disabled="loading">🔄 刷新</button>
+      </div>
+      <div v-if="stateSnapshot" class="snapshot-body">
+        <div class="snapshot-row">
+          <span class="snapshot-label">Checkpoint ID：</span>
+          <span class="snapshot-value">{{ stateSnapshot.checkpointId }}</span>
         </div>
-        <div class="cp-detail">
-          <span>消息数：{{ cp.messageCount }}</span>
-          <span v-if="cp.parentId">父节点：{{ cp.parentId }}</span>
+        <div class="snapshot-row">
+          <span class="snapshot-label">下一步节点：</span>
+          <span class="snapshot-value">{{ stateSnapshot.nextNodes.join(', ') || '(无/已结束)' }}</span>
         </div>
+        <div class="snapshot-row">
+          <span class="snapshot-label">消息数量：</span>
+          <span class="snapshot-value">{{ stateSnapshot.messageCount }}</span>
+        </div>
+        <div class="snapshot-row">
+          <span class="snapshot-label">创建时间：</span>
+          <span class="snapshot-value">{{ stateSnapshot.createdAt }}</span>
+        </div>
+        <div class="snapshot-row">
+          <span class="snapshot-label">父检查点：</span>
+          <span class="snapshot-value">{{ stateSnapshot.parentCheckpointId || '(根检查点)' }}</span>
+        </div>
+      </div>
+      <div v-else class="snapshot-empty">
+        暂无状态快照，请先发送消息后刷新
+      </div>
+    </div>
+
+    <!-- getStateHistory — 检查点历史列表 -->
+    <div v-if="showStateSnapshot && enableMemory" class="history-panel">
+      <div class="snapshot-title">
+        📜 检查点历史（graph.getStateHistory）
+        <button @click="refreshStateHistory" class="btn-refresh-sm" :disabled="loading">🔄 刷新</button>
+      </div>
+      <div v-if="stateHistory.length > 0" class="history-list">
+        <div
+          v-for="(cp, i) in stateHistory"
+          :key="i"
+          :class="['history-item', { selected: cp.checkpointId === selectedHistoryCpId }]"
+          @click="selectHistoryCp(cp)"
+        >
+          <div class="cp-header">
+            <span class="cp-id">#{{ stateHistory.length - i }} ID: {{ cp.checkpointId }}</span>
+            <span class="cp-time">{{ cp.createdAt }}</span>
+          </div>
+          <div class="cp-detail">
+            <span>消息数：{{ cp.messageCount }}</span>
+            <span>步骤：{{ cp.step }}</span>
+            <span>下一步：{{ cp.nextNodes && cp.nextNodes.length > 0 ? cp.nextNodes.join(', ') : '(已结束)' }}</span>
+            <span v-if="cp.parentCheckpointId">父节点：{{ cp.parentCheckpointId }}</span>
+          </div>
+        </div>
+      </div>
+      <div v-else class="snapshot-empty">
+        暂无检查点历史，请先发送消息后刷新
+      </div>
+    </div>
+
+    <!-- updateState — 状态回退操作区 -->
+    <div v-if="showStateSnapshot && enableMemory && selectedHistoryCpId" class="update-state-panel">
+      <div class="snapshot-title">✏️ 状态回退（graph.updateState）— 已选中检查点：<code>{{ selectedHistoryCpId }}</code></div>
+      <div class="update-state-desc">
+        选择一个历史检查点后，可以<strong>回退状态</strong>（修改该检查点的状态值）或<strong>分叉执行</strong>（从该检查点继续执行新输入）。
+      </div>
+      <div class="update-state-actions">
+        <button
+          @click="replayFromHistoryCp"
+          class="btn-replay"
+          :disabled="loading || !selectedHistoryCpId"
+        >
+          🔁 回放（Replay）— 从选中检查点重新执行
+        </button>
+        <button
+          @click="forkFromHistoryCp"
+          class="btn-fork"
+          :disabled="loading || !selectedHistoryCpId || !forkInput.trim()"
+        >
+          🔀 分叉（Fork）— 从选中检查点继续执行新输入
+        </button>
+      </div>
+      <div v-if="selectedHistoryCpId" class="fork-input-area">
+        <label>分叉输入（从选中检查点继续执行的新消息）：</label>
+        <input
+          v-model="forkInput"
+          class="config-input"
+          placeholder="输入要追加的新消息内容"
+          style="width: 100%; margin-top: 4px;"
+        />
       </div>
     </div>
 
@@ -153,23 +245,32 @@ export default {
       loading: false,
       error: null,
       agentSteps: [],
-      checkpointInfo: [],
       streamStats: null,
       // 配置项
       currentThreadId: 'user-session-001',
+      currentCheckpointNs: '',
       enableMemory: true,
       enableStream: true,
-      showCheckpoints: false,
+      showStateSnapshot: false,
       // 线程管理：threadId → messages 数组
       threadMessages: {},
       // 全局 MemorySaver 实例（所有线程共享同一个实例）
       memorySaver: null,
+      // Agent 实例缓存
+      agentCache: null,
       // 线程 ID 列表
       threadIds: ['user-session-001'],
       // Token 统计：当前线程累计消耗
       memoryTokens: { prompt: 0, completion: 0, total: 0 },
       // 线程 Token 统计：threadId → { prompt, completion, total }
-      threadTokens: {}
+      threadTokens: {},
+      // getState 状态快照
+      stateSnapshot: null,
+      // getStateHistory 检查点历史
+      stateHistory: [],
+      // updateState 操作
+      selectedHistoryCpId: null,
+      forkInput: ''
     }
   },
 
@@ -177,7 +278,7 @@ export default {
     messages: {
       deep: true,
       handler() { this.$nextTick(() => this.scrollToBottom()) }
-    },
+    }
   },
 
   created() {
@@ -244,10 +345,10 @@ export default {
         async ({ city }) => {
           const weatherData = {
             '北京': { temp: 28, condition: '晴', humidity: '45%' },
-            '上海': { temp: 32, condition: '多云', humidity: '65%' },
-            '广州': { temp: 35, condition: '雷阵雨', humidity: '80%' },
+            '上海': { temp: 22, condition: '多云', humidity: '65%' },
+            '广州': { temp: 30, condition: '雷阵雨', humidity: '80%' },
             '深圳': { temp: 33, condition: '阵雨', humidity: '75%' },
-            '杭州': { temp: 30, condition: '阴', humidity: '60%' }
+            '杭州': { temp: 24, condition: '晴', humidity: '60%' }
           }
           const data = weatherData[city] || { temp: 25, condition: '未知', humidity: '50%' }
           return `${city}天气：${data.condition}，温度 ${data.temp}°C，湿度 ${data.humidity}`
@@ -263,9 +364,12 @@ export default {
     },
 
     // ============================================================
-    // 构建 Agent（注入 MemorySaver）
+    // 构建 Agent（注入 MemorySaver，带缓存）
     // ============================================================
     buildAgent() {
+      // Agent 实例缓存：避免每次 send 都重新创建 Agent
+      if (this.agentCache) return this.agentCache
+
       const tools = [
         this.createCalculatorTool(),
         this.createTimeTool(),
@@ -289,12 +393,14 @@ export default {
       }
 
       // 注入 MemorySaver（核心：短期记忆）
+      // 注意：checkpointer 和 checkpointSaver 是等价的参数别名
       const memory = this.getMemorySaver()
       if (memory) {
         params.checkpointer = memory
       }
 
-      return createReactAgent(params)
+      this.agentCache = createReactAgent(params)
+      return this.agentCache
     },
 
     // ============================================================
@@ -309,7 +415,6 @@ export default {
       this.error = null
       this.loading = true
       this.agentSteps = []
-      this.checkpointInfo = []
       this.streamStats = null
 
       this.messages.push({ role: 'assistant', content: '' })
@@ -330,9 +435,12 @@ export default {
 
         const inputs = { messages: historyMessages }
 
-        // thread_id 配置（核心：线程隔离）
+        // thread_id + checkpoint_ns 配置（核心：双层隔离）
         const config = {
-          configurable: { thread_id: this.currentThreadId }
+          configurable: {
+            thread_id: this.currentThreadId,
+            ...(this.currentCheckpointNs ? { checkpoint_ns: this.currentCheckpointNs } : {})
+          }
         }
 
         if (this.enableStream) {
@@ -397,10 +505,12 @@ export default {
         // 保存当前线程消息
         this.saveThreadMessages()
 
-        // 更新 Checkpoint 信息
-        if (this.showCheckpoints && this.enableMemory) {
-          await this.loadCheckpointInfo()
+        // 自动刷新状态快照和检查点历史
+        if (this.showStateSnapshot && this.enableMemory) {
+          await this.refreshStateSnapshot()
+          await this.refreshStateHistory()
         }
+
       } catch (err) {
         console.error('[Stage9 Error]', err)
         this.error = `请求失败: ${err.message}`
@@ -470,31 +580,202 @@ export default {
     },
 
     // ============================================================
-    // 加载 Checkpoint 信息
+    // getState — 查看当前状态快照
     // ============================================================
-    async loadCheckpointInfo() {
-      if (!this.memorySaver) return
-
+    async refreshStateSnapshot() {
       try {
-        const config = { configurable: { thread_id: this.currentThreadId } }
-        const cpList = []
+        const agent = this.buildAgent()
+        const config = {
+          configurable: {
+            thread_id: this.currentThreadId,
+            ...(this.currentCheckpointNs ? { checkpoint_ns: this.currentCheckpointNs } : {})
+          }
+        }
+        const snapshot = await agent.getState(config)
 
-        for await (const tuple of this.memorySaver.list(config, { limit: 20 })) {
-          cpList.push({
-            id: tuple.checkpoint.id ? tuple.checkpoint.id.substring(0, 8) : '?',
-            timestamp: tuple.checkpoint.ts
-              ? new Date(tuple.checkpoint.ts).toLocaleString('zh-CN')
+        if (snapshot && snapshot.values) {
+          const msgs = snapshot.values.messages || []
+          this.stateSnapshot = {
+            checkpointId: snapshot.config?.configurable?.checkpoint_id
+              ? snapshot.config.configurable.checkpoint_id.substring(0, 8)
               : '?',
-            messageCount: tuple.checkpoint.channel_values?.messages?.length || 0,
-            parentId: tuple.parentConfig?.configurable?.checkpoint_id
-              ? tuple.parentConfig.configurable.checkpoint_id.substring(0, 8)
+            nextNodes: snapshot.next || [],
+            messageCount: msgs.length,
+            createdAt: this.formatTime(snapshot.createdAt),
+            parentCheckpointId: snapshot.parentConfig?.configurable?.checkpoint_id
+              ? snapshot.parentConfig.configurable.checkpoint_id.substring(0, 8)
               : null
+          }
+        } else {
+          this.stateSnapshot = null
+        }
+      } catch (err) {
+        console.error('[getState] 获取状态快照失败:', err)
+        this.stateSnapshot = null
+      }
+    },
+
+    // ============================================================
+    // getStateHistory — 遍历历史检查点
+    // ============================================================
+    async refreshStateHistory() {
+      try {
+        const agent = this.buildAgent()
+        const config = {
+          configurable: {
+            thread_id: this.currentThreadId,
+            ...(this.currentCheckpointNs ? { checkpoint_ns: this.currentCheckpointNs } : {})
+          }
+        }
+        const history = []
+
+        for await (const snapshot of agent.getStateHistory(config)) {
+          const msgs = snapshot.values?.messages || []
+          history.push({
+            checkpointId: snapshot.config?.configurable?.checkpoint_id
+              ? snapshot.config.configurable.checkpoint_id.substring(0, 8)
+              : '?',
+            fullCheckpointId: snapshot.config?.configurable?.checkpoint_id || null,
+            config: snapshot.config,
+            parentConfig: snapshot.parentConfig,
+            messageCount: msgs.length,
+            step: snapshot.metadata?.step || '?',
+            createdAt: this.formatTime(snapshot.createdAt),
+            parentCheckpointId: snapshot.parentConfig?.configurable?.checkpoint_id
+              ? snapshot.parentConfig.configurable.checkpoint_id.substring(0, 8)
+              : null,
+            nextNodes: snapshot.next || []
           })
         }
 
-        this.checkpointInfo = cpList.reverse()
+        this.stateHistory = history
       } catch (err) {
-        console.error('[Checkpoint] 加载失败:', err)
+        console.error('[getStateHistory] 获取检查点历史失败:', err)
+      }
+    },
+
+    // ============================================================
+    // 选中历史检查点
+    // ============================================================
+    selectHistoryCp(cp) {
+      if (cp.checkpointId === this.selectedHistoryCpId) {
+        this.selectedHistoryCpId = null
+        this.forkInput = ''
+      } else {
+        this.selectedHistoryCpId = cp.checkpointId
+      }
+    },
+
+    // ============================================================
+    // Time Travel: 回放（Replay）— 从选中检查点重新执行
+    // ============================================================
+    async replayFromHistoryCp() {
+      if (!this.selectedHistoryCpId || this.loading) return
+
+      const cp = this.stateHistory.find(
+        (c) => c.checkpointId === this.selectedHistoryCpId
+      )
+      if (!cp || !cp.config) {
+        this.error = '未找到选中的检查点配置'
+        return
+      }
+
+      this.loading = true
+      this.error = null
+
+      try {
+        const agent = this.buildAgent()
+
+        // 使用历史检查点的 config 重新 invoke（传入 null 表示不追加新输入，仅重放）
+        const result = await agent.invoke(null, cp.config)
+
+        // 更新消息列表
+        const resultMsgs = result.messages || []
+        this.messages = resultMsgs.map((m) => {
+          const type = m._getType ? m._getType() : ''
+          if (type === 'human') return { role: 'user', content: m.content }
+          if (type === 'ai') return { role: 'assistant', content: m.content }
+          return null
+        }).filter(Boolean)
+
+        this.saveThreadMessages()
+        await this.refreshStateSnapshot()
+        await this.refreshStateHistory()
+        this.selectedHistoryCpId = null
+      } catch (err) {
+        console.error('[Replay] 回放失败:', err)
+        this.error = `回放失败: ${err.message}`
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // ============================================================
+    // Time Travel: 分叉（Fork）— 从选中检查点继续执行新输入
+    // ============================================================
+    async forkFromHistoryCp() {
+      if (!this.selectedHistoryCpId || this.loading) return
+
+      const cp = this.stateHistory.find(
+        (c) => c.checkpointId === this.selectedHistoryCpId
+      )
+      if (!cp || !cp.config) {
+        this.error = '未找到选中的检查点配置'
+        return
+      }
+
+      const forkMsg = this.forkInput.trim()
+      if (!forkMsg) {
+        this.error = '请输入分叉时要追加的消息内容'
+        return
+      }
+
+      this.loading = true
+      this.error = null
+
+      try {
+        const agent = this.buildAgent()
+
+        // 从历史检查点分叉：使用历史 config 继续执行，传入新消息
+        const result = await agent.invoke(
+          { messages: [new HumanMessage(forkMsg)] },
+          cp.config
+        )
+
+        // 更新消息列表
+        const resultMsgs = result.messages || []
+        this.messages = resultMsgs.map((m) => {
+          const type = m._getType ? m._getType() : ''
+          if (type === 'human') return { role: 'user', content: m.content }
+          if (type === 'ai') return { role: 'assistant', content: m.content }
+          return null
+        }).filter(Boolean)
+
+        this.forkInput = ''
+        this.saveThreadMessages()
+        await this.refreshStateSnapshot()
+        await this.refreshStateHistory()
+        this.selectedHistoryCpId = null
+      } catch (err) {
+        console.error('[Fork] 分叉失败:', err)
+        this.error = `分叉失败: ${err.message}`
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // ============================================================
+    // 格式化时间
+    // ============================================================
+    formatTime(isoString) {
+      if (!isoString) return '?'
+      try {
+        const d = new Date(isoString)
+        if (isNaN(d.getTime())) return '?'
+        const pad = (n) => String(n).padStart(2, '0')
+        return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+      } catch {
+        return '?'
       }
     },
 
@@ -524,7 +805,10 @@ export default {
       this.messages = []
       this.memoryTokens = { prompt: 0, completion: 0, total: 0 }
       this.agentSteps = []
-      this.checkpointInfo = []
+      this.stateSnapshot = null
+      this.stateHistory = []
+      this.selectedHistoryCpId = null
+      this.forkInput = ''
       this.streamStats = null
       this.error = null
     },
@@ -540,13 +824,17 @@ export default {
       this.messages = this.threadMessages[threadId] || []
       this.memoryTokens = this.threadTokens[threadId] || { prompt: 0, completion: 0, total: 0 }
       this.agentSteps = []
-      this.checkpointInfo = []
+      this.stateSnapshot = null
+      this.stateHistory = []
+      this.selectedHistoryCpId = null
+      this.forkInput = ''
       this.streamStats = null
       this.error = null
 
-      // 加载 Checkpoint 信息
-      if (this.showCheckpoints && this.enableMemory) {
-        this.loadCheckpointInfo()
+      // 加载 Checkpoint 信息和状态快照
+      if (this.showStateSnapshot && this.enableMemory) {
+        this.refreshStateSnapshot()
+        this.refreshStateHistory()
       }
     },
 
@@ -581,7 +869,10 @@ export default {
         this.messages = []
         this.memoryTokens = { prompt: 0, completion: 0, total: 0 }
         this.agentSteps = []
-        this.checkpointInfo = []
+        this.stateSnapshot = null
+        this.stateHistory = []
+        this.selectedHistoryCpId = null
+        this.forkInput = ''
         this.streamStats = null
       }
     },
@@ -598,7 +889,10 @@ export default {
       this.messages = []
       this.memoryTokens = { prompt: 0, completion: 0, total: 0 }
       this.agentSteps = []
-      this.checkpointInfo = []
+      this.stateSnapshot = null
+      this.stateHistory = []
+      this.selectedHistoryCpId = null
+      this.forkInput = ''
       this.streamStats = null
       this.error = null
 
@@ -916,6 +1210,213 @@ export default {
   animation: blink 1s step-end infinite;
   color: #8b5cf6;
   font-weight: 700;
+}
+
+/* ============================================================
+  checkpoint_ns 命名空间样式
+  ============================================================ */
+.ns-input {
+  flex: 1;
+  max-width: 420px;
+  font-family: monospace;
+}
+
+.ns-hint {
+  font-size: 12px;
+  color: #7c3aed;
+  cursor: help;
+  white-space: nowrap;
+}
+
+/* ============================================================
+  getState 状态快照面板
+  ============================================================ */
+.state-snapshot-panel {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.snapshot-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: #1e40af;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.snapshot-title code {
+  font-size: 12px;
+  background: #dbeafe;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.btn-refresh-sm {
+  padding: 2px 10px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn-refresh-sm:hover {
+  background: #2563eb;
+}
+
+.btn-refresh-sm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.snapshot-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.snapshot-row {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.snapshot-label {
+  color: #1e40af;
+  font-weight: 600;
+  min-width: 100px;
+}
+
+.snapshot-value {
+  color: #1e293b;
+  font-family: monospace;
+}
+
+.snapshot-empty {
+  font-size: 13px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ============================================================
+  getStateHistory 检查点历史面板
+  ============================================================ */
+.history-panel {
+  background: #fefce8;
+  border: 1px solid #fef08a;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.history-item {
+  background: #fef9c3;
+  border: 1px solid #fde047;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.history-item:hover {
+  background: #fef08a;
+  border-color: #eab308;
+}
+
+.history-item.selected {
+  background: #fde047;
+  border-color: #ca8a04;
+  box-shadow: 0 0 0 2px rgba(202, 138, 4, 0.3);
+}
+
+/* ============================================================
+  updateState 状态回退面板
+  ============================================================ */
+.update-state-panel {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.update-state-desc {
+  font-size: 13px;
+  color: #991b1b;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.update-state-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-replay {
+  padding: 6px 16px;
+  background: #f59e0b;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-replay:hover {
+  background: #d97706;
+}
+
+.btn-replay:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-fork {
+  padding: 6px 16px;
+  background: #8b5cf6;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-fork:hover {
+  background: #7c3aed;
+}
+
+.btn-fork:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fork-input-area {
+  margin-top: 8px;
+}
+
+.fork-input-area label {
+  font-size: 13px;
+  color: #991b1b;
+  font-weight: 600;
 }
 
 @keyframes blink {

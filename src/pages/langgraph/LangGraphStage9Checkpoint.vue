@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-24 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-24 14:20:14
+ * @LastEditTime: 2026-10-08 11:17:00
  * @Description: 阶段九：Checkpoint 检查点 — getState/getStateHistory + Time Travel 回溯演示
  *   学习目标：掌握 LangGraph 的 getState/getStateHistory API，实现 Time Travel（回放/分叉）
  *   核心 API：graph.getState()、graph.getStateHistory()、graph.updateState()、StateSnapshot
@@ -369,7 +369,7 @@ export default {
             // 父检查点id
             parentCheckpointId: snapshot.parentConfig?.configurable?.checkpoint_id
               ? snapshot.parentConfig.configurable.checkpoint_id.substring(0, 8)
-              : null,
+              : null
           }
         } else {
           this.currentState = null
@@ -405,7 +405,7 @@ export default {
             parentCheckpointId: snapshot.parentConfig?.configurable?.checkpoint_id
               ? snapshot.parentConfig.configurable.checkpoint_id.substring(0, 8)
               : null,
-            nextNodes: snapshot.next || [],
+            nextNodes: snapshot.next || []
           })
         }
 
