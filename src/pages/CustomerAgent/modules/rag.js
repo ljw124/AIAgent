@@ -162,7 +162,7 @@ const BUILTIN_DOCUMENTS = [
   },
   {
     title: 'Middleware 中间件',
-    source: 'LangChain-Python中间件Middleware详解.md',
+    source: 'LangChain-中间件Middleware详解.md',
     content: `中间件（Middleware）允许在 LLM 调用前后插入自定义逻辑。
 
       LangChain.js 通过 BaseCallbackHandler 实现中间件功能：

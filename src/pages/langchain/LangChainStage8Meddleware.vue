@@ -2,19 +2,19 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-07 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-08 12:38:26
- * @Description: 阶段七：中间件 Middleware — LangChain Python 中间件演示
- *   学习目标：理解 LangChain Python 的中间件机制（Before/After/Around）
- *   核心 API：BaseCallbackHandler、callbacks 参数
- *   注意：LangChain.js 无中间件 API，本页面通过 Python 脚本演示
+ * @LastEditTime: 2026-10-09 14:44:08
+ * @Description: 阶段七：中间件 Middleware — LangChain.js 中间件演示
+ *   学习目标：理解 LangChain.js 的中间件机制（beforeModel/afterModel）
+ *   核心 API：createMiddleware（自定义中间件）、createAgent + middleware（官方内置中间件）
+ *   说明：基于 langchain@1.5.x，前端直接调用 JS 中间件，无需 Python 环境
 -->
 <template>
   <div>
-    <h1>阶段七：中间件 Middleware <span class="badge stage">Python演示</span></h1>
+    <h1>阶段七：中间件 Middleware <span class="badge stage">LangChain</span></h1>
     <div class="info-box">
-      <strong>学习目标：</strong>理解 LangChain Python 的中间件机制，实现横切关注点（日志、缓存、限流、重试）<br />
-      <strong>核心 API：</strong><code>BaseCallbackHandler</code>（自定义中间件）、<code>create_agent(middleware=)</code>（官方内置中间件）<br />
-      <strong>说明：</strong>LangChain.js 无中间件 API，本页面通过 Python 脚本（<code>MiddlewareModel.py</code>）调用内网大模型演示
+      <strong>学习目标：</strong>理解 LangChain.js 的中间件机制，实现横切关注点（日志、缓存、限流、重试）<br />
+      <strong>核心 API：</strong><code>createMiddleware</code>（自定义中间件）、<code>createAgent({ middleware: [...] })</code>（官方内置中间件）<br />
+      <strong>说明：</strong>基于 <code>langchain@1.5.x</code>，前端直接调用 JS 中间件（<code>middlewareSamples.js</code>），无需 Python 环境
     </div>
 
     <!-- 中间件与模型配置 -->
@@ -72,6 +72,7 @@
           模型：
           <select v-model="config.model">
             <option value="EB-DeepSeek-V4-Pro">EB-DeepSeek-V4-Pro（推荐）</option>
+            <option value="EB-GLM-5.2">EB-GLM-5.2</option>
           </select>
         </label>
         <label class="ml-24">
@@ -113,15 +114,12 @@
         </div>
       </div>
     </div>
-
-    <details class="code-block">
-      <summary>📄 查看 Python 中间件代码（MiddlewareModel.py）</summary>
-      <pre class="code-content">{{ codeExample }}</pre>
-    </details>
   </div>
 </template>
 
 <script>
+import { chatWithMiddleware } from '@/composables/middlewareSamples.js'
+
 export default {
   name: 'LangChainStage8Meddleware',
 
@@ -139,78 +137,19 @@ export default {
       selectedMiddleware: ['before', 'after', 'around', 'sensitive', 'metrics', 'retry', 'summarization', 'human_in_the_loop', 'pii', 'todo', 'call_limit'],
       // 中间件选项列表
       middlewareOptions: [
-        { value: 'before', label: 'Before 中间件', desc: '调用前：参数校验、鉴权、注入上下文', type: 'custom', className: 'BeforeMiddleware' },
-        { value: 'after', label: 'After 中间件', desc: '调用后：结果处理、缓存写入、指标采集', type: 'custom', className: 'AfterMiddleware' },
-        { value: 'around', label: 'Around 中间件', desc: '环绕：统一计时、统一异常处理', type: 'custom', className: 'AroundMiddleware' },
-        { value: 'sensitive', label: '脱敏中间件', desc: '敏感数据脱敏，防止信息泄露', type: 'custom', className: 'SensitiveDataMiddleware' },
-        { value: 'metrics', label: '指标中间件', desc: '统计调用次数与平均耗时', type: 'custom', className: 'MetricsMiddleware' },
-        { value: 'retry', label: '重试中间件', desc: '调用失败自动重试', type: 'custom', className: 'RetryMiddleware' },
-        { value: 'summarization', label: '摘要中间件', desc: '长文本自动摘要，便于快速阅读', type: 'official', className: 'SummarizationMiddleware' },
-        { value: 'human_in_the_loop', label: '人机协同中间件', desc: '关键节点人工审核确认', type: 'official', className: 'HumanInTheLoopMiddleware' },
-        { value: 'pii', label: 'PII 中间件', desc: '检测过滤身份证/手机号/邮箱等敏感信息', type: 'official', className: 'PIIMiddleware' },
-        { value: 'todo', label: '待办列表中间件', desc: '从回复中自动提取行动项/待办事项', type: 'official', className: 'TodoListMiddleware' },
-        { value: 'call_limit', label: '调用限制中间件', desc: '限制调用次数，防止滥用超配额', type: 'official', className: 'ModelCallLimitMiddleware' },
+        { value: 'before', label: 'Before 中间件', desc: '调用前：参数校验、鉴权、注入上下文', type: 'custom', className: 'beforeMiddleware' },
+        { value: 'after', label: 'After 中间件', desc: '调用后：结果处理、缓存写入、指标采集', type: 'custom', className: 'afterMiddleware' },
+        { value: 'around', label: 'Around 中间件', desc: '环绕：统一计时、统一异常处理', type: 'custom', className: 'aroundMiddleware' },
+        { value: 'sensitive', label: '脱敏中间件', desc: '敏感数据脱敏，防止信息泄露', type: 'custom', className: 'sensitiveDataMiddleware' },
+        { value: 'metrics', label: '指标中间件', desc: '统计调用次数与平均耗时', type: 'custom', className: 'metricsMiddleware' },
+        { value: 'retry', label: '重试中间件', desc: '调用失败自动重试', type: 'official', className: 'modelRetryMiddleware' },
+        { value: 'summarization', label: '摘要中间件', desc: '长文本自动摘要，便于快速阅读', type: 'official', className: 'summarizationMiddleware' },
+        { value: 'human_in_the_loop', label: '人机协同中间件', desc: '关键节点人工审核确认', type: 'official', className: 'humanInTheLoopMiddleware' },
+        { value: 'pii', label: 'PII 中间件', desc: '检测过滤身份证/手机号/邮箱等敏感信息', type: 'official', className: 'piiMiddleware' },
+        { value: 'todo', label: '待办列表中间件', desc: '从回复中自动提取行动项/待办事项', type: 'official', className: 'todoListMiddleware' },
+        { value: 'call_limit', label: '调用限制中间件', desc: '限制调用次数，防止滥用超配额', type: 'official', className: 'modelCallLimitMiddleware' },
       ],
-      dropdownOpen: false,
-      codeExample: `# MiddlewareModel.py — LangChain Python 中间件演示（重构版）
-      # 安装依赖：pip install langchain langchain-openai langchain-core python-dotenv
-
-      from langchain_core.callbacks import BaseCallbackHandler
-      from langchain_openai import ChatOpenAI
-      from langchain.agents import create_agent
-      from langchain.agents.middleware import (
-          SummarizationMiddleware, HumanInTheLoopMiddleware,
-          PIIMiddleware, TodoListMiddleware, ModelCallLimitMiddleware,
-      )
-
-      # ============================================================
-      # 一、自定义中间件（继承 BaseCallbackHandler，通过 callbacks= 传递）
-      # ============================================================
-      class BeforeMiddleware(BaseCallbackHandler):
-          """调用前：参数校验、鉴权、注入上下文"""
-          def on_llm_start(self, serialized, prompts, **kwargs):
-              print(f"[Before] LLM 调用开始，输入消息数: {len(prompts)}")
-
-      class AfterMiddleware(BaseCallbackHandler):
-          """调用后：结果处理、缓存写入、指标采集"""
-          def on_llm_end(self, response, **kwargs):
-              text = response.generations[0][0].text
-              print(f"[After] LLM 调用结束，输出长度: {len(text)} 字符")
-
-      class AroundMiddleware(BaseCallbackHandler):
-          """环绕：统一计时/异常处理"""
-          def on_llm_start(self, serialized, prompts, **kwargs):
-              self.start_time = time.time()
-          def on_llm_end(self, response, **kwargs):
-              print(f"[Around] 调用耗时: {time.time() - self.start_time:.2f} 秒")
-
-      # ============================================================
-      # 二、双层中间件架构：自定义 + 官方内置
-      # ============================================================
-      # 1. 自定义中间件 → ChatOpenAI(callbacks=)
-      llm = ChatOpenAI(
-          model="EB-DeepSeek-V4-Pro",
-          api_key=API_KEY,
-          base_url=BASE_URL,
-          callbacks=[BeforeMiddleware(), AfterMiddleware(), AroundMiddleware()],
-      )
-
-      # 2. 官方内置中间件 → create_agent(middleware=)
-      agent = create_agent(
-          model=llm,  # 已配置自定义中间件的 LLM 实例
-          middleware=[
-              SummarizationMiddleware(model=llm, trigger=('tokens', 4000)),
-              TodoListMiddleware(),
-              ModelCallLimitMiddleware(run_limit=10),
-              PIIMiddleware(pii_type='email', strategy='redact'),
-              HumanInTheLoopMiddleware(interrupt_on={'tool_use': True}),
-          ],
-          system_prompt="你是一个有用的AI助手，请用中文回答。",
-      )
-
-      # 3. 调用 Agent（两种中间件协同工作）
-      result = agent.invoke({"messages": [HumanMessage(content=message)]})
-      print(result["messages"][-1].content)`,
+      dropdownOpen: false
     }
   },
 
@@ -219,21 +158,21 @@ export default {
     selectedMiddlewareOptions() {
       return this.middlewareOptions.filter((opt) => this.selectedMiddleware.includes(opt.value))
     },
-    // 转换为后端期望的 { key: boolean } 对象格式
+    // 转换为中间件开关配置 { key: boolean }
     middlewareConfig() {
       const config = {}
       this.middlewareOptions.forEach((opt) => {
         config[opt.value] = this.selectedMiddleware.includes(opt.value)
       })
       return config
-    },
+    }
   },
 
   watch: {
     messages: {
       deep: true,
-      handler() { this.$nextTick(() => this.scrollToBottom()) },
-    },
+      handler() { this.$nextTick(() => this.scrollToBottom()) }
+    }
   },
 
   methods: {
@@ -270,27 +209,17 @@ export default {
       const aiMsgIndex = this.messages.length - 1
 
       try {
-        const response = await fetch('/api/middleware/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: text,
-            temperature: this.config.temperature,
-            model: this.config.model,
-            middleware: this.middlewareConfig,
-          }),
+        // 直接调用 JS 中间件（无需 Python 后端）
+        const result = await chatWithMiddleware(text, {
+          temperature: this.config.temperature,
+          model: this.config.model,
+          middleware: this.middlewareConfig
         })
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(`HTTP ${response.status}: ${errorData.error || response.statusText}`)
-        }
-
-        const data = await response.json()
-        this.messages[aiMsgIndex].content = data.content || data.message || '（空响应）'
-        this.messages[aiMsgIndex].logs = data.logs || []
+        this.messages[aiMsgIndex].content = result.content || '（空响应）'
+        this.messages[aiMsgIndex].logs = result.logs || []
       } catch (err) {
-        console.error('[Middleware API Error]', err)
+        console.error('[Middleware Error]', err)
         this.error = `请求失败: ${err.message}`
         if (!this.messages[aiMsgIndex].content) {
           this.messages.splice(aiMsgIndex, 1)
@@ -666,34 +595,6 @@ export default {
   line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-all;
-}
-
-.code-block {
-  margin-top: 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.code-block summary {
-  padding: 12px 16px;
-  background: #f8fafc;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  color: #334155;
-}
-
-.code-content {
-  background: #0f172a;
-  color: #e2e8f0;
-  padding: 16px;
-  font-size: 13px;
-  line-height: 1.6;
-  overflow-x: auto;
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .ml-24 {

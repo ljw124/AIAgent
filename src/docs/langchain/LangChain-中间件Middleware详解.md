@@ -2,15 +2,15 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-07
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-08 12:41:23
- * @Description: LangChain Python 版中间件（Middleware）学习教程
- *   对比：LangChain.js 目前尚无 middleware API（@langchain/core 1.2.9）
- *   更新：重构为双层架构 — 自定义中间件（BaseCallbackHandler）+ 官方内置中间件（AgentMiddleware）
+ * @LastEditTime: 2026-10-09 09:44:59
+ * @Description: LangChain 中间件（Middleware）学习教程
+ *   说明：LangChain.js（langchain@1.5.x）已支持 middleware API（createAgent + createMiddleware）
+ *   本文以 Python 版为参考讲解中间件原理，实际项目已迁移至 JS 版（见 src/composables/middlewareSamples.js）
 -->
 
-# LangChain Python 版中间件（Middleware）详解
+# LangChain 中间件（Middleware）详解
 
-> 本文总结 LangChain **Python 版**的中间件（Middleware）机制，帮助你理解如何在模型调用前后插入自定义逻辑。**注意**：LangChain.js 目前尚未提供 `middleware` API，本文以 Python 版为准。
+> 本文总结 LangChain 的中间件（Middleware）机制，帮助你理解如何在模型调用前后插入自定义逻辑。**说明**：LangChain.js（`langchain@1.5.x`）已支持 `middleware` API（`createAgent` + `createMiddleware`），项目已从 Python 版迁移至纯前端 JS 实现（[`middlewareSamples.js`](../../composables/middlewareSamples.js)），本文保留 Python 版作为原理参考。
 
 ---
 
@@ -350,29 +350,41 @@ result = agent.invoke({"messages": [HumanMessage("帮我规划学习计划")]})
 
 ## 八、与 LangChain.js 的对比
 
-| 维度 | LangChain Python | LangChain.js |
+| 维度 | LangChain Python | LangChain.js（langchain@1.5.x） |
 |---|---|---|
-| 自定义中间件 API | ✅ `BaseCallbackHandler` + `callbacks=` | ❌ 无直接等价物 |
-| 官方内置中间件 | ✅ `langchain.agents.middleware` (5个) | ❌ 尚未提供 |
-| Agent 级别中间件 | ✅ `create_agent(middleware=)` | ❌ 尚未提供 |
-| 替代方案 | 原生中间件 | `RunnableLambda` 链式组合、`callbacks` 回调 |
+| 自定义中间件 API | ✅ `BaseCallbackHandler` + `callbacks=` | ✅ `createMiddleware({ beforeModel, afterModel })` |
+| 官方内置中间件 | ✅ `langchain.agents.middleware` (5个) | ✅ 20+ 内置中间件（`summarizationMiddleware`、`humanInTheLoopMiddleware`、`piiMiddleware` 等） |
+| Agent 级别中间件 | ✅ `create_agent(middleware=)` | ✅ `createAgent({ model, middleware: [...] })` |
+| 项目实现 | [`MiddlewareModel.py`](../../composables/MiddlewareModel.py) | [`middlewareSamples.js`](../../composables/middlewareSamples.js) |
 
-**LangChain.js 的替代实现**（当前 `@langchain/core` 1.2.9）：
+**LangChain.js 中间件示例**（`langchain@1.5.x`，项目实际使用）：
 
 ```js
-import { RunnableLambda } from '@langchain/core/runnables'
+import { createAgent, createMiddleware, summarizationMiddleware } from 'langchain'
 
-// 用 RunnableLambda 模拟中间件（前后处理）
-const chain = RunnableLambda.from(async (input) => {
-  console.log('调用前：', input)
-  return input
+// 自定义中间件：在模型调用前后插入逻辑
+const beforeMiddleware = createMiddleware({
+  name: 'BeforeMiddleware',
+  beforeModel: async (state) => {
+    console.log('[Before] 模型调用前，输入:', state.messages[state.messages.length - 1]?.content)
+  }
 })
-  .pipe(llm)
-  .pipe(RunnableLambda.from(async (output) => {
-  console.log('调用后：', output)
-  return output
-}))
+
+const afterMiddleware = createMiddleware({
+  name: 'AfterMiddleware',
+  afterModel: async (state) => {
+    console.log('[After] 模型调用后，输出:', state.messages[state.messages.length - 1]?.content)
+  }
+})
+
+// 创建 Agent，同时使用自定义和内置中间件
+const agent = createAgent({
+  model: 'gpt-4o',
+  middleware: [beforeMiddleware, afterMiddleware, summarizationMiddleware()]
+})
 ```
+
+> 完整实现见 [`src/composables/middlewareSamples.js`](../../composables/middlewareSamples.js)，包含 6 个自定义中间件 + 5 个官方内置中间件的 JS 移植。
 
 ---
 
@@ -394,4 +406,4 @@ const chain = RunnableLambda.from(async (input) => {
 - **官方内置中间件** 通过 `create_agent(middleware=)` 传递，在 Agent 级别工作
 - 官方内置了 5 个中间件：`SummarizationMiddleware`、`HumanInTheLoopMiddleware`、`PIIMiddleware`、`TodoListMiddleware`、`ModelCallLimitMiddleware`
 - 两种中间件可通过 `create_agent()` 统一编排，形成 **双层中间件架构**
-- **LangChain.js 目前没有 `middleware` API**，可用 `RunnableLambda` 链式组合或 `callbacks` 回调实现类似功能
+- **LangChain.js（`langchain@1.5.x`）已完整支持 `middleware` API**（`createAgent` + `createMiddleware` + 20+ 内置中间件），项目已迁移至纯前端 JS 实现（[`middlewareSamples.js`](../../composables/middlewareSamples.js)），无需 Python 后端
