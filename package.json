@@ -9,10 +9,10 @@
   },
   "dependencies": {
     "@langchain/core": "^1.2.9",
-    "@langchain/langgraph": "^1.4.13",
     "@langchain/openai": "^1.5.10",
     "@langchain/textsplitters": "^1.0.1",
     "core-js": "^3.8.3",
+    "langchain": "^1.5.15",
     "marked": "^18.0.14",
     "mermaid": "10",
     "pg": "^8.23.0",
