@@ -141,56 +141,56 @@
               :class="['nav-item', { active: currentPage === 'lc-stage1' }]"
               @click="currentPage = 'lc-stage1'"
             >
-              <span class="nav-icon">1️⃣</span>
+              <span class="nav-icon nav-badge">1</span>
               <span class="nav-label">Prompt Template</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lc-stage2' }]"
               @click="currentPage = 'lc-stage2'"
             >
-              <span class="nav-icon">2️⃣</span>
+              <span class="nav-icon nav-badge">2</span>
               <span class="nav-label">Chain 链式调用</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lc-stage6' }]"
               @click="currentPage = 'lc-stage6'"
             >
-              <span class="nav-icon">3️⃣</span>
+              <span class="nav-icon nav-badge">3</span>
               <span class="nav-label">Streaming 流式</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lc-stage7' }]"
               @click="currentPage = 'lc-stage7'"
             >
-              <span class="nav-icon">4️⃣</span>
+              <span class="nav-icon nav-badge">4</span>
               <span class="nav-label">Structured 结构化</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lc-stage3' }]"
               @click="currentPage = 'lc-stage3'"
             >
-              <span class="nav-icon">5️⃣</span>
+              <span class="nav-icon nav-badge">5</span>
               <span class="nav-label">Tool Calling</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lc-stage4' }]"
               @click="currentPage = 'lc-stage4'"
             >
-              <span class="nav-icon">6️⃣</span>
+              <span class="nav-icon nav-badge">6</span>
               <span class="nav-label">Agent 智能体</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lc-stage5' }]"
               @click="currentPage = 'lc-stage5'"
             >
-              <span class="nav-icon">7️⃣</span>
+              <span class="nav-icon nav-badge">7</span>
               <span class="nav-label">RAG 检索增强</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lc-stage8' }]"
               @click="currentPage = 'lc-stage8'"
             >
-              <span class="nav-icon">8️⃣</span>
+              <span class="nav-icon nav-badge">8</span>
               <span class="nav-label">Middleware 中间件</span>
             </div>
             <div
@@ -213,71 +213,78 @@
               :class="['nav-item', { active: currentPage === 'lg-stage1' }]"
               @click="currentPage = 'lg-stage1'"
             >
-              <span class="nav-icon">1️⃣</span>
+              <span class="nav-icon nav-badge">1</span>
               <span class="nav-label">StateGraph 基础图</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lg-stage2' }]"
               @click="currentPage = 'lg-stage2'"
             >
-              <span class="nav-icon">2️⃣</span>
+              <span class="nav-icon nav-badge">2</span>
               <span class="nav-label">Annotation 状态定义</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lg-stage3' }]"
               @click="currentPage = 'lg-stage3'"
             >
-              <span class="nav-icon">3️⃣</span>
+              <span class="nav-icon nav-badge">3</span>
               <span class="nav-label">Routing 条件路由</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lg-stage4' }]"
               @click="currentPage = 'lg-stage4'"
             >
-              <span class="nav-icon">4️⃣</span>
+              <span class="nav-icon nav-badge">4</span>
               <span class="nav-label">Command 命令式路由</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lg-stage5' }]"
               @click="currentPage = 'lg-stage5'"
             >
-              <span class="nav-icon">5️⃣</span>
+              <span class="nav-icon nav-badge">5</span>
               <span class="nav-label">Interrupt 人机协同</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lg-stage6' }]"
               @click="currentPage = 'lg-stage6'"
             >
-              <span class="nav-icon">6️⃣</span>
+              <span class="nav-icon nav-badge">6</span>
               <span class="nav-label">Send 并行执行</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lg-stage7' }]"
               @click="currentPage = 'lg-stage7'"
             >
-              <span class="nav-icon">7️⃣</span>
+              <span class="nav-icon nav-badge">7</span>
               <span class="nav-label">Memory 短期记忆</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lg-stage8' }]"
               @click="currentPage = 'lg-stage8'"
             >
-              <span class="nav-icon">8️⃣</span>
+              <span class="nav-icon nav-badge">8</span>
               <span class="nav-label">Store 长期记忆</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lg-stage9' }]"
               @click="currentPage = 'lg-stage9'"
             >
-              <span class="nav-icon">9️⃣</span>
+              <span class="nav-icon nav-badge">9</span>
               <span class="nav-label">Checkpoint 检查点</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lg-stage10' }]"
               @click="currentPage = 'lg-stage10'"
             >
-              <span class="nav-icon">🔟</span>
+              <span class="nav-icon nav-badge">10</span>
               <span class="nav-label">Context 运行时上下文</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lg-stage11' }]"
+              @click="currentPage = 'lg-stage11'"
+            >
+              <span class="nav-icon nav-badge">11</span>
+              <span class="nav-label">Subgraph 子图嵌套</span>
             </div>
           </div>
         </div>
@@ -317,6 +324,7 @@
       <LangGraphStage8Store v-if="currentPage === 'lg-stage8'" />
       <LangGraphStage9Checkpoint v-if="currentPage === 'lg-stage9'" />
       <LangGraphStage10Context v-if="currentPage === 'lg-stage10'" />
+      <LangGraphStage11Subgraph v-if="currentPage === 'lg-stage11'" />
       <OllamaChat v-if="currentPage === 'ollama-chat'" />
       <OllamaPythonChat v-if="currentPage === 'ollama-python'" />
       <DeepSeekModelChat v-if="currentPage === 'deepseek-js'" />
@@ -351,6 +359,7 @@ import LangGraphStage7Memory from '@/pages/langgraph/LangGraphStage7Memory.vue'
 import LangGraphStage8Store from '@/pages/langgraph/LangGraphStage8Store.vue'
 import LangGraphStage9Checkpoint from '@/pages/langgraph/LangGraphStage9Checkpoint.vue'
 import LangGraphStage10Context from '@/pages/langgraph/LangGraphStage10Context.vue'
+import LangGraphStage11Subgraph from '@/pages/langgraph/LangGraphStage11Subgraph.vue'
 import OllamaChat from '@/pages/ollama/OllamaChat.vue'
 import OllamaPythonChat from '@/pages/ollama/OllamaPythonChat.vue'
 import DeepSeekModelChat from '@/pages/DeepSeek/DeepSeekModelChat.vue'
@@ -385,6 +394,7 @@ export default {
     LangGraphStage8Store,
     LangGraphStage9Checkpoint,
     LangGraphStage10Context,
+    LangGraphStage11Subgraph,
     OllamaChat,
     OllamaPythonChat,
     DeepSeekModelChat,
@@ -541,6 +551,22 @@ html, body {
   width: 24px;
   text-align: center;
   flex-shrink: 0;
+}
+
+/* 阶段数字徽章 — 模拟 keycap emoji 风格 */
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #2B7CE4 0%, #4A90F7 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .nav-label {

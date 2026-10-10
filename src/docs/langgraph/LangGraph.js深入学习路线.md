@@ -21,8 +21,9 @@
 9. [阶段八：Store 长期记忆 — InMemoryStore 跨会话记忆](#9-阶段八store-长期记忆--inmemorystore-跨会话记忆)
 10. [阶段九：Checkpoint 检查点 — getState/getStateHistory + Time Travel](#10-阶段九checkpoint-检查点--getstategetstatehistory--time-travel)
 11. [阶段十：Context 运行时上下文 — runtime.context 注入](#11-阶段十context-运行时上下文--runtimecontext-注入)
-12. [进阶主题](#12-进阶主题)
-13. [🆕 Python 快速对照速查表](#13-python-快速对照速查表)
+12. [阶段十一：Subgraph — 子图嵌套与复用](#12-阶段十一subgraph--子图嵌套与复用)
+13. [进阶主题](#13-进阶主题)
+14. [🆕 Python 快速对照速查表](#14-python-快速对照速查表)
 
 ---
 
@@ -52,11 +53,11 @@
 │  │ 人机协同 │   │ 并行执行 │   │ 短期记忆 │   │ 长期记忆 │                          │
 │  └──────────┘   └──────────┘   └──────────┘   └──────────┘                          │
 │                                                                                      │
-│  阶段九          阶段十                                                                │
-│  ┌──────────┐   ┌──────────┐                                                        │
-│  │Checkpoint│ → │ Context  │                                                        │
-│  │TimeTravel│   │ 运行时上下文│                                                       │
-│  └──────────┘   └──────────┘                                                        │
+│  阶段九          阶段十          阶段十一                                              │
+│  ┌──────────┐   ┌──────────┐   ┌──────────┐                                        │
+│  │Checkpoint│ → │ Context  │ → │ Subgraph │                                        │
+│  │TimeTravel│   │ 运行时上下文│   │ 子图嵌套 │                                        │
+│  └──────────┘   └──────────┘   └──────────┘                                        │
 │                                                                                      │
 │  每个阶段 = 概念讲解 + 可运行示例代码（Vue 组件） + JS/Python 对比 + 与官网文档对照         │
 │                                                                                      │
@@ -1047,185 +1048,9 @@ graph.add_edge('aggregator', END)
 
 ---
 
-## 8. 阶段七：Subgraph — 子图嵌套与复用
+## 8. 阶段七（进阶）：Functional API — entrypoint & task 函数式工作流
 
 ### 8.1 概念
-
-[`Subgraph`](node_modules/@langchain/langgraph/dist/graph/graph.d.ts) 允许将一个已编译的图作为另一个图的节点使用。这实现了图的**模块化**和**复用**。
-
-```
-┌─────────────────────────────────────────────────────┐
-│                   Parent Graph                       │
-│                                                     │
-│  ┌──────────┐     ┌──────────────────┐              │
-│  │  START   │ ──→ │   Subgraph A     │              │
-│  └──────────┘     │  ┌────────────┐  │              │
-│                   │  │ 内部节点1   │  │              │
-│                   │  │ 内部节点2   │  │              │
-│                   │  └────────────┘  │              │
-│                   └────────┬─────────┘              │
-│                            │                        │
-│                            ▼                        │
-│                   ┌──────────────────┐              │
-│                   │   Subgraph B     │              │
-│                   │  ┌────────────┐  │              │
-│                   │  │ 内部节点3   │  │              │
-│                   │  │ 内部节点4   │  │              │
-│                   │  └────────────┘  │              │
-│                   └────────┬─────────┘              │
-│                            │                        │
-│                            ▼                        │
-│                   ┌──────────────┐                  │
-│                   │     END      │                  │
-│                   └──────────────┘                  │
-└─────────────────────────────────────────────────────┘
-```
-
-**典型应用场景：**
-- 🏗️ **多 Agent 协作**：每个 Agent 是一个子图
-- 🔧 **可复用组件**：将通用逻辑封装为子图
-- 📋 **复杂工作流**：将大图拆分为多个小图，便于维护
-
-### 8.2 核心 API
-
-| API | 说明 |
-|-----|------|
-| [`graph.addNode(name, compiledSubgraph)`](node_modules/@langchain/langgraph/dist/graph/state.d.ts) | 将已编译的图作为节点添加 |
-| 子图状态隔离 | 子图有独立的状态空间 |
-| 状态映射 | 父图状态自动映射到子图输入 |
-
-### 8.3 🆕 JS vs Python 对比
-
-#### API 对照表
-
-| 操作 | LangGraph.js | LangGraph Python |
-|------|-------------|------------------|
-| 添加子图 | `parentGraph.addNode('name', compiledSubgraph)` | `parent_graph.add_node('name', compiled_subgraph)` |
-| 子图状态 | 独立状态空间，通过 input/output 映射 | 独立状态空间，通过 input/output 映射 |
-| 编译子图 | `subgraph.compile()` | `subgraph.compile()` |
-
-> **关键差异**：子图机制在两个版本中几乎完全一致。都是将已编译的图作为节点添加到父图中。
-
-#### 代码对比：多 Agent 协作
-
-```js
-// ============ LangGraph.js ============
-// 子图 A：数据分析 Agent
-const DataAnalysisState = Annotation.Root({
-  query: Annotation<string>(),
-  analysis: Annotation<string>(),
-});
-
-const analysisGraph = new StateGraph(DataAnalysisState)
-  .addNode('analyze', async (state) => {
-    const result = await llm.invoke(`分析数据：${state.query}`);
-    return { analysis: result.content };
-  })
-  .addEdge(START, 'analyze')
-  .addEdge('analyze', END)
-  .compile();  // 先编译子图
-
-// 子图 B：报告生成 Agent
-const ReportState = Annotation.Root({
-  data: Annotation<string>(),
-  report: Annotation<string>(),
-});
-
-const reportGraph = new StateGraph(ReportState)
-  .addNode('generate', async (state) => {
-    const report = await llm.invoke(`生成报告：${state.data}`);
-    return { report: report.content };
-  })
-  .addEdge(START, 'generate')
-  .addEdge('generate', END)
-  .compile();  // 先编译子图
-
-// 父图：编排多 Agent
-const SupervisorState = Annotation.Root({
-  task: Annotation<string>(),
-  analysisResult: Annotation<string>(),
-  reportResult: Annotation<string>(),
-});
-
-const supervisorGraph = new StateGraph(SupervisorState)
-  .addNode('dataAnalysis', analysisGraph)   // 子图作为节点
-  .addNode('reportGen', reportGraph)        // 子图作为节点
-  .addEdge(START, 'dataAnalysis')
-  .addEdge('dataAnalysis', 'reportGen')
-  .addEdge('reportGen', END)
-  .compile();
-```
-
-```python
-# ============ LangGraph Python ============
-# 子图 A：数据分析 Agent
-class DataAnalysisState(TypedDict):
-    query: str
-    analysis: str
-
-analysis_graph = StateGraph(DataAnalysisState)
-analysis_graph.add_node('analyze', lambda state: {
-    'analysis': llm.invoke(f'分析数据：{state["query"]}').content
-})
-analysis_graph.add_edge(START, 'analyze')
-analysis_graph.add_edge('analyze', END)
-compiled_analysis = analysis_graph.compile()  # 先编译子图
-
-# 子图 B：报告生成 Agent
-class ReportState(TypedDict):
-    data: str
-    report: str
-
-report_graph = StateGraph(ReportState)
-report_graph.add_node('generate', lambda state: {
-    'report': llm.invoke(f'生成报告：{state["data"]}').content
-})
-report_graph.add_edge(START, 'generate')
-report_graph.add_edge('generate', END)
-compiled_report = report_graph.compile()  # 先编译子图
-
-# 父图：编排多 Agent
-class SupervisorState(TypedDict):
-    task: str
-    analysis_result: str
-    report_result: str
-
-supervisor_graph = StateGraph(SupervisorState)
-supervisor_graph.add_node('dataAnalysis', compiled_analysis)  # 子图作为节点
-supervisor_graph.add_node('reportGen', compiled_report)       # 子图作为节点
-supervisor_graph.add_edge(START, 'dataAnalysis')
-supervisor_graph.add_edge('dataAnalysis', 'reportGen')
-supervisor_graph.add_edge('reportGen', END)
-compiled_supervisor = supervisor_graph.compile()
-```
-
-> **核心差异总结**：
-> - 子图机制在两个版本中几乎完全一致
-> - 都是先 `compile()` 子图，再 `addNode('name', compiledSubgraph)` 添加到父图
-> - 子图有独立的状态空间，父图通过状态键名匹配自动映射
-
-### 8.4 示例代码
-
-→ [`LangGraphStage7Subgraph.vue`](../../pages/langgraph/LangGraphStage7Subgraph.vue)
-
-**学习要点：**
-- 如何将已编译的图作为另一个图的节点
-- 子图与父图的状态关系
-- 多 Agent 协作的基本模式
-- 子图的复用：同一个子图可以被多个父图使用
-
-### 8.5 官网对照
-
-| 官网章节 | JS 文档 | Python 文档 |
-|----------|--------|-------------|
-| Subgraph | [JS Subgraph](https://langchain-ai.github.io/langgraphjs/how-tos/#subgraph) | [Python Subgraph](https://langchain-ai.github.io/langgraph/how-tos/#subgraph) |
-| Multi-Agent | [JS Multi-Agent](https://langchain-ai.github.io/langgraphjs/concepts/multi_agent/) | [Python Multi-Agent](https://langchain-ai.github.io/langgraph/concepts/multi_agent/) |
-
----
-
-## 9. 阶段八：Functional API — entrypoint & task 函数式工作流
-
-### 9.1 概念
 
 LangGraph v1.x 引入了 **Functional API**（[`entrypoint`](node_modules/@langchain/langgraph/dist/func/index.d.ts) + [`task`](node_modules/@langchain/langgraph/dist/func/index.d.ts:37)），提供了一种更简洁的方式来定义工作流。与 `StateGraph` 的图构建模式不同，Functional API 更接近编写普通异步函数。
 
@@ -1247,7 +1072,7 @@ graph.compile()                           nums.map(n => addOne(n))
 - ✅ 自动并行：`task` 调用自动支持并行执行
 - ✅ 类型安全：完整的 TypeScript 类型推导
 
-### 9.2 核心 API
+### 8.2 核心 API
 
 | API | 说明 |
 |-----|------|
@@ -1258,7 +1083,7 @@ graph.compile()                           nums.map(n => addOne(n))
 | `entrypoint.invoke(input)` | 执行工作流 |
 | `entrypoint.stream(input)` | 流式执行工作流 |
 
-### 9.3 🆕 JS vs Python 对比
+### 8.3 🆕 JS vs Python 对比
 
 #### API 对照表
 
@@ -1363,7 +1188,7 @@ result = await document_analysis.ainvoke('这是一篇关于AI发展的文章...
 > - JS 并行用 `Promise.all([...])`，Python 用 `asyncio.gather(...)`
 > - JS 执行用 `workflow.invoke()`，Python 用 `workflow.ainvoke()`（异步）或 `workflow.invoke()`（同步）
 
-### 9.4 示例代码
+### 8.4 示例代码
 
 → [`LangGraphStage8Functional.vue`](../../pages/langgraph/LangGraphStage8Functional.vue)
 
@@ -1374,7 +1199,7 @@ result = await document_analysis.ainvoke('这是一篇关于AI发展的文章...
 - `task` 的 `retry` 和 `cachePolicy` 配置
 - Functional API 也支持 `checkpointer` 和 `interrupt`
 
-### 9.5 官网对照
+### 8.5 官网对照
 
 | 官网章节 | JS 文档 | Python 文档 |
 |----------|--------|-------------|
@@ -1750,13 +1575,241 @@ const result = await graph.invoke(input, config)
 
 ---
 
-## 12. 进阶主题
+## 12. 阶段十一：Subgraph — 子图嵌套与复用
 
-完成十个阶段后，可以进一步探索：
+> **文件：** [`LangGraphStage11Subgraph.vue`](../../src/pages/langgraph/LangGraphStage11Subgraph.vue)
+>
+> **核心 API：** `StateGraph.addNode(name, compiledSubgraph)`、子图状态隔离、状态映射
+>
+> **前置条件：** 阶段一（StateGraph），理解图的基本构建方式
+
+### 12.1 概念
+
+[`Subgraph`](node_modules/@langchain/langgraph/dist/graph/graph.d.ts) 允许将一个已编译的图作为另一个图的节点使用。这实现了图的**模块化**和**复用**，是构建复杂多 Agent 系统的核心机制。
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   Parent Graph                       │
+│                                                     │
+│  ┌──────────┐     ┌──────────────────┐              │
+│  │  START   │ ──→ │   Subgraph A     │              │
+│  └──────────┘     │  ┌────────────┐  │              │
+│                   │  │ 内部节点1   │  │              │
+│                   │  │ 内部节点2   │  │              │
+│                   │  └────────────┘  │              │
+│                   └────────┬─────────┘              │
+│                            │                        │
+│                            ▼                        │
+│                   ┌──────────────────┐              │
+│                   │   Subgraph B     │              │
+│                   │  ┌────────────┐  │              │
+│                   │  │ 内部节点3   │  │              │
+│                   │  │ 内部节点4   │  │              │
+│                   │  └────────────┘  │              │
+│                   └────────┬─────────┘              │
+│                            │                        │
+│                            ▼                        │
+│                   ┌──────────────┐                  │
+│                   │     END      │                  │
+│                   └──────────────┘                  │
+└─────────────────────────────────────────────────────┘
+```
+
+**典型应用场景：**
+- 🏗️ **多 Agent 协作**：每个 Agent 是一个子图，父图负责编排调度
+- 🔧 **可复用组件**：将通用逻辑（如数据预处理、格式校验）封装为子图
+- 📋 **复杂工作流**：将大图拆分为多个小图，便于维护和测试
+- 🔄 **分层架构**：上层编排图 + 下层执行图，职责分离
+
+**子图与父图的状态关系：**
+- 子图有**独立的状态空间**（自己的 `Annotation.Root` 定义）
+- 父图通过**状态键名匹配**自动将状态映射到子图输入
+- 子图执行完毕后，其状态变更**不会自动**写回父图（需要显式映射）
+- 同一个子图可以被多个父图复用
+
+### 12.2 核心 API
+
+| API | 说明 |
+|-----|------|
+| [`graph.addNode(name, compiledSubgraph)`](node_modules/@langchain/langgraph/dist/graph/state.d.ts) | 将已编译的图作为节点添加到父图中 |
+| `subgraph.compile()` | 先编译子图，再作为节点使用 |
+| 子图状态隔离 | 子图有独立的状态空间，与父图状态分离 |
+| 状态映射 | 父图状态键名与子图输入键名匹配时自动映射 |
+| 子图复用 | 同一个已编译子图可被多个父图引用 |
+
+### 12.3 🆕 JS vs Python 对比
+
+#### API 对照表
+
+| 操作 | LangGraph.js | LangGraph Python |
+|------|-------------|------------------|
+| 添加子图 | `parentGraph.addNode('name', compiledSubgraph)` | `parent_graph.add_node('name', compiled_subgraph)` |
+| 子图状态 | 独立状态空间，通过 input/output 映射 | 独立状态空间，通过 input/output 映射 |
+| 编译子图 | `subgraph.compile()` | `subgraph.compile()` |
+| 子图复用 | 同一实例可添加到多个父图 | 同一实例可添加到多个父图 |
+
+> **关键差异**：子图机制在两个版本中几乎完全一致。都是将已编译的图作为节点添加到父图中。
+
+#### 代码对比：多 Agent 协作（数据分析 + 报告生成）
+
+```js
+// ============ LangGraph.js ============
+import { StateGraph, Annotation, START, END } from '@langchain/langgraph';
+
+// 子图 A：数据分析 Agent
+const DataAnalysisState = Annotation.Root({
+  query: Annotation<string>(),
+  analysis: Annotation<string>(),
+});
+
+const analysisGraph = new StateGraph(DataAnalysisState)
+  .addNode('analyze', async (state) => {
+    const result = await llm.invoke(`分析数据：${state.query}`);
+    return { analysis: result.content };
+  })
+  .addEdge(START, 'analyze')
+  .addEdge('analyze', END)
+  .compile();  // ⚠️ 先编译子图
+
+// 子图 B：报告生成 Agent
+const ReportState = Annotation.Root({
+  data: Annotation<string>(),
+  report: Annotation<string>(),
+});
+
+const reportGraph = new StateGraph(ReportState)
+  .addNode('generate', async (state) => {
+    const report = await llm.invoke(`生成报告：${state.data}`);
+    return { report: report.content };
+  })
+  .addEdge(START, 'generate')
+  .addEdge('generate', END)
+  .compile();  // ⚠️ 先编译子图
+
+// 父图：编排多 Agent（Supervisor 模式）
+const SupervisorState = Annotation.Root({
+  task: Annotation<string>(),
+  analysisResult: Annotation<string>(),
+  reportResult: Annotation<string>(),
+});
+
+const supervisorGraph = new StateGraph(SupervisorState)
+  .addNode('dataAnalysis', analysisGraph)   // 子图作为节点
+  .addNode('reportGen', reportGraph)        // 子图作为节点
+  .addEdge(START, 'dataAnalysis')
+  .addEdge('dataAnalysis', 'reportGen')
+  .addEdge('reportGen', END)
+  .compile();
+
+// 执行
+const result = await supervisorGraph.invoke({ task: '分析Q3销售数据并生成报告' });
+```
+
+```python
+# ============ LangGraph Python ============
+from langgraph.graph import StateGraph, START, END
+from typing import TypedDict
+
+# 子图 A：数据分析 Agent
+class DataAnalysisState(TypedDict):
+    query: str
+    analysis: str
+
+analysis_graph = StateGraph(DataAnalysisState)
+analysis_graph.add_node('analyze', lambda state: {
+    'analysis': llm.invoke(f'分析数据：{state["query"]}').content
+})
+analysis_graph.add_edge(START, 'analyze')
+analysis_graph.add_edge('analyze', END)
+compiled_analysis = analysis_graph.compile()  # 先编译子图
+
+# 子图 B：报告生成 Agent
+class ReportState(TypedDict):
+    data: str
+    report: str
+
+report_graph = StateGraph(ReportState)
+report_graph.add_node('generate', lambda state: {
+    'report': llm.invoke(f'生成报告：{state["data"]}').content
+})
+report_graph.add_edge(START, 'generate')
+report_graph.add_edge('generate', END)
+compiled_report = report_graph.compile()  # 先编译子图
+
+# 父图：编排多 Agent
+class SupervisorState(TypedDict):
+    task: str
+    analysis_result: str
+    report_result: str
+
+supervisor_graph = StateGraph(SupervisorState)
+supervisor_graph.add_node('dataAnalysis', compiled_analysis)  # 子图作为节点
+supervisor_graph.add_node('reportGen', compiled_report)       # 子图作为节点
+supervisor_graph.add_edge(START, 'dataAnalysis')
+supervisor_graph.add_edge('dataAnalysis', 'reportGen')
+supervisor_graph.add_edge('reportGen', END)
+compiled_supervisor = supervisor_graph.compile()
+```
+
+> **核心差异总结**：
+> - 子图机制在两个版本中几乎完全一致
+> - 都是先 `compile()` 子图，再 `addNode('name', compiledSubgraph)` 添加到父图
+> - 子图有独立的状态空间，父图通过状态键名匹配自动映射
+> - JS 版使用 `Annotation.Root` 定义状态，Python 版使用 `TypedDict`
+
+### 12.4 常见子图模式
+
+#### 模式一：顺序编排（Pipeline）
+
+```
+START → SubgraphA → SubgraphB → SubgraphC → END
+```
+
+每个子图完成一个阶段的任务，按顺序执行。适用于 ETL 管道、文档处理流水线。
+
+#### 模式二：条件路由（Router）
+
+```
+                    ┌→ SubgraphA（路径A）
+START → Router →    ├→ SubgraphB（路径B）
+                    └→ SubgraphC（路径C）
+```
+
+父图根据条件将任务路由到不同的子图。适用于多策略处理、A/B 测试。
+
+#### 模式三：Supervisor 模式（多 Agent 协作）
+
+```
+        ┌→ SubgraphA（Agent A）←┐
+START → Supervisor → SubgraphB（Agent B）→ END
+        └→ SubgraphC（Agent C）←┘
+```
+
+Supervisor 子图负责任务分配和结果汇总，Worker 子图负责具体执行。适用于复杂多 Agent 系统。
+
+### 12.5 学习要点
+
+- 如何将已编译的图作为另一个图的节点
+- 子图与父图的状态关系（独立状态空间 + 键名匹配映射）
+- 多 Agent 协作的基本模式（顺序/路由/Supervisor）
+- 子图的复用：同一个子图可以被多个父图使用
+- 子图的测试：可以独立测试每个子图，再集成测试父图
+
+### 12.6 官网对照
+
+| 官网章节 | JS 文档 | Python 文档 |
+|----------|--------|-------------|
+| Subgraph | [JS Subgraph](https://langchain-ai.github.io/langgraphjs/how-tos/#subgraph) | [Python Subgraph](https://langchain-ai.github.io/langgraph/how-tos/#subgraph) |
+| Multi-Agent | [JS Multi-Agent](https://langchain-ai.github.io/langgraphjs/concepts/multi_agent/) | [Python Multi-Agent](https://langchain-ai.github.io/langgraph/concepts/multi_agent/) |
+
+---
+
+## 13. 进阶主题
+
+完成十一个阶段后，可以进一步探索：
 
 | 主题 | 说明 | JS API | Python API |
 |------|------|--------|------------|
-| **Subgraph** | 子图嵌套与复用 | [`StateGraph.addNode`](node_modules/@langchain/langgraph/dist/graph/state.d.ts) | `StateGraph.add_node` |
 | **Functional API** | entrypoint & task 函数式工作流 | [`entrypoint`](node_modules/@langchain/langgraph/dist/func/index.d.ts) | `langgraph.func` |
 | **PostgresSaver** | 生产环境持久化 | `@langchain/langgraph-checkpoint-postgres` | `langgraph.checkpoint.postgres` |
 | **Stream Mode** | 多种流式模式 | [`StreamMode`](node_modules/@langchain/langgraph/dist/pregel/types.d.ts) | `langgraph.types.StreamMode` |

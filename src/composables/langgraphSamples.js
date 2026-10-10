@@ -36,7 +36,7 @@ export const stage1JsCode = [
   '',
   '// 5. 执行图',
   "const result = await app.invoke({ text: '输入文本' })",
-  'console.log(result) // { text: \'...\', step: \'B\' }',
+  'console.log(result) // { text: \'...\', step: \'B\' }'
 ].join('\n')
 
 export const stage1PyCode = [
@@ -68,7 +68,7 @@ export const stage1PyCode = [
   '',
   '# 5. 执行图',
   "result = app.invoke({'text': '输入文本'})",
-  "print(result)  # {'text': '...', 'step': 'B'}",
+  "print(result)  # {'text': '...', 'step': 'B'}"
 ].join('\n')
 
 export const stage2JsCode = [
@@ -149,7 +149,7 @@ export const stage2JsCode = [
   '',
   'const graph = new StateGraph(MessagesAnnotation)',
   '   .addNode(...)',
-  '   .compile()',
+  '   .compile()'
 ].join('\n')
 
 export const stage2PyCode = [
@@ -213,7 +213,7 @@ export const stage2PyCode = [
   '#',
   '# graph = StateGraph(MessagesState)',
   '# graph.add_node(...)',
-  '# app = graph.compile()',
+  '# app = graph.compile()'
 ].join('\n')
 
 export const stage3JsCode = [
@@ -274,7 +274,7 @@ export const stage3JsCode = [
   '',
   '// 6. 编译并执行',
   'const app = graph1.compile()',
-  "const result = await app.invoke({ messages: [new HumanMessage('北京天气')] })",
+  "const result = await app.invoke({ messages: [new HumanMessage('北京天气')] })"
 ].join('\n')
 
 export const stage3PyCode = [
@@ -322,7 +322,7 @@ export const stage3PyCode = [
   '',
   '# 5. 编译并执行',
   'app = graph1.compile()',
-  "result = app.invoke({'messages': [HumanMessage(content='北京天气')]})",
+  "result = app.invoke({'messages': [HumanMessage(content='北京天气')]})"
 ].join('\n')
 
 export const stage4JsCode = [
@@ -472,7 +472,7 @@ export const stage4JsCode = [
   "  .addConditionalEdges('analyzer', router)",  // ← 声明式路由',
   "  .addEdge('priorityHandler', END)",
   "  .addEdge('escalationHandler', END)",
-  "  .addEdge('normalHandler', END)",
+  "  .addEdge('normalHandler', END)"
 ].join('\n')
 
 export const stage4PyCode = [
@@ -599,7 +599,7 @@ export const stage4PyCode = [
   "graph_v2.add_conditional_edges('analyzer', router)  # ← 声明式路由",
   "graph_v2.add_edge('priorityHandler', END)",
   "graph_v2.add_edge('escalationHandler', END)",
-  "graph_v2.add_edge('normalHandler', END)",
+  "graph_v2.add_edge('normalHandler', END)"
 ].join('\n')
 
 export const stage5JsCode = [
@@ -699,7 +699,7 @@ export const stage5JsCode = [
   '  new Command({ resume: { approved: false, comment: "方案不可行" } }),',
   '  { configurable: { thread_id: threadId } }',
   ')',
-  '// isInterrupted(result3) === true，LLM 已重新生成方案，再次暂停等待审批',
+  '// isInterrupted(result3) === true，LLM 已重新生成方案，再次暂停等待审批'
 ].join('\n')
 
 export const stage5PyCode = [
@@ -782,7 +782,7 @@ export const stage5PyCode = [
   "    Command(resume={'approved': False, 'comment': '方案不可行'}),",
   "    {'configurable': {'thread_id': thread_id}}",
   ')',
-  '# result3 包含 __interrupt__，LLM 已重新生成方案，再次暂停等待审批',
+  '# result3 包含 __interrupt__，LLM 已重新生成方案，再次暂停等待审批'
 ].join('\n')
 
 export const stage6JsCode = [
@@ -869,7 +869,7 @@ export const stage6JsCode = [
   '  ],',
   '})',
   '// result.summaries: 3 条并行摘要（reducer 自动合并）',
-  '// result.finalSummary: 汇总后的最终摘要',
+  '// result.finalSummary: 汇总后的最终摘要'
 ].join('\n')
 
 export const stage6PyCode = [
@@ -935,7 +935,7 @@ export const stage6PyCode = [
   '    ],',
   '})',
   "# result['summaries']: 3 条并行摘要",
-  "# result['final_summary']: 汇总后的最终摘要",
+  "# result['final_summary']: 汇总后的最终摘要"
 ].join('\n')
 
 export const stage7JsCode = [
@@ -991,7 +991,7 @@ export const stage7JsCode = [
   '// 对比：不注入 checkpointer 的 Agent（无记忆）',
   '// ============================================================',
   'const agentNoMemory = createReactAgent({ llm, tools: [calculatorTool] })',
-  '// 每次 invoke 都是全新上下文，无法记住之前的对话',
+  '// 每次 invoke 都是全新上下文，无法记住之前的对话'
 ].join('\n')
 
 export const stage7PyCode = [
@@ -1033,7 +1033,7 @@ export const stage7PyCode = [
   '# 7. 不同 thread_id 完全隔离',
   "config2 = {'configurable': {'thread_id': 'session-2'}}",
   "result3 = agent.invoke({'messages': [HumanMessage(content='我叫什么名字？')]}, config2)",
-  '# → AI 不知道（session-2 是全新会话，无历史记录）',
+  '# → AI 不知道（session-2 是全新会话，无历史记录）'
 ].join('\n')
 
 export const stage8JsCode = [
@@ -1118,7 +1118,7 @@ export const stage8JsCode = [
   '// ============================================================',
   '// isolated: namespace = ["users", userId, category] — 完全隔离',
   '// shared:   namespace = ["shared", category] — 所有用户共享',
-  '// hybrid:   同时搜索私有和共享 namespace',
+  '// hybrid:   同时搜索私有和共享 namespace'
 ].join('\n')
 
 export const stage8PyCode = [
@@ -1166,7 +1166,7 @@ export const stage8PyCode = [
   '# 7. 用户 A 新会话仍能检索到记忆（跨会话持久化）',
   "config_a2 = {'configurable': {'thread_id': 'user-a-session2'}}",
   "agent.invoke({'messages': [HumanMessage(content='我喜欢什么？')]}, config_a2)",
-  '# → AI 调用 recall 工具检索到"喜欢编程"',
+  '# → AI 调用 recall 工具检索到"喜欢编程"'
 ].join('\n')
 
 export const stage9JsCode = [
@@ -1260,7 +1260,7 @@ export const stage9JsCode = [
   "  { messages: [new HumanMessage('其实我30岁，喜欢打篮球')] },",
   '  targetCp.config  // ← 使用历史检查点的 config',
   ')',
-  '// forkResult 创建了新的时间线分支（新 checkpoint_id，parentCheckpointId 指向 targetCp）',
+  '// forkResult 创建了新的时间线分支（新 checkpoint_id，parentCheckpointId 指向 targetCp）'
 ].join('\n')
 
 export const stage9PyCode = [
@@ -1351,7 +1351,7 @@ export const stage9PyCode = [
   "    {'messages': [HumanMessage(content='其实我30岁，喜欢打篮球')]},",
   "    target_cp['config']  # ← 使用历史检查点的 config",
   ')',
-  '# fork_result 创建了新的时间线分支',
+  '# fork_result 创建了新的时间线分支'
 ].join('\n')
 
 export const stage10JsCode = [
@@ -1447,7 +1447,7 @@ export const stage10JsCode = [
   '// ============================================================',
   '// state:   图执行过程中可变的状态（有 reducer、持久化到 checkpoint）',
   '// context: 运行时注入的只读配置（不参与 reducer、不持久化到 checkpoint）',
-  '//          适合传递：用户身份、权限、语言偏好、租户 ID 等',
+  '//          适合传递：用户身份、权限、语言偏好、租户 ID 等'
 ].join('\n')
 
 export const stage10PyCode = [
@@ -1533,5 +1533,125 @@ export const stage10PyCode = [
   '    }',
   '}',
   "result2 = app.invoke({'messages': [HumanMessage(content='Hello, introduce yourself')]}, config2)",
-  '# → AI 以普通用户规格用英文回复，称呼"李四"',
+  '# → AI 以普通用户规格用英文回复，称呼"李四"'
+].join('\n')
+
+// ============================================================
+// 阶段十一：Subgraph — 子图嵌套与复用
+// ============================================================
+
+export const stage11JsCode = [
+  "import { StateGraph, Annotation, START, END } from '@langchain/langgraph'",
+  '',
+  '// ============================================================',
+  '// 子图 A：文本摘要 Agent',
+  '// ============================================================',
+  'const SummaryState = Annotation.Root({',
+  '  text: Annotation<string>(),',
+  '  summary: Annotation<string>(),',
+  '})',
+  '',
+  'const summaryGraph = new StateGraph(SummaryState)',
+  "  .addNode('summarize', async (state) => {",
+  "    const result = await llm.invoke(`请用一句话总结：${state.text}`)",
+  '    return { summary: result.content }',
+  '  })',
+  "  .addEdge(START, 'summarize')",
+  "  .addEdge('summarize', END)",
+  '  .compile()  // ⚠️ 先编译子图',
+  '',
+  '// ============================================================',
+  '// 子图 B：翻译 Agent',
+  '// ============================================================',
+  'const TranslateState = Annotation.Root({',
+  '  text: Annotation<string>(),',
+  '  translated: Annotation<string>(),',
+  '})',
+  '',
+  'const translateGraph = new StateGraph(TranslateState)',
+  "  .addNode('translate', async (state) => {",
+  "    const result = await llm.invoke(`请翻译成英文：${state.text}`)",
+  '    return { translated: result.content }',
+  '  })',
+  "  .addEdge(START, 'translate')",
+  "  .addEdge('translate', END)",
+  '  .compile()  // ⚠️ 先编译子图',
+  '',
+  '// ============================================================',
+  '// 父图：编排多 Agent（Supervisor 模式）',
+  '// ============================================================',
+  'const SupervisorState = Annotation.Root({',
+  '  input: Annotation<string>(),',
+  '  summaryResult: Annotation<string>(),',
+  '  translateResult: Annotation<string>(),',
+  '})',
+  '',
+  'const supervisorGraph = new StateGraph(SupervisorState)',
+  "  .addNode('summaryAgent', summaryGraph)      // 子图作为节点",
+  "  .addNode('translateAgent', translateGraph)  // 子图作为节点",
+  "  .addEdge(START, 'summaryAgent')",
+  "  .addEdge('summaryAgent', 'translateAgent')",
+  "  .addEdge('translateAgent', END)",
+  '  .compile()',
+  '',
+  '// 执行',
+  "const result = await supervisorGraph.invoke({ input: 'LangGraph是一个强大的...' })",
+  '// result.summaryResult → 摘要结果',
+  '// result.translateResult → 翻译结果'
+].join('\n')
+
+export const stage11PyCode = [
+  'from langgraph.graph import StateGraph, START, END',
+  'from typing import TypedDict',
+  '',
+  '# ============================================================',
+  '# 子图 A：文本摘要 Agent',
+  '# ============================================================',
+  'class SummaryState(TypedDict):',
+  '    text: str',
+  '    summary: str',
+  '',
+  'summary_graph = StateGraph(SummaryState)',
+  "summary_graph.add_node('summarize', lambda state: {",
+  "    'summary': llm.invoke(f'请用一句话总结：{state[\"text\"]}').content",
+  '})',
+  "summary_graph.add_edge(START, 'summarize')",
+  "summary_graph.add_edge('summarize', END)",
+  'compiled_summary = summary_graph.compile()  # 先编译子图',
+  '',
+  '# ============================================================',
+  '# 子图 B：翻译 Agent',
+  '# ============================================================',
+  'class TranslateState(TypedDict):',
+  '    text: str',
+  '    translated: str',
+  '',
+  'translate_graph = StateGraph(TranslateState)',
+  "translate_graph.add_node('translate', lambda state: {",
+  "    'translated': llm.invoke(f'请翻译成英文：{state[\"text\"]}').content",
+  '})',
+  "translate_graph.add_edge(START, 'translate')",
+  "translate_graph.add_edge('translate', END)",
+  'compiled_translate = translate_graph.compile()  # 先编译子图',
+  '',
+  '# ============================================================',
+  '# 父图：编排多 Agent（Supervisor 模式）',
+  '# ============================================================',
+  'class SupervisorState(TypedDict):',
+  '    input: str',
+  '    summary_result: str',
+  '    translate_result: str',
+  '',
+  'supervisor_graph = StateGraph(SupervisorState)',
+  "supervisor_graph.add_node('summaryAgent', compiled_summary)    # 子图作为节点",
+  "supervisor_graph.add_node('translateAgent', compiled_translate) # 子图作为节点",
+  "supervisor_graph.add_edge(START, 'summaryAgent')",
+  "supervisor_graph.add_edge('summaryAgent', 'translateAgent')",
+  "supervisor_graph.add_edge('translateAgent', END)",
+  'compiled_supervisor = supervisor_graph.compile()',
+  '',
+  '# 执行',
+  "result = compiled_supervisor.invoke({'input': 'LangGraph是一个强大的...'})",
+  '# result["summary_result"] → 摘要结果',
+  '# result["translate_result"] → 翻译结果'
 ].join('\n')

@@ -24,7 +24,7 @@
 
 ## 🚀 项目简介
 
-本项目是一个面向大模型应用开发的学习与演示平台，通过统一的 Web 界面接入多种大模型服务，并配套完整的 **LangChain.js**（8 阶段）与 **LangGraph.js**（10 阶段）学习路径。项目同时提供 **JavaScript** 与 **Python** 两种调用方式，方便对比学习不同语言生态下的 LangChain/LangGraph 用法。
+本项目是一个面向大模型应用开发的学习与演示平台，通过统一的 Web 界面接入多种大模型服务，并配套完整的 **LangChain.js**（8 阶段）与 **LangGraph.js**（11 阶段）学习路径。项目同时提供 **JavaScript** 与 **Python** 两种调用方式，方便对比学习不同语言生态下的 LangChain/LangGraph 用法。
 
 前端基于 Vue 2 + Vue CLI 5，通过 [`vue.config.js`](vue.config.js) 配置多路代理解决跨域与公司网络限制问题；后端使用 Node.js 原生 `http` 模块（[`server.js`](server.js)）调用 Python 脚本完成内网模型与本地模型的推理，并提供 PostgreSQL 长期记忆 Store API。
 
@@ -35,8 +35,8 @@
 - **多模型平台接入**：内网 hikvision、本地 Ollama、百炼 DashScope、DeepSeek、魔搭 ModelScope 五大平台统一接入。
 - **双语言调用**：每个模型平台均提供 JS 与 Python 两种调用示例，便于对比学习。
 - **LangChain.js 八阶段学习**：从 Prompt Template 到 Middleware 中间件的完整进阶路线。
-- **LangGraph.js 十阶段学习**：从 StateGraph 基础图到 Checkpoint 检查点、Context 运行时上下文的完整进阶路线。
-- **🎯 综合实战：智能客服**：串联 LangChain.js 全部 8 阶段 + LangGraph.js 全部 10 阶段知识的完整 Agent 应用，支持多租户（技术文档 / 学习辅导 / 通用助手）、流式对话、工具调用（计算器 / 天气 / 知识库搜索）、RAG 知识库检索、短期记忆（MemorySaver）+ 长期记忆（InMemoryStore / PostgreSQL）、中间件日志与 Token 统计。
+- **LangGraph.js 十一阶段学习**：从 StateGraph 基础图到 Subgraph 子图嵌套的完整进阶路线。
+- **🎯 综合实战：智能客服**：串联 LangChain.js 全部 8 阶段 + LangGraph.js 全部 11 阶段知识的完整 Agent 应用，支持多租户（技术文档 / 学习辅导 / 通用助手）、流式对话、工具调用（计算器 / 天气 / 知识库搜索）、RAG 知识库检索、短期记忆（MemorySaver）+ 长期记忆（InMemoryStore / PostgreSQL）、中间件日志与 Token 统计。
 - **短期记忆（Memory）**：基于 LangGraph `MemorySaver` Checkpoint 机制实现多轮对话上下文记忆，支持 `thread_id` 线程隔离、Checkpoint 历史查看、线程切换/删除管理。
 - **长期记忆（Store）**：基于 LangGraph `InMemoryStore` 实现跨会话信息持久化，支持三种记忆模式（完全隔离/共享记忆/混合模式）、namespace 命名空间隔离、localStorage 持久化备份，同时支持 PostgreSQL 后端存储。
 - **Checkpoint 检查点**：基于 `getState()` / `getStateHistory()` API 实现 Time Travel（回放/分叉），支持查看状态快照、遍历历史检查点、从任意检查点回放或分叉执行。
@@ -86,36 +86,37 @@
 
 项目内置了从入门到进阶的 **八阶段** LangChain 学习模块，每个阶段对应一个独立的 Vue 组件：
 
-| 阶段 | 主题 | 组件 | 说明 |
+| 阶段 | 主题 | 组件 | 核心 API |
 | --- | --- | --- | --- |
-| 1️⃣ | **Prompt Template** 提示词模板 | [`LangChainStage1Prompt.vue`](src/pages/langchain/LangChainStage1Prompt.vue) | JS |
-| 2️⃣ | **Chain 链式调用** | [`LangChainStage2Chain.vue`](src/pages/langchain/LangChainStage2Chain.vue) | JS |
-| 3️⃣ | **Streaming 流式输出** | [`LangChainStage3Stream.vue`](src/pages/langchain/LangChainStage3Stream.vue) | JS |
-| 4️⃣ | **Structured 结构化输出** | [`LangChainStage4Structured.vue`](src/pages/langchain/LangChainStage4Structured.vue) | JS |
-| 5️⃣ | **Tool Calling 工具调用** | [`LangChainStage5Tool.vue`](src/pages/langchain/LangChainStage5Tool.vue) | JS |
-| 6️⃣ | **Agent 智能体** | [`LangChainStage6Agent.vue`](src/pages/langchain/LangChainStage6Agent.vue) | JS |
-| 7️⃣ | **RAG 检索增强** | [`LangChainStage7RAG.vue`](src/pages/langchain/LangChainStage7RAG.vue) | JS |
-| 8️⃣ | **Middleware 中间件** | [`LangChainStage8Meddleware.vue`](src/pages/langchain/LangChainStage8Meddleware.vue) | Python |
-| 🎯 | **综合实战：智能客服** | [`CustomerChat.vue`](src/pages/CustomerAgent/CustomerChat.vue) | JS — 串联全部阶段 |
+| 1 | **Prompt Template** 提示词模板 | [`LangChainStage1Prompt.vue`](src/pages/langchain/LangChainStage1Prompt.vue) | `ChatPromptTemplate.fromMessages()`、`MessagesPlaceholder` |
+| 2 | **Chain 链式调用** | [`LangChainStage2Chain.vue`](src/pages/langchain/LangChainStage2Chain.vue) | `.pipe()`、`StringOutputParser`、`RunnableSequence` |
+| 3 | **Streaming 流式输出** | [`LangChainStage3Stream.vue`](src/pages/langchain/LangChainStage3Stream.vue) | `llm.stream()`、`for await...of`、`AIMessageChunk` |
+| 4 | **Structured 结构化输出** | [`LangChainStage4Structured.vue`](src/pages/langchain/LangChainStage4Structured.vue) | `withStructuredOutput()`、`zod`、`StructuredOutputParser` |
+| 5 | **Tool Calling 工具调用** | [`LangChainStage5Tool.vue`](src/pages/langchain/LangChainStage5Tool.vue) | `tool()`、`bindTools()`、`ToolMessage` |
+| 6 | **Agent 智能体** | [`LangChainStage6Agent.vue`](src/pages/langchain/LangChainStage6Agent.vue) | `createReactAgent()`、Agent 自动循环 |
+| 7 | **RAG 检索增强** | [`LangChainStage7RAG.vue`](src/pages/langchain/LangChainStage7RAG.vue) | `RecursiveCharacterTextSplitter`、`MemoryVectorStore`、检索链 |
+| 8 | **Middleware 中间件** | [`LangChainStage8Meddleware.vue`](src/pages/langchain/LangChainStage8Meddleware.vue) | `createMiddleware`、`createAgent({ middleware })` |
+| 🎯 | **综合实战：智能客服** | [`CustomerChat.vue`](src/pages/CustomerAgent/CustomerChat.vue) | `createReactAgent()` + `MemorySaver` + `PostgresStore` + `MemoryVectorStore` |
 
 ---
 
 ## 🔀 LangGraph.js 知识体系
 
-项目内置了从基础到高级的 **十阶段** LangGraph 学习模块，每个阶段对应一个独立的 Vue 组件：
+项目内置了从基础到高级的 **十一阶段** LangGraph 学习模块，每个阶段对应一个独立的 Vue 组件：
 
 | 阶段 | 主题 | 组件 | 核心 API |
 | --- | --- | --- | --- |
-| 1️⃣ | **StateGraph 基础图** | [`LangGraphStage1StateGraph.vue`](src/pages/langgraph/LangGraphStage1StateGraph.vue) | `StateGraph`、`addNode`、`addEdge`、`compile` |
-| 2️⃣ | **Annotation 状态定义** | [`LangGraphStage2Annotation.vue`](src/pages/langgraph/LangGraphStage2Annotation.vue) | `Annotation.Root`、`reducer`、`default` |
-| 3️⃣ | **Routing 条件路由** | [`LangGraphStage3Routing.vue`](src/pages/langgraph/LangGraphStage3Routing.vue) | `addConditionalEdges`、条件分支 |
-| 4️⃣ | **Command 命令式路由** | [`LangGraphStage4Command.vue`](src/pages/langgraph/LangGraphStage4Command.vue) | `Command`、`goto`、`update` |
-| 5️⃣ | **Interrupt 人机协同** | [`LangGraphStage5Interrupt.vue`](src/pages/langgraph/LangGraphStage5Interrupt.vue) | `interrupt()`、审批流程 |
-| 6️⃣ | **Send 并行执行** | [`LangGraphStage6Send.vue`](src/pages/langgraph/LangGraphStage6Send.vue) | `Send()`、扇出（fan-out） |
-| 7️⃣ | **Memory 短期记忆** | [`LangGraphStage7Memory.vue`](src/pages/langgraph/LangGraphStage7Memory.vue) | `MemorySaver`、`thread_id`、Checkpoint |
-| 8️⃣ | **Store 长期记忆** | [`LangGraphStage8Store.vue`](src/pages/langgraph/LangGraphStage8Store.vue) | `InMemoryStore`、`namespace`、跨会话持久化 |
-| 9️⃣ | **Checkpoint 检查点** | [`LangGraphStage9Checkpoint.vue`](src/pages/langgraph/LangGraphStage9Checkpoint.vue) | `getState()`、`getStateHistory()`、Time Travel |
-| 🔟 | **Context 运行时上下文** | [`LangGraphStage10Context.vue`](src/pages/langgraph/LangGraphStage10Context.vue) | `contextSchema`、`runtime.context` |
+| 1 | **StateGraph 基础图** | [`LangGraphStage1StateGraph.vue`](src/pages/langgraph/LangGraphStage1StateGraph.vue) | `StateGraph`、`addNode`、`addEdge`、`compile` |
+| 2 | **Annotation 状态定义** | [`LangGraphStage2Annotation.vue`](src/pages/langgraph/LangGraphStage2Annotation.vue) | `Annotation.Root`、`reducer`、`default` |
+| 3 | **Routing 条件路由** | [`LangGraphStage3Routing.vue`](src/pages/langgraph/LangGraphStage3Routing.vue) | `addConditionalEdges`、条件分支 |
+| 4 | **Command 命令式路由** | [`LangGraphStage4Command.vue`](src/pages/langgraph/LangGraphStage4Command.vue) | `Command`、`goto`、`update` |
+| 5 | **Interrupt 人机协同** | [`LangGraphStage5Interrupt.vue`](src/pages/langgraph/LangGraphStage5Interrupt.vue) | `interrupt()`、审批流程 |
+| 6 | **Send 并行执行** | [`LangGraphStage6Send.vue`](src/pages/langgraph/LangGraphStage6Send.vue) | `Send()`、扇出（fan-out） |
+| 7 | **Memory 短期记忆** | [`LangGraphStage7Memory.vue`](src/pages/langgraph/LangGraphStage7Memory.vue) | `MemorySaver`、`thread_id`、Checkpoint |
+| 8 | **Store 长期记忆** | [`LangGraphStage8Store.vue`](src/pages/langgraph/LangGraphStage8Store.vue) | `InMemoryStore`、`namespace`、跨会话持久化 |
+| 9 | **Checkpoint 检查点** | [`LangGraphStage9Checkpoint.vue`](src/pages/langgraph/LangGraphStage9Checkpoint.vue) | `getState()`、`getStateHistory()`、Time Travel |
+| 10 | **Context 运行时上下文** | [`LangGraphStage10Context.vue`](src/pages/langgraph/LangGraphStage10Context.vue) | `contextSchema`、`runtime.context` |
+| 11 | **Subgraph 子图嵌套** | [`LangGraphStage11Subgraph.vue`](src/pages/langgraph/LangGraphStage11Subgraph.vue) | `StateGraph.addNode(name, compiledSubgraph)`、子图状态隔离、状态映射 |
 
 ### 📄 配套学习文档
 
@@ -134,7 +135,7 @@
 - [LangChain.js前端学习路径.md](src/docs/langchain/LangChain.js前端学习路径.md)
 - [LangChain.js深入学习路线.md](src/docs/langchain/LangChain.js深入学习路线.md)
 - [学习LangChain所需的Python知识.md](src/docs/langchain/学习LangChain所需的Python知识.md)
-- [LangChain-Python中间件Middleware详解.md](src/docs/langchain/LangChain-Python中间件Middleware详解.md)
+- [LangChain-中间件Middleware详解.md](src/docs/langchain/LangChain-中间件Middleware详解.md)
 - [LangChain.js RAG 检索增强生成详解.md](src/docs/langchain/LangChain.js%20RAG%20检索增强生成详解.md)
 - [LangSmith追踪集成总结.md](src/docs/langchain/LangSmith追踪集成总结.md)
 - [LangChain-智能客服项目实战.md](src/docs/langchain/LangChain-智能客服项目实战.md)
@@ -156,7 +157,6 @@
 ├── server.js                 # Node.js 后端服务（调用 Python 脚本、LangSmith 代理、Store API）
 ├── vue.config.js             # Vue CLI 配置（DefinePlugin 注入、多路代理）
 ├── public/                   # 静态资源
-├── scripts/                  # 辅助脚本（示例数据生成等）
 └── src/
     ├── App.vue               # 主入口（左侧菜单 + 右侧内容区）
     ├── main.js               # 应用入口（LangSmith 追踪初始化、AsyncLocalStorage 兼容）
@@ -188,7 +188,7 @@
         ├── DeepSeek/           # DeepSeek 大模型（平台）
         ├── inner/            # 内网大模型（平台）
         ├── langchain/        # LangChain.js 知识体系（8 阶段学习）
-        ├── langgraph/        # LangGraph.js 知识体系（10 阶段学习）
+        ├── langgraph/        # LangGraph.js 知识体系（11 阶段学习）
         ├── modelscope/       # 魔搭 ModelScope（平台）
         └── ollama/           # 本地 Ollama（平台）
 ```
