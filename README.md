@@ -12,6 +12,7 @@
 - [支持的模型平台](#-支持的模型平台)
 - [LangChain.js 知识体系](#-langchainjs-知识体系)
 - [LangGraph.js 知识体系](#-langgraphjs-知识体系)
+- [🎯 综合实战：智能客服](#-综合实战智能客服)
 - [项目结构](#-项目结构)
 - [环境配置](#-环境配置)
 - [快速开始](#-快速开始)
@@ -96,8 +97,6 @@
 | 6 | **Agent 智能体** | [`LangChainStage6Agent.vue`](src/pages/langchain/LangChainStage6Agent.vue) | `createReactAgent()`、Agent 自动循环 |
 | 7 | **RAG 检索增强** | [`LangChainStage7RAG.vue`](src/pages/langchain/LangChainStage7RAG.vue) | `RecursiveCharacterTextSplitter`、`MemoryVectorStore`、检索链 |
 | 8 | **Middleware 中间件** | [`LangChainStage8Meddleware.vue`](src/pages/langchain/LangChainStage8Meddleware.vue) | `createMiddleware`、`createAgent({ middleware })` |
-| 🎯 | **综合实战：智能客服** | [`CustomerChat.vue`](src/pages/CustomerAgent/CustomerChat.vue) | `StateGraph` + `CustomerGraphBuilder` + `MemorySaver` + `PostgresStore` + `MemoryVectorStore` |
-
 ---
 
 ## 🔀 LangGraph.js 知识体系
@@ -117,6 +116,29 @@
 | 9 | **Checkpoint 检查点** | [`LangGraphStage9Checkpoint.vue`](src/pages/langgraph/LangGraphStage9Checkpoint.vue) | `getState()`、`getStateHistory()`、Time Travel |
 | 10 | **Context 运行时上下文** | [`LangGraphStage10Context.vue`](src/pages/langgraph/LangGraphStage10Context.vue) | `contextSchema`、`runtime.context` |
 | 11 | **Subgraph 子图嵌套** | [`LangGraphStage11Subgraph.vue`](src/pages/langgraph/LangGraphStage11Subgraph.vue) | `StateGraph.addNode(name, compiledSubgraph)`、子图状态隔离、状态映射 |
+
+---
+
+## 🎯 综合实战：智能客服
+
+串联 LangChain.js 全部 8 阶段 + LangGraph.js 全部 11 阶段知识的完整 Agent 应用，基于手写 `StateGraph` 工作流构建。
+
+| 组件 | 核心 API |
+| --- | --- |
+| [`CustomerChat.vue`](src/pages/CustomerAgent/CustomerChat.vue) | `StateGraph` + `CustomerGraphBuilder` + `MemorySaver` + `PostgresStore` + `MemoryVectorStore` |
+
+**模块化架构**（位于 [`src/pages/CustomerAgent/modules/`](src/pages/CustomerAgent/modules)）：
+
+| 模块 | 文件 | 职责 |
+| --- | --- | --- |
+| 图引擎 | [`graph.js`](src/pages/CustomerAgent/modules/graph.js) | StateGraph 手写工作流（意图分类 → FAQ/RAG/工具调用 → 生成回答） |
+| 工具定义 | [`tools.js`](src/pages/CustomerAgent/modules/tools.js) | 计算器、天气查询、知识库搜索 |
+| 知识库 | [`rag.js`](src/pages/CustomerAgent/modules/rag.js) | RAG 检索增强生成（内置文档 + 文件上传） |
+| 中间件 | [`middleware.js`](src/pages/CustomerAgent/modules/middleware.js) | 日志记录 + Token 统计回调 |
+| 记忆管理 | [`memory.js`](src/pages/CustomerAgent/modules/memory.js) | 短期记忆（MemorySaver）+ 长期记忆（PostgresStore） |
+| 多租户 | [`tenants.js`](src/pages/CustomerAgent/modules/tenants.js) | 技术文档 / 学习辅导 / 通用助手三套租户配置 |
+
+**核心特性**：多租户切换、流式对话、工具调用、RAG 知识库检索、短期记忆 + 长期记忆、Checkpoint 时光旅行（回放/分叉）、中间件日志与 Token 统计、思考过程可视化。
 
 ### 📄 配套学习文档
 
