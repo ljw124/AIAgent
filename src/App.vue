@@ -6,7 +6,7 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <h2>🤖 AI Agent</h2>
-        <span class="sidebar-subtitle">基于LangChain.js的AIAgent</span>
+        <span class="sidebar-subtitle">基于LangChain.js和LangGraph.js的AIAgent</span>
       </div>
 
       <nav class="sidebar-nav">
@@ -193,15 +193,9 @@
               <span class="nav-icon nav-badge">8</span>
               <span class="nav-label">Middleware 中间件</span>
             </div>
-            <div
-              :class="['nav-item', { active: currentPage === 'lc-customer-agent' }]"
-              @click="currentPage = 'lc-customer-agent'"
-            >
-              <span class="nav-icon">🎯</span>
-              <span class="nav-label">综合实战：智能客服</span>
-            </div>
           </div>
         </div>
+
         <!-- 分组：LangGraph.js 学习 -->
         <div class="nav-group">
           <div class="nav-group-title" @click="toggleGroup('langgraph')">
@@ -285,6 +279,22 @@
             >
               <span class="nav-icon nav-badge">11</span>
               <span class="nav-label">Subgraph 子图嵌套</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 独立菜单：综合实战 - 智能客服 -->
+        <div class="nav-group">
+          <div class="nav-group-title" style="cursor: default;">
+            <span>🎯 综合实战</span>
+          </div>
+          <div class="nav-group-body">
+            <div
+              :class="['nav-item', { active: currentPage === 'lc-customer-agent' }]"
+              @click="currentPage = 'lc-customer-agent'"
+            >
+              <span class="nav-icon">💬</span>
+              <span class="nav-label">智能客服</span>
             </div>
           </div>
         </div>
@@ -398,12 +408,12 @@ export default {
     OllamaChat,
     OllamaPythonChat,
     DeepSeekModelChat,
-    DeepSeekPythonChat,
+    DeepSeekPythonChat
   },
 
   data() {
     return {
-      currentPage: 'inner-js',
+      currentPage: 'lc-customer-agent',
       expandedGroups: {
         inner: true,
         ollama: true,
@@ -411,16 +421,16 @@ export default {
         deepseek: true,
         modelscope: true,
         langchain: true,
-        langgraph: true,
-      },
+        langgraph: true
+      }
     }
   },
 
   methods: {
     toggleGroup(group) {
       this.expandedGroups[group] = !this.expandedGroups[group]
-    },
-  },
+    }
+  }
 }
 </script>
 
@@ -478,9 +488,9 @@ html, body {
 }
 
 .sidebar-subtitle {
-  font-size: 11px;
-  color: #8892b0;
-  letter-spacing: 0.5px;
+  font-size: 10px;
+  color: #e0e4e9;
+  letter-spacing: 1px;
 }
 
 .sidebar-nav {
@@ -497,18 +507,18 @@ html, body {
   align-items: center;
   gap: 6px;
   padding: 8px 20px 4px;
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #5a6a8a;
+  letter-spacing: 1.1px;
+  color: #94a3b8;
   cursor: pointer;
   user-select: none;
   transition: color 0.15s ease;
 }
 
 .nav-group-title:hover {
-  color: #8892b0;
+  color: #e2e8f0;
 }
 
 .group-arrow {

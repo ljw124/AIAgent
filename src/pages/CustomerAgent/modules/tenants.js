@@ -133,7 +133,13 @@ export function getTenantById(tenantId) {
  */
 export function getTenantDefaultFeatures(tenantId) {
   const tenant = getTenantById(tenantId)
-  return { ...tenant.defaultFeatures }
+  // === M2 修复：添加 graphBuilder 独有的功能开关字段，防止 _syncFeatures() 覆盖丢失 ===
+  return {
+    ...tenant.defaultFeatures,
+    enableParallelTools: true,
+    enableHumanReview: true,
+    enableFAQ: true
+  }
 }
 
 /**

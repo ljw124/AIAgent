@@ -39,7 +39,7 @@ class PostgresStore extends BaseStore {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-        signal: controller.signal,
+        signal: controller.signal
       })
 
       if (!response.ok) {
@@ -79,7 +79,7 @@ class PostgresStore extends BaseStore {
             namespacePrefix: op.namespacePrefix,
             filter: op.filter,
             limit: op.limit || 10,
-            offset: op.offset || 0,
+            offset: op.offset || 0
           })
           results.push(data.items || [])
         } catch (err) {
@@ -102,7 +102,7 @@ class PostgresStore extends BaseStore {
           await this._fetch('put', {
             namespace: op.namespace,
             key: op.key,
-            value: op.value,
+            value: op.value
           })
           results.push(undefined)
         } catch (err) {
@@ -117,7 +117,7 @@ class PostgresStore extends BaseStore {
         try {
           const data = await this._fetch('get', {
             namespace: op.namespace,
-            key: op.key,
+            key: op.key
           })
           results.push(data.item || null)
         } catch (err) {
@@ -149,9 +149,6 @@ export class MemoryManager {
     // 线程管理
     this.threadIds = ['thread-001']
     this.threadMessages = {} // threadId → messageCount
-
-    // localStorage 持久化定时器
-    this._persistTimer = null
   }
 
   // ============================================================

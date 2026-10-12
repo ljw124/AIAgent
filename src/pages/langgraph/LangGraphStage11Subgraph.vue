@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-10-10 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-10 11:46:43
+ * @LastEditTime: 2026-10-10 13:41:34
  * @Description: 阶段十一：Subgraph — 子图嵌套与复用
  *   学习目标：掌握子图机制，理解如何将已编译的图作为另一个图的节点使用
  *   核心 API：StateGraph.addNode(name, compiledSubgraph)、子图状态隔离、状态映射
@@ -464,7 +464,6 @@ export default {
 
       const summaryGraph = new StateGraph(SummaryState)
         .addNode('summarize', async (state) => {
-          console.log('state', state)
           const msg = await llm.invoke([new HumanMessage('请用一句话总结以下内容（不超过50字）：\n\n' + state.input)])
           const summary = msg.content
           this.executionSteps.push({
@@ -473,7 +472,6 @@ export default {
             input: 'input: "' + state.input.substring(0, 80) + '..."',
             output: 'summaryResult: "' + summary + '"'
           })
-          console.log(111, summary)
           return { summaryResult: summary }
         })
         .addEdge(START, 'summarize')
@@ -507,7 +505,6 @@ export default {
             input: 'summaryResult: "' + state.summaryResult.substring(0, 80) + '..."',
             output: 'translateResult: "' + translated + '"'
           })
-          console.log(222, translated)
           return { translateResult: translated }
         })
         .addEdge(START, 'translate')

@@ -2,27 +2,43 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-14 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-23 12:59:04
- * @Description: 智能客服 Agent — LangChain 10 阶段综合实战
- *   融合全部 10 阶段知识：
+ * @LastEditTime: 2026-10-12 10:11:13
+ * @Description: 智能客服 Agent — LangChain + LangGraph 全阶段综合实战（重构版）
+ *   从 createReactAgent 黑盒 → StateGraph 手写工作流
+ *
+ *   LangGraph 阶段映射：
+ *     Stage1:  StateGraph — 自定义状态图引擎
+ *     Stage2:  Annotation — 客服状态定义
+ *     Stage3:  Routing — 意图分类条件路由
+ *     Stage4:  Command — 工具调用后动态跳转
+ *     Stage5:  Interrupt — 人机协同审核
+ *     Stage6:  Send — 多工具并行执行
+ *     Stage7:  Memory — 短期记忆（MemorySaver）
+ *     Stage8:  Store — 长期记忆（PostgresStore）
+ *     Stage9:  Checkpoint — 检查点/时光旅行
+ *     Stage10: Context — 运行时上下文注入
+ *     Stage11: Subgraph — 子图模块化
+ *
+ *   LangChain 阶段映射：
  *     Stage1:  Prompt 模板（多租户 System Prompt）
  *     Stage2:  LCEL 链（RAG 检索链）
- *     Stage3:  流式输出（SSE streaming）
+ *     Stage3:  流式输出（streamMode: 'values'）
  *     Stage4:  结构化输出（responseFormat + zod）
- *     Stage5:  工具调用（calculator / weather / knowledge_search）
- *     Stage6:  ReAct Agent（createReactAgent）
+ *     Stage5:  工具调用（calculator / weather / search_knowledge）
+ *     Stage6:  Agent 循环（Think→Act→Observe，StateGraph 节点实现）
  *     Stage7:  RAG 知识库（文档→分片→向量→检索）
  *     Stage8:  中间件（日志 + Token 统计）
  *     Stage9:  短期记忆（MemorySaver，thread_id 隔离）
- *     Stage10: 长期记忆（InMemoryStore，namespace 隔离）
- *   架构：纯前端 Vue 2，与现有 Stage1-Stage10 完全一致
+ *     Stage10: 长期记忆（PostgresStore，namespace 隔离）
+ *
+ *   架构：纯前端 Vue 2，与现有 Stage1-Stage11 完全一致
 -->
 <template>
   <div class="customer-agent-container">
-    <h1>🤖 智能客服 Agent <span class="badge stage">综合实战</span></h1>
+    <h1>🤖 智能客服 Agent <span class="badge stage">LangChain + LangGraph</span></h1>
     <div class="info-box">
-      <strong>学习目标：</strong>用智能客服场景串联 LangChain 全部 10 个阶段知识点<br />
-      <strong>核心 API：</strong><code>createReactAgent()</code> + <code>MemorySaver</code> + <code>PostgresStore</code> + <code>MemoryVectorStore</code><br />
+      <strong>学习目标：</strong>用智能客服场景串联 LangChain 10 阶段 + LangGraph 11 阶段全部知识点<br />
+      <strong>核心 API：</strong><code>StateGraph</code> + <code>Annotation</code> + <code>ConditionalEdges</code> + <code>MemorySaver</code> + <code>PostgresStore</code><br />
     </div>
 
     <!-- ============================================================ -->
@@ -253,6 +269,23 @@
                   <span class="seg-icon">❌</span>
                   <span>{{ seg.message }}</span>
                 </div>
+
+                <!-- Phase 4: 节点执行轨迹 -->
+                <div v-if="seg.type === 'trace'" class="segment trace-seg">
+                  <div class="seg-header" @click="toggleSegment(msg, si)">
+                    <span class="seg-icon">🔍</span>
+                    <span class="seg-label">节点: {{ seg.trace.node }}</span>
+                    <span :class="['trace-status', seg.trace.status]">{{ seg.trace.status }}</span>
+                    <span class="seg-toggle">{{ seg.collapsed ? '▶' : '▼' }}</span>
+                  </div>
+                  <div v-if="!seg.collapsed" class="seg-body">
+                    <div class="trace-detail">
+                      <span class="trace-time">{{ formatTime(seg.trace.timestamp) }}</span>
+                      <pre v-if="seg.trace.output" class="seg-json">{{ JSON.stringify(seg.trace.output, null, 2) }}</pre>
+                      <pre v-if="seg.trace.error" class="seg-json trace-error">{{ seg.trace.error }}</pre>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- 加载光标 -->
@@ -274,6 +307,66 @@
       <span>🗄️ 长期记忆: {{ features.enableStore ? '已启用' : '已禁用' }}</span>
       <span>🔢 Token: {{ stats.tokens.total || 0 }}</span>
       <span>📚 知识库: {{ knowledgeReady ? docCount + ' 片段' : '未初始化' }}</span>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Phase 4: 图可视化面板（Mermaid + 执行轨迹） -->
+    <!-- ============================================================ -->
+    <div class="graph-viz-section">
+      <div class="graph-viz-header" @click="showGraphViz = !showGraphViz">
+        <span class="graph-viz-title">🔀 图结构可视化（LangGraph StateGraph）</span>
+        <span class="seg-toggle">{{ showGraphViz ? '▼' : '▶' }}</span>
+      </div>
+      <div v-if="showGraphViz" class="graph-viz-body">
+        <!-- Mermaid 图 -->
+        <div class="mermaid-section">
+          <div class="mermaid-title">📐 工作流图结构</div>
+          <pre class="mermaid-code">{{ mermaidGraph }}</pre>
+        </div>
+        <!-- 执行轨迹列表 -->
+        <div v-if="executionTraces.length > 0" class="traces-section">
+          <div class="traces-title">📋 节点执行轨迹（最近一次）</div>
+          <div class="traces-timeline">
+            <div v-for="(trace, ti) in executionTraces" :key="ti" class="trace-node">
+              <div class="trace-node-marker" :class="trace.status"></div>
+              <div class="trace-node-info">
+                <span class="trace-node-name">{{ trace.node }}</span>
+                <span class="trace-node-time">{{ formatTime(trace.timestamp) }}</span>
+              </div>
+              <span :class="['trace-node-status', trace.status]">{{ trace.status }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-else class="traces-empty">发送消息后将在此显示节点执行轨迹</div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- Phase 2: Checkpoint 时光旅行面板 -->
+    <!-- ============================================================ -->
+    <div class="checkpoint-section">
+      <div class="checkpoint-header" @click="toggleCheckpoints">
+        <span class="checkpoint-title">⏱️ 时光旅行（Checkpoint）</span>
+        <span class="seg-toggle">{{ showCheckpoints ? '▼' : '▶' }}</span>
+        <button v-if="showCheckpoints" @click.stop="loadCheckpoints" class="btn-sm checkpoint-refresh">🔄 刷新</button>
+      </div>
+      <div v-if="showCheckpoints" class="checkpoint-body">
+        <div v-if="checkpoints.length > 0" class="checkpoint-list">
+          <div
+            v-for="(cp, cpi) in checkpoints"
+            :key="cpi"
+            :class="['checkpoint-item', { active: cp.checkpointId === activeCheckpointId }]"
+          >
+            <div class="checkpoint-index">#{{ checkpoints.length - cpi }}</div>
+            <div class="checkpoint-info">
+              <span class="checkpoint-id">{{ cp.checkpointId?.substring(0, 12) }}...</span>
+              <span class="checkpoint-time">{{ formatTime(cp.timestamp) }}</span>
+            </div>
+            <button @click="replayCheckpoint(cp.checkpointId)" class="btn-sm checkpoint-replay">⏪ 回退</button>
+          </div>
+        </div>
+        <div v-else class="checkpoint-empty">暂无 checkpoint 记录，发送消息后生成</div>
+      </div>
     </div>
 
     <!-- ============================================================ -->
@@ -305,7 +398,7 @@ import { useCustomerAgent } from '@/composables/useCustomerAgent'
 // 配置 marked
 marked.setOptions({
   breaks: true, // 换行符转为 <br>
-  gfm: true,    // 启用 GitHub Flavored Markdown
+  gfm: true     // 启用 GitHub Flavored Markdown
 })
 
 export default {
@@ -355,6 +448,16 @@ export default {
       userPreferences: null,
       userMemories: [],
       conversationHistory: [],
+
+      // === Phase 4: 图可视化 ===
+      showGraphViz: false,
+      mermaidGraph: '',
+      executionTraces: [],
+
+      // === Phase 2: Checkpoint 时光旅行 ===
+      showCheckpoints: false,
+      checkpoints: [],
+      activeCheckpointId: null
     }
   },
 
@@ -375,11 +478,20 @@ export default {
 
   async created() {
     // 初始化 Agent 服务
-    const { create } = useCustomerAgent()
-    this.agentService = create(this)
+    try {
+      const { create } = useCustomerAgent()
+      this.agentService = create(this)
+    } catch (err) {
+      console.error('[CustomerChat] Agent 服务创建失败:', err)
+      this.error = `Agent 服务创建失败: ${err.message}`
+      return
+    }
 
     // 同步功能开关到服务
     this.syncFeatures()
+
+    // 初始化 Mermaid 图
+    this.mermaidGraph = this.agentService.getMermaidGraph()
 
     // 自动初始化 LLM + 知识库 + 长期记忆
     try {
@@ -431,10 +543,19 @@ export default {
       const text = this.input.trim()
       if (!text || this.loading) return
 
+      // 防御性检查：确保 Agent 服务已初始化
+      if (!this.agentService) {
+        this.error = 'Agent 服务未初始化，请刷新页面后重试'
+        return
+      }
+
       // 添加用户消息
       this.messages.push({ role: 'user', content: text })
       this.input = ''
       this.error = null
+
+      // 清空上次执行轨迹（Phase 4）
+      this.executionTraces = []
 
       // 创建 AI 消息占位（含空 segments 数组）
       const aiMsg = { role: 'assistant', content: '', segments: [] }
@@ -463,6 +584,8 @@ export default {
       } finally {
         this.loading = false
         this.updateStats()
+        // Stage9: 对话结束后刷新 checkpoint 时光旅行列表
+        this.loadCheckpoints()
         // Stage10: 对话结束后刷新长期记忆（延迟 2 秒等待异步保存完成）
         setTimeout(() => this.refreshHistory(), 2000)
       }
@@ -549,6 +672,19 @@ export default {
           this.error = segment.message
           break
 
+        case 'trace':
+          // Phase 4: 节点执行轨迹 — 追加到 segments 并收集到 executionTraces
+          msg.segments.push({
+            type: 'trace',
+            trace: segment.trace,
+            collapsed: true
+          })
+          // 同步收集到可视化面板
+          if (segment.trace && segment.trace.node) {
+            this.executionTraces = [...this.executionTraces, segment.trace]
+          }
+          break
+
         case 'done':
           // 流式完成
           break
@@ -580,6 +716,8 @@ export default {
       this.syncFeatures()
       // 切换租户后刷新长期记忆（不同租户的记忆数据不同）
       this.refreshHistory()
+      // === M3 修复：切换租户后重新加载知识库（不同租户可能有不同的知识库配置） ===
+      this.initKnowledge()
     },
 
     // ============================================================
@@ -610,7 +748,7 @@ export default {
     },
 
     getThreadRounds(threadId) {
-      return this.agentService?.memoryManager?.getRounds(threadId) || 0
+      return this.agentService?.graphBuilder?.memoryManager?.getRounds(threadId) || 0
     },
 
     // ============================================================
@@ -759,7 +897,54 @@ export default {
       } catch {
         return timeStr
       }
-    }
+    },
+
+    // ============================================================
+    // Phase 2: Checkpoint 时光旅行
+    // ============================================================
+
+    /**
+     * 展开/折叠时光旅行面板，展开时自动加载 checkpoint 历史
+     */
+    toggleCheckpoints() {
+      this.showCheckpoints = !this.showCheckpoints
+      if (this.showCheckpoints) {
+        this.loadCheckpoints()
+      }
+    },
+
+    /**
+     * 加载当前线程的 checkpoint 历史
+     */
+    async loadCheckpoints() {
+      if (!this.agentService) return
+      try {
+        const history = await this.agentService.getStateHistory()
+        this.checkpoints = history || []
+      } catch (err) {
+        console.warn('[CustomerChat] 加载 checkpoint 失败:', err.message)
+        this.checkpoints = []
+      }
+    },
+
+    /**
+     * 回退到指定 checkpoint
+     */
+    async replayCheckpoint(checkpointId) {
+      if (!this.agentService) return
+      try {
+        this.activeCheckpointId = checkpointId
+        const state = await this.agentService.replayFromCheckpoint(checkpointId)
+        console.log('[CustomerChat] 时光旅行回退到:', checkpointId, state)
+        // 清空当前消息展示
+        this.messages = []
+        this.executionTraces = []
+        // eslint-disable-next-line no-alert
+        alert(`已回退到 checkpoint: ${checkpointId.substring(0, 12)}...\n请重新发送消息继续对话。`)
+      } catch (err) {
+        this.error = `时光旅行失败: ${err.message}`
+      }
+    },
   }
 }
 </script>
@@ -1294,13 +1479,15 @@ h1 {
 .markdown-body p {
   margin: 6px 0;
 }
-.markdown-body ul,
-.markdown-body ol {
+.markdown-body::v-deep ul,
+.markdown-body::v-deep ol {
   margin: 6px 0;
-  padding-left: 20px;
+  padding-left: 24px;
+  list-style-position: outside;
 }
-.markdown-body li {
+.markdown-body::v-deep li {
   margin: 3px 0;
+  padding-left: 4px;
 }
 .markdown-body code {
   background: #f1f5f9;
@@ -1617,5 +1804,344 @@ h1 {
   background: #f1f5f9;
   color: #ef4444;
   border-color: #fecaca;
+}
+
+/* ============================================================ */
+/* Phase 4: 图可视化面板 */
+/* ============================================================ */
+.graph-viz-section {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.graph-viz-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.graph-viz-header:hover {
+  background: #f1f5f9;
+}
+
+.graph-viz-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  flex: 1;
+}
+
+.graph-viz-body {
+  padding: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.mermaid-section {
+  margin-bottom: 16px;
+}
+
+.mermaid-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.mermaid-code {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.traces-section {
+  margin-top: 4px;
+}
+
+.traces-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.traces-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trace-node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.trace-node-marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.trace-node-marker.running {
+  background: #f59e0b;
+  animation: pulse 1.5s infinite;
+}
+
+.trace-node-marker.completed {
+  background: #10b981;
+}
+
+.trace-node-marker.error {
+  background: #ef4444;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.trace-node-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.trace-node-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.trace-node-time {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.trace-node-status {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.trace-node-status.running {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.trace-node-status.completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.trace-node-status.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.traces-empty {
+  text-align: center;
+  padding: 20px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* ============================================================ */
+/* Phase 4: Trace Segment（对话中的节点轨迹） */
+/* ============================================================ */
+.trace-seg .seg-header {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+}
+
+.trace-status {
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-left: 6px;
+}
+
+.trace-status.running {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.trace-status.completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.trace-status.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.trace-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trace-time {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.trace-error {
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+/* ============================================================ */
+/* Phase 2: Checkpoint 时光旅行面板 */
+/* ============================================================ */
+.checkpoint-section {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.checkpoint-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.checkpoint-header:hover {
+  background: #f1f5f9;
+}
+
+.checkpoint-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  flex: 1;
+}
+
+.checkpoint-refresh {
+  cursor: pointer;
+}
+
+.checkpoint-body {
+  padding: 10px 14px;
+  border-top: 1px solid #e2e8f0;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.checkpoint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.checkpoint-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.checkpoint-item:hover {
+  background: #f1f5f9;
+}
+
+.checkpoint-item.active {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.checkpoint-index {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #6366f1;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.checkpoint-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.checkpoint-id {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 11px;
+  color: #6366f1;
+  font-weight: 600;
+}
+
+.checkpoint-time {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.checkpoint-replay {
+  padding: 4px 10px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.checkpoint-replay:hover {
+  background: #4f46e5;
+}
+
+.checkpoint-empty {
+  text-align: center;
+  padding: 16px;
+  color: #94a3b8;
+  font-size: 13px;
 }
 </style>

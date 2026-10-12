@@ -36,9 +36,9 @@
 - **双语言调用**：每个模型平台均提供 JS 与 Python 两种调用示例，便于对比学习。
 - **LangChain.js 八阶段学习**：从 Prompt Template 到 Middleware 中间件的完整进阶路线。
 - **LangGraph.js 十一阶段学习**：从 StateGraph 基础图到 Subgraph 子图嵌套的完整进阶路线。
-- **🎯 综合实战：智能客服**：串联 LangChain.js 全部 8 阶段 + LangGraph.js 全部 11 阶段知识的完整 Agent 应用，支持多租户（技术文档 / 学习辅导 / 通用助手）、流式对话、工具调用（计算器 / 天气 / 知识库搜索）、RAG 知识库检索、短期记忆（MemorySaver）+ 长期记忆（InMemoryStore / PostgreSQL）、中间件日志与 Token 统计。
+- **🎯 综合实战：智能客服**：串联 LangChain.js 全部 8 阶段 + LangGraph.js 全部 11 阶段知识的完整 Agent 应用，支持多租户（技术文档 / 学习辅导 / 通用助手）、流式对话、工具调用（计算器 / 天气 / 知识库搜索）、RAG 知识库检索、短期记忆（MemorySaver）+ 长期记忆（PostgresStore / PostgreSQL）、中间件日志与 Token 统计、Checkpoint 时光旅行（回放/分叉）。
 - **短期记忆（Memory）**：基于 LangGraph `MemorySaver` Checkpoint 机制实现多轮对话上下文记忆，支持 `thread_id` 线程隔离、Checkpoint 历史查看、线程切换/删除管理。
-- **长期记忆（Store）**：基于 LangGraph `InMemoryStore` 实现跨会话信息持久化，支持三种记忆模式（完全隔离/共享记忆/混合模式）、namespace 命名空间隔离、localStorage 持久化备份，同时支持 PostgreSQL 后端存储。
+- **长期记忆（Store）**：基于 LangGraph `BaseStore` 实现跨会话信息持久化，通过自定义 `PostgresStore` 支持 namespace 命名空间隔离，后端通过 HTTP API 与 PostgreSQL 通信实现长期记忆存储。
 - **Checkpoint 检查点**：基于 `getState()` / `getStateHistory()` API 实现 Time Travel（回放/分叉），支持查看状态快照、遍历历史检查点、从任意检查点回放或分叉执行。
 - **运行时上下文（Context）**：基于 `runtime.context` 机制实现运行时上下文注入，支持用户名、会员等级、语言偏好等动态上下文。
 - **人机协同（Interrupt）**：基于 `interrupt()` API 实现人机协同，支持审批流程、动态决策等场景。
@@ -96,7 +96,7 @@
 | 6 | **Agent 智能体** | [`LangChainStage6Agent.vue`](src/pages/langchain/LangChainStage6Agent.vue) | `createReactAgent()`、Agent 自动循环 |
 | 7 | **RAG 检索增强** | [`LangChainStage7RAG.vue`](src/pages/langchain/LangChainStage7RAG.vue) | `RecursiveCharacterTextSplitter`、`MemoryVectorStore`、检索链 |
 | 8 | **Middleware 中间件** | [`LangChainStage8Meddleware.vue`](src/pages/langchain/LangChainStage8Meddleware.vue) | `createMiddleware`、`createAgent({ middleware })` |
-| 🎯 | **综合实战：智能客服** | [`CustomerChat.vue`](src/pages/CustomerAgent/CustomerChat.vue) | `createReactAgent()` + `MemorySaver` + `PostgresStore` + `MemoryVectorStore` |
+| 🎯 | **综合实战：智能客服** | [`CustomerChat.vue`](src/pages/CustomerAgent/CustomerChat.vue) | `StateGraph` + `CustomerGraphBuilder` + `MemorySaver` + `PostgresStore` + `MemoryVectorStore` |
 
 ---
 
@@ -182,6 +182,7 @@
         │       ├── tools.js       # 工具定义（计算器/天气/知识库搜索）
         │       ├── rag.js         # RAG 知识库服务
         │       ├── middleware.js  # 日志 + Token 统计中间件
+        │       ├── graph.js       # StateGraph 图引擎（手写工作流节点）
         │       ├── memory.js      # 短期记忆 + 长期记忆管理
         │       └── tenants.js     # 多租户配置（技术文档/学习辅导/通用助手）
         ├── DashScope/          # 百炼 DashScope（平台）
