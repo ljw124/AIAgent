@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:30:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-04 13:03:30
+ * @LastEditTime: 2026-10-12 18:20:43
  * @Description: 阶段一：Prompt Template — 提示词模板
  *   学习目标：用 ChatPromptTemplate 替代硬编码 System Prompt
  *   核心 API：ChatPromptTemplate.fromMessages()、MessagesPlaceholder
@@ -77,14 +77,42 @@ export default {
       error: null,
       role: '前端开发专家',
       language: '中文',
+      llm: null,
+      promptTemplate: null // Prompt 模板复用，避免每次 send() 都 ChatPromptTemplate.fromMessages()
     }
+  },
+
+  created() {
+    // #1 修复：在 created 中初始化 LLM 实例（复用连接池）
+    this.llm = new ChatOpenAI({
+      model: 'EB-DeepSeek-V4-Pro',
+      apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
+      temperature: 0.7,
+      configuration: {
+        baseURL: window.location.origin + '/inner/'
+      }
+    })
+
+    // 在 created 中初始化 Prompt 模板（静态定义，只创建一次）
+    //    - system 消息中使用 {role} 和 {language} 变量
+    //    - MessagesPlaceholder 为对话历史预留位置
+    //    - optional: true 表示 history 变量是可选的：
+    //      首次对话时 history 为空数组，占位符会自动跳过，不会报错
+    this.promptTemplate = ChatPromptTemplate.fromMessages([
+      [
+        'system',
+        '你是一个{role}，请用{language}回答用户的问题。回答要专业、准确、简洁。'
+      ],
+      new MessagesPlaceholder('history', { optional: true }),
+      ['human', '{input}']
+    ])
   },
 
   watch: {
     messages: {
       deep: true,
-      handler() { this.$nextTick(() => this.scrollToBottom()) },
-    },
+      handler() { this.$nextTick(() => this.scrollToBottom()) }
+    }
   },
 
   methods: {
@@ -105,26 +133,11 @@ export default {
         // 阶段一核心：使用 ChatPromptTemplate 构造提示词
         // ============================================================
 
-        // 1. 创建提示词模板
-        //    - system 消息中使用 {role} 和 {language} 变量
-        //    - MessagesPlaceholder 为对话历史预留位置
-        //    - optional: true 表示 history 变量是可选的：
-        //      首次对话时 history 为空数组（甚至不传），占位符会自动跳过，
-        //      不会因为缺少 history 变量而报错。
-        //      若省略 optional（默认 false），则必须提供 history 变量，
-        //      否则 formatMessages 会抛出 "Missing value for input variable 'history'" 错误。
-        const promptTemplate = ChatPromptTemplate.fromMessages([
-          [
-            'system',
-            '你是一个{role}，请用{language}回答用户的问题。回答要专业、准确、简洁。',
-          ],
-          new MessagesPlaceholder('history', { optional: true }),
-          ['human', '{input}'],
-        ])
-
-        // 2. 将历史消息转换为 LangChain 消息类型
+        // 1. 将历史消息转换为 LangChain 消息类型
+        //    #3 修复：slice(0, -2) 防御 — 确保 messages 至少有 2 条才切片
+        const sliceEnd = this.messages.length >= 2 ? -2 : this.messages.length
         const historyMessages = this.messages
-          .slice(0, -1)
+          .slice(0, sliceEnd)
           .map((msg) => {
             if (msg.role === 'user') return new HumanMessage(msg.content)
             if (msg.role === 'assistant') return new AIMessage(msg.content)
@@ -132,25 +145,16 @@ export default {
           })
           .filter(Boolean)
 
-        // 3. 格式化模板：传入变量值
-        const formattedMessages = await promptTemplate.formatMessages({
-          role: this.role,
-          language: this.language,
-          history: historyMessages,
-          input: text,
+        // 2. 格式化模板：传入变量值（模板变量注入）
+        const formattedMessages = await this.promptTemplate.formatMessages({
+          role: this.role, // 替换 {role}
+          language: this.language, // 替换 {language}
+          history: historyMessages, // 替换 MessagesPlaceholder
+          input: text // 替换 {input}
         })
 
-        // 4. 调用模型
-        const llm = new ChatOpenAI({
-          model: 'EB-DeepSeek-V4-Pro',
-          apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
-          temperature: 0.7,
-          configuration: {
-            baseURL: window.location.origin + '/inner/',
-          },
-        })
-
-        const response = await llm.invoke(formattedMessages)
+        // 3. 调用模型（复用 llm 实例）
+        const response = await this.llm.invoke(formattedMessages)
         this.messages[aiMsgIndex].content = response.content
       } catch (err) {
         console.error('[Stage1 Error]', err)
@@ -171,8 +175,8 @@ export default {
     scrollToBottom() {
       const el = this.$refs.chatHistory
       if (el) el.scrollTop = el.scrollHeight
-    },
-  },
+    }
+  }
 }
 </script>
 
