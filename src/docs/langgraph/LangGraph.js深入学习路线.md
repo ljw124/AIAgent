@@ -1190,7 +1190,7 @@ result = await document_analysis.ainvoke('这是一篇关于AI发展的文章...
 
 ### 8.4 示例代码
 
-→ [`LangGraphStage8Functional.vue`](../../pages/langgraph/LangGraphStage8Functional.vue)
+→ [`LangGraphStage12Functional.vue`](../../pages/langgraph/LangGraphStage12Functional.vue)
 
 **学习要点：**
 - `entrypoint` 定义工作流入口，`task` 定义可并行任务

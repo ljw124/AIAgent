@@ -280,6 +280,13 @@
               <span class="nav-icon nav-badge">11</span>
               <span class="nav-label">Subgraph 子图嵌套</span>
             </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lg-stage12' }]"
+              @click="currentPage = 'lg-stage12'"
+            >
+              <span class="nav-icon nav-badge">12</span>
+              <span class="nav-label">Functional API 函数式</span>
+            </div>
           </div>
         </div>
 
@@ -335,6 +342,7 @@
       <LangGraphStage9Checkpoint v-if="currentPage === 'lg-stage9'" />
       <LangGraphStage10Context v-if="currentPage === 'lg-stage10'" />
       <LangGraphStage11Subgraph v-if="currentPage === 'lg-stage11'" />
+      <LangGraphStage12Functional v-if="currentPage === 'lg-stage12'" />
       <OllamaChat v-if="currentPage === 'ollama-chat'" />
       <OllamaPythonChat v-if="currentPage === 'ollama-python'" />
       <DeepSeekModelChat v-if="currentPage === 'deepseek-js'" />
@@ -370,6 +378,7 @@ import LangGraphStage8Store from '@/pages/langgraph/LangGraphStage8Store.vue'
 import LangGraphStage9Checkpoint from '@/pages/langgraph/LangGraphStage9Checkpoint.vue'
 import LangGraphStage10Context from '@/pages/langgraph/LangGraphStage10Context.vue'
 import LangGraphStage11Subgraph from '@/pages/langgraph/LangGraphStage11Subgraph.vue'
+import LangGraphStage12Functional from '@/pages/langgraph/LangGraphStage12Functional.vue'
 import OllamaChat from '@/pages/ollama/OllamaChat.vue'
 import OllamaPythonChat from '@/pages/ollama/OllamaPythonChat.vue'
 import DeepSeekModelChat from '@/pages/DeepSeek/DeepSeekModelChat.vue'
@@ -405,6 +414,7 @@ export default {
     LangGraphStage9Checkpoint,
     LangGraphStage10Context,
     LangGraphStage11Subgraph,
+    LangGraphStage12Functional,
     OllamaChat,
     OllamaPythonChat,
     DeepSeekModelChat,
