@@ -6,6 +6,15 @@
  * @Description: 阶段八：长期记忆 Store — LangGraph InMemoryStore 长期记忆演示
  *   学习目标：理解 LangGraph 的 BaseStore/InMemoryStore 长期记忆机制，实现跨会话信息持久化
  *   核心 API：InMemoryStore、createReactAgent({ store })、namespace 命名空间隔离
+ *   API 提示：
+ *     - new InMemoryStore() — 内存长期存储（开发/测试用，生产用 PostgresStore 等）
+ *     - createReactAgent({ store }) — 注入 store 启用长期记忆
+ *     - store.put(namespace, key, value) — 存储数据，namespace 为元组路径如 ['users', '123']
+ *     - store.search(prefix, { limit, filter }) — 按前缀搜索，返回 AsyncIterator
+ *     - store.delete(namespace, key) — 删除指定键
+ *     - store.batch([{ op, namespace, key, value }]) — 批量操作（put/delete）
+ *     - store.listNamespaces({ prefix, limit }) — 列出命名空间
+ *     - namespace 设计模式：['type', 'id'] 如 ['users', '123']、['memories', 'user_123']
 -->
 <template>
   <div>

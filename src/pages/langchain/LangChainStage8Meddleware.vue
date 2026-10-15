@@ -2,10 +2,15 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-07 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-09 14:44:08
- * @Description: 阶段七：中间件 Middleware — LangChain.js 中间件演示
+ * @LastEditTime: 2026-10-15 10:37:39
+ * @Description: 阶段八：中间件 Middleware — LangChain.js 中间件演示
  *   学习目标：理解 LangChain.js 的中间件机制（beforeModel/afterModel）
  *   核心 API：createMiddleware（自定义中间件）、createAgent + middleware（官方内置中间件）
+ *   新增 API 提示：
+ *     - createMiddleware 钩子：beforeModel、afterModel、beforeAgent、afterAgent、wrapModelCall、wrapToolCall
+ *     - createAgent 参数：model、tools、systemPrompt、middleware、responseFormat、stateSchema、contextSchema
+ *     - createAgent 参数：name、description、version、includeAgentName、checkpointer、store、signal
+ *     - 官方内置中间件：summarizationMiddleware、humanInTheLoopMiddleware、piiMiddleware 等
  *   说明：基于 langchain@1.5.x，前端直接调用 JS 中间件，无需 Python 环境
 -->
 <template>
@@ -131,7 +136,7 @@ export default {
       error: null,
       config: {
         model: 'EB-DeepSeek-V4-Pro',
-        temperature: 0.7,
+        temperature: 0.7
       },
       // 下拉多选：选中的中间件 key 数组
       selectedMiddleware: ['before', 'after', 'around', 'sensitive', 'metrics', 'retry', 'summarization', 'human_in_the_loop', 'pii', 'todo', 'call_limit'],
@@ -147,7 +152,7 @@ export default {
         { value: 'human_in_the_loop', label: '人机协同中间件', desc: '关键节点人工审核确认', type: 'official', className: 'humanInTheLoopMiddleware' },
         { value: 'pii', label: 'PII 中间件', desc: '检测过滤身份证/手机号/邮箱等敏感信息', type: 'official', className: 'piiMiddleware' },
         { value: 'todo', label: '待办列表中间件', desc: '从回复中自动提取行动项/待办事项', type: 'official', className: 'todoListMiddleware' },
-        { value: 'call_limit', label: '调用限制中间件', desc: '限制调用次数，防止滥用超配额', type: 'official', className: 'modelCallLimitMiddleware' },
+        { value: 'call_limit', label: '调用限制中间件', desc: '限制调用次数，防止滥用超配额', type: 'official', className: 'modelCallLimitMiddleware' }
       ],
       dropdownOpen: false
     }
@@ -209,7 +214,40 @@ export default {
       const aiMsgIndex = this.messages.length - 1
 
       try {
-        // 直接调用 JS 中间件（无需 Python 后端）
+        // ============================================================
+        // 阶段八核心：通过 chatWithMiddleware 调用 createAgent + 中间件
+        //
+        // chatWithMiddleware 内部流程（见 middlewareSamples.js）：
+        //   1. 创建 ChatOpenAI 实例
+        //   2. 组装自定义中间件（buildCustomMiddlewares）
+        //   3. 组装官方内置中间件（buildOfficialMiddlewares）
+        //   4. createAgent({ model, middleware: [...], systemPrompt }) 创建 Agent
+        //   5. agent.invoke({ messages: [...] }) 执行推理
+        //
+        // createAgent 完整参数（langchain@1.5.x）：
+        //   model: ChatModel — 必填，LLM 模型实例
+        //   tools: Tool[] — 工具列表（可选）
+        //   systemPrompt: string — 系统提示词（可选）
+        //   middleware: Middleware[] — 中间件列表（可选）
+        //   responseFormat: ZodSchema | { schema, prompt?, method? } — 结构化输出（可选）
+        //   stateSchema: Annotation.Root — 自定义状态 schema（可选）
+        //   contextSchema: Annotation.Root — 运行时上下文 schema（可选）
+        //   name: string — Agent 名称（可选，用于多 Agent 场景）
+        //   description: string — Agent 描述（可选，用于 supervisor 路由）
+        //   version: 'v1' | 'v2' — 工具调用版本（v2 支持并行 Send API）
+        //   includeAgentName: 'inline' | boolean — 消息中是否包含 Agent 名称
+        //   checkpointer: Checkpointer — 短期记忆持久化（可选）
+        //   store: BaseStore — 长期记忆存储（可选）
+        //   signal: AbortSignal — 取消信号（可选）
+        //
+        // createMiddleware 支持的钩子（langchain@1.5.x）：
+        //   beforeModel(state, runtime) — 模型调用前（参数校验、鉴权、注入上下文）
+        //   afterModel(state, runtime) — 模型调用后（结果处理、缓存写入、指标采集）
+        //   beforeAgent(state, runtime) — Agent 执行前
+        //   afterAgent(state, runtime) — Agent 执行后
+        //   wrapModelCall(request, handler) — 包装模型调用（重试、限流、超时）
+        //   wrapToolCall(request, handler) — 包装工具调用
+        // ============================================================
         const result = await chatWithMiddleware(text, {
           temperature: this.config.temperature,
           model: this.config.model,
@@ -239,7 +277,7 @@ export default {
       if (el) {
         el.scrollTop = el.scrollHeight
       }
-    },
+    }
   },
 
   mounted() {

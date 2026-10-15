@@ -2,10 +2,16 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:50:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-11 14:47:24
+ * @LastEditTime: 2026-10-15 10:25:11
  * @Description: 阶段七：RAG — 检索增强生成
  *   学习目标：基于外部知识库回答问题
  *   核心 API：RecursiveCharacterTextSplitter、MemoryVectorStore、createRetrievalChain
+ *   新增 API 提示：
+ *     - TextSplitter 基类参数：chunkSize、chunkOverlap、keepSeparator、lengthFunction
+ *     - RecursiveCharacterTextSplitter 特有参数：separators（分隔符优先级列表）
+ *     - 静态方法：fromLanguage(language, options) — 按编程语言选择分隔符
+ *     - 子类：MarkdownTextSplitter、LatexTextSplitter（继承 RecursiveCharacterTextSplitter）
+ *     - 文档分割流程：createDocuments(texts, metadatas) → splitDocuments(documents)
  *   注意：内网模型的 embedding API 可能与 OpenAI 不同，此处使用模拟向量存储演示流程
 -->
 <template>
@@ -234,11 +240,26 @@ export default {
         const documents = this.getKnowledgeDocuments()
 
         // 1. 创建文档分割器
+        //    RecursiveCharacterTextSplitter 继承自 TextSplitter 基类
+        //    TextSplitter 基类参数：
+        //      chunkSize: 每个分片的最大字符数（默认 1000）
+        //      chunkOverlap: 相邻分片之间的重叠字符数（默认 200），必须 < chunkSize
+        //      keepSeparator: 是否在分片中保留分隔符（默认 false）
+        //      lengthFunction: 自定义长度计算函数（默认 (text) => text.length）
+        //    RecursiveCharacterTextSplitter 特有参数：
+        //      separators: 分隔符优先级列表（默认 ["\n\n", "\n", " ", ""]）
+        //        分割时按优先级依次尝试，先按 "\n\n" 分，再按 "\n" 分，最后按字符分
+        //    静态方法：
+        //      RecursiveCharacterTextSplitter.fromLanguage('markdown', options)
+        //        — 按编程语言自动选择分隔符（支持 cpp, go, java, js, python, markdown 等）
+        //    子类（继承 RecursiveCharacterTextSplitter）：
+        //      MarkdownTextSplitter — 针对 Markdown 文档优化
+        //      LatexTextSplitter — 针对 LaTeX 文档优化
         const splitter = new RecursiveCharacterTextSplitter({
-          chunkSize: 100,   // 每个分片的最大字符数，默认值1000
-          chunkOverlap: 20, // 相邻分片之间的重叠字符数，默认值200
-          separators: ["\n\n", "\n", " ", ""], // 分隔符优先级列表，默认值["\n\n", "\n", " ", ""]
-          keepSeparator: false // 是否在分片中保留分隔符，默认值false
+          chunkSize: 100,
+          chunkOverlap: 20,
+          separators: ["\n\n", "\n", " ", ""],
+          keepSeparator: false
         })
 
         // 2. 分割所有文档
@@ -360,9 +381,20 @@ export default {
       try {
         // ============================================================
         // 阶段七核心：RAG 检索增强生成
+        // 流程：用户提问 → 检索相关文档 → 拼接上下文 → 注入 System Prompt → LLM 回答
+        //
+        // 进阶 API（本演示未使用，供学习参考）：
+        //   - MemoryVectorStore.fromDocuments(docs, embeddings)
+        //       使用 OpenAIEmbeddings 将文档转为向量并存入内存向量存储
+        //   - createRetrievalChain({ retriever, combineDocsChain })
+        //       创建完整的 RAG 检索链（LangChain 旧版 API）
+        //   - createHistoryAwareRetriever({ llm, retriever, chatHistory })
+        //       创建历史感知检索器，根据对话历史改写查询（LangChain 新版 API）
+        //   - RunnableSequence.from([retriever, prompt, llm, parser])
+        //       使用 LCEL 链式调用构建 RAG 管道（推荐方式）
         // ============================================================
 
-        // 1. 检索相关文档
+        // 1. 检索相关文档（基于 bigram Jaccard 相似度 + 子串包含加分）
         const relevantDocs = this.retrieveDocuments(text)
         this.retrievedDocs = relevantDocs
 
@@ -371,7 +403,7 @@ export default {
           .map((doc, i) => `[文档${i + 1}] ${doc.content}`)
           .join('\n\n')
 
-        // 3. 构造带上下文的 System Prompt
+        // 3. 构造带上下文的 System Prompt（RAG 的核心：将检索结果注入 Prompt）
         const systemPrompt = `你是一个基于知识库回答问题的AI助手。请严格根据以下提供的文档内容回答问题。
 
           重要规则：
@@ -384,7 +416,7 @@ export default {
           === 文档内容结束 ===
           请用中文回答，回答要准确、简洁。`
 
-        // 4. 构造消息
+        // 4. 构造消息（SystemMessage + 历史对话 + 当前问题）
         const historyMessages = this.messages
           .slice(0, -1)
           .map((msg) => {

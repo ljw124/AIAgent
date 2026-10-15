@@ -7,6 +7,13 @@
  *   学习目标：理解 LangGraph 的 runtime.context 机制，实现运行时上下文注入
  *   核心 API：contextSchema（定义上下文结构）、config.context（传入上下文）、runtime.context（节点中访问）
  *   前置条件：已完成阶段七（MemorySaver），理解 StateGraph 基础
+ *   API 提示：
+ *     - contextSchema — 定义运行时上下文的 Schema（Annotation.Root），与 StateGraph 的第二个参数传入
+ *     - new StateGraph(stateSchema, contextSchema) — 第二个参数定义上下文结构
+ *     - config.context — 调用 invoke/stream 时通过 config 传入上下文数据
+ *     - runtime.context — 节点函数第二个参数 runtime 中访问上下文
+ *     - 上下文 vs 状态：context 是运行时注入的只读配置（用户信息、语言偏好等），state 是图执行过程中可变的状态
+ *     - 上下文不会持久化到 checkpoint，每次调用都需要重新传入
 -->
 <template>
   <div>

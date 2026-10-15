@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:40:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-02 20:12:05
+ * @LastEditTime: 2026-10-15 10:05:57
  * @Description: 阶段五：Tool Calling — 工具调用
  *   学习目标：让 LLM 调用外部函数获取实时数据
  *   核心 API：tool()、bindTools()、AIMessage.tool_calls、ToolMessage
@@ -85,7 +85,12 @@ export default {
 
     /**
      * 工具1：计算器
-     * 用 Zod schema 定义参数类型和描述，LLM 会根据描述决定何时调用
+     * 核心 API：tool(fn, options) — 将普通函数包装为 LangChain Tool
+     *   - 参数1 fn：异步函数，接收 Zod schema 定义的参数，返回字符串结果
+     *   - 参数2 options.name：工具唯一标识，LLM 通过此名称决定调用哪个工具
+     *   - 参数2 options.description：工具用途描述，LLM 据此判断何时调用（关键！）
+     *   - 参数2 options.schema：用 Zod 定义输入参数的类型和描述
+     * 注意：description 是 LLM 判断是否调用的核心依据，需准确描述触发场景
      */
     createCalculatorTool() {
       return tool(
@@ -112,6 +117,7 @@ export default {
 
     /**
      * 工具2：获取当前时间
+     * 无参数工具示例：schema 中字段设为 optional，LLM 可不传参数直接调用
      */
     createTimeTool() {
       return tool(
@@ -132,6 +138,7 @@ export default {
 
     /**
      * 工具3：模拟天气查询
+     * 带必填参数的工具示例：city 为必填，LLM 必须从用户输入中提取城市名
      */
     createWeatherTool() {
       return tool(
@@ -173,9 +180,19 @@ export default {
       try {
         // ============================================================
         // 阶段五核心：Tool Calling 手动循环
+        // 完整流程：
+        //   ① tool(fn, options) → 定义工具（函数 + Zod schema + 描述）
+        //   ② llm.bindTools(tools) → 将工具列表绑定到模型
+        //   ③ llmWithTools.invoke() → LLM 返回 AIMessage（含 tool_calls 或纯文本）
+        //   ④ response.tool_calls → 判断 LLM 是否要求调用工具
+        //   ⑤ selectedTool.invoke(args) → 执行工具函数获取结果
+        //   ⑥ new ToolMessage({...}) → 将结果包装为 ToolMessage 返回给 LLM
+        //   ⑦ 循环 ③~⑥ 直到 LLM 不再要求调用工具，输出最终文本回复
+        // 注意：这是手动循环方式，阶段六 Agent 会自动完成此流程
         // ============================================================
 
         // 1. 创建工具列表
+        //    tool() 返回的是 StructuredTool 实例，包含 name/schema/invoke 等属性
         const tools = [
           this.createCalculatorTool(),
           this.createTimeTool(),
@@ -192,10 +209,13 @@ export default {
           }
         })
 
-        // bindTools 让模型知道有哪些工具可用
+        // 核心 API：llm.bindTools(tools)
+        //   将工具列表注入模型，模型会在每次 invoke 时自动判断是否需要调用工具
+        //   返回一个新的 Runnable，其 invoke() 返回的 AIMessage 可能包含 tool_calls 数组
+        //   内部原理：将工具的 name/description/schema 转为 OpenAI function calling 格式
         const llmWithTools = llm.bindTools(tools)
 
-        // 3. 构造消息（不含空的 assistant 占位）
+        // 3. 构造历史消息（不含空的 assistant 占位消息）
         const historyMessages = this.messages
           .slice(0, -1)
           .map((msg) => {
@@ -205,11 +225,16 @@ export default {
           })
           .filter(Boolean)
 
-        // 4. 第一次调用：LLM 决定是否需要调用工具
+        // 4. 第一次调用：LLM 根据用户问题决定是否需要调用工具
+        //    返回的 response 可能是：
+        //    - AIMessage { content: '...', tool_calls: [...] }  → 需要调用工具
+        //    - AIMessage { content: '...' }                      → 直接文本回复
         let response = await llmWithTools.invoke(historyMessages)
 
         // 5. 手动处理 tool_calls 循环
-        //    如果 LLM 返回了 tool_calls，执行工具并将结果返回
+        //    response.tool_calls 是数组，每个元素包含：
+        //    { name: 'calculator', args: { expression: '1+1' }, id: 'call_xxx' }
+        //    MAX_TOOL_ITERATIONS 防止无限循环（如工具返回结果后 LLM 又要求调用同一工具）
         const MAX_TOOL_ITERATIONS = 5
         let iteration = 0
 
@@ -219,12 +244,19 @@ export default {
           // 记录工具调用详情（用于 UI 展示）
           const callDetails = []
 
-          // 执行每个工具调用
+          // 遍历所有 tool_calls，逐一执行
           const toolMessages = []
           for (const toolCall of response.tool_calls) {
+            // 根据 toolCall.name 匹配对应的工具实例
             const selectedTool = tools.find((t) => t.name === toolCall.name)
             if (selectedTool) {
+              // 核心 API：selectedTool.invoke(toolCall.args)
+              //   执行工具函数，传入 LLM 提取的参数（已按 Zod schema 解析）
+              //   返回工具执行结果的字符串
               const result = await selectedTool.invoke(toolCall.args)
+              // 核心 API：new ToolMessage({ content, tool_call_id })
+              //   将工具执行结果包装为 ToolMessage，tool_call_id 必须与 AIMessage 中的 id 对应
+              //   LLM 通过 tool_call_id 将结果与调用请求关联
               toolMessages.push(new ToolMessage({
                 content: result,
                 tool_call_id: toolCall.id
@@ -240,16 +272,19 @@ export default {
           this.toolCalls = callDetails
 
           // 将工具结果追加到消息列表，再次调用 LLM
+          // 消息顺序：...历史消息 → AIMessage(含 tool_calls) → ToolMessage(工具结果)...
+          // LLM 收到 ToolMessage 后会基于工具结果生成最终文本回复
           const allMessages = [
             ...historyMessages,
             response,           // AIMessage（含 tool_calls）
             ...toolMessages    // ToolMessage（工具执行结果）
           ]
 
+          // 再次调用：LLM 可能返回最终文本，也可能再次要求调用工具
           response = await llmWithTools.invoke(allMessages)
         }
 
-        // 6. 最终回复
+        // 6. 最终回复：循环结束后 response.content 即为 LLM 的文本回复
         this.messages[aiMsgIndex].content = response.content || '(模型未返回文本内容)'
       } catch (err) {
         console.error('[Stage3 Error]', err)

@@ -8,6 +8,18 @@
  *   核心 API：entrypoint()、task()、getPreviousState()、entrypoint.final()、getWriter()
  *   场景：文档分析 — 并行执行情感分析、关键词提取、摘要生成
  *   ⚡ 真实 LLM：使用 ChatOpenAI 调用内网大模型
+ *   API 提示：
+ *     - entrypoint(options, func) — 定义函数式工作流入口，替代 StateGraph
+ *       - options.name: 工作流名称
+ *       - options.checkpointer: 检查点保存器（可选）
+ *       - options.store: 长期存储（可选）
+ *     - task(name, func) — 定义可并行执行的任务单元，调用返回 Promise
+ *       - task(options, func) — 带配置：options.retry（RetryPolicy）、options.cachePolicy、options.timeout
+ *     - getPreviousState() — 在 entrypoint 内部获取上一次通过 entrypoint.final 保存的状态
+ *     - entrypoint.final({ value, save }) — 分离返回值（value）与持久化状态（save）
+ *     - getWriter() — 获取自定义流式 writer，用于推送 streamMode='custom' 事件
+ *     - workflow.invoke(input, config) — 同步执行
+ *     - workflow.stream(input, { streamMode: 'custom' }) — 流式执行，接收 writer 自定义事件
 -->
 <template>
   <div>

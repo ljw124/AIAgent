@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:35:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-08-27 18:29:31
+ * @LastEditTime: 2026-10-14 10:22:47
  * @Description: 阶段二：Chain — 链式调用（LCEL 管道模式）
  *   学习目标：用 .pipe() 串联 PromptTemplate → ChatOpenAI → StringOutputParser
  *   核心 API：.pipe()、StringOutputParser、RunnableSequence
@@ -63,6 +63,8 @@
 /* global INNER_API_KEY */
 import { ChatOpenAI } from '@langchain/openai'
 import { ChatPromptTemplate } from '@langchain/core/prompts'
+// StringOutputParser — 输出解析器，将 AIMessage 对象转为纯文本字符串
+// 是 LCEL 管道链的最后一环，让 chain.invoke() 直接返回 string 而非 AIMessage
 import { StringOutputParser } from '@langchain/core/output_parsers'
 
 export default {
@@ -75,15 +77,15 @@ export default {
       loading: false,
       error: null,
       direction: '中译英',
-      style: '正式',
+      style: '正式'
     }
   },
 
   watch: {
     messages: {
       deep: true,
-      handler() { this.$nextTick(() => this.scrollToBottom()) },
-    },
+      handler() { this.$nextTick(() => this.scrollToBottom()) }
+    }
   },
 
   methods: {
@@ -93,27 +95,32 @@ export default {
      * 链创建一次，可多次调用（复用）
      */
     createTranslationChain() {
-      // 1. 创建提示词模板
+      // 1. ChatPromptTemplate.fromMessages([...]) — 创建提示词模板
+      //    支持 system / human / ai 多角色消息，用 {变量名} 占位
       const promptTemplate = ChatPromptTemplate.fromMessages([
         ['system', '你是一个专业翻译助手。请将用户输入的文本翻译为{style}风格的{language}。只输出翻译结果，不要添加任何解释。'],
-        ['human', '{input}'],
+        ['human', '{input}']
       ])
 
-      // 2. 创建模型实例
+      // 2. new ChatOpenAI({...}) — 创建 OpenAI 兼容的聊天模型实例
+      //    temperature: 0.3 翻译任务用较低温度，保证输出一致性
       const llm = new ChatOpenAI({
         model: 'EB-DeepSeek-V4-Pro',
         apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
-        temperature: 0.3, // 翻译任务用较低温度，保证一致性
+        temperature: 0.3,
         configuration: {
-          baseURL: window.location.origin + '/inner/',
-        },
+          baseURL: window.location.origin + '/inner/'
+        }
       })
 
-      // 3. 创建输出解析器（将 AIMessage 转为纯文本字符串）
+      // 3. new StringOutputParser() — 创建字符串输出解析器
+      //    将 LLM 返回的 AIMessage 对象自动提取 .content 转为纯文本字符串
       const parser = new StringOutputParser()
 
-      // 4. 用 .pipe() 串联成链
-      //    PromptTemplate → ChatOpenAI → StringOutputParser
+      // 4. .pipe() — LCEL 管道操作符，将上游输出作为下游输入串联
+      //    promptTemplate.pipe(llm): 模板格式化 → LLM 调用 → 返回 AIMessage
+      //    .pipe(parser): AIMessage → StringOutputParser → 纯文本字符串
+      //    链创建后可复用，多次调用 chain.invoke() 传入不同参数
       const chain = promptTemplate.pipe(llm).pipe(parser)
 
       return chain
@@ -139,12 +146,15 @@ export default {
         // 创建链（实际项目中可以在 created() 中创建一次，复用）
         const chain = this.createTranslationChain()
 
-        // 调用链：传入模板变量，直接得到字符串结果
-        // 不再需要手动 formatMessages + invoke + .content
+        // chain.invoke({...}) — 执行 LCEL 链
+        // 传入模板变量（language, style, input），自动完成：
+        //   1. ChatPromptTemplate 用变量填充模板 → 2. ChatOpenAI 调用 LLM →
+        //   3. StringOutputParser 提取纯文本 → 返回 string
+        // 对比阶段一：不再需要手动 formatMessages + invoke + .content
         const result = await chain.invoke({
           language: this.direction,
           style: this.style,
-          input: text,
+          input: text
         })
 
         // result 已经是纯文本字符串（StringOutputParser 处理过了）
@@ -168,8 +178,8 @@ export default {
     scrollToBottom() {
       const el = this.$refs.chatHistory
       if (el) el.scrollTop = el.scrollHeight
-    },
-  },
+    }
+  }
 }
 </script>
 

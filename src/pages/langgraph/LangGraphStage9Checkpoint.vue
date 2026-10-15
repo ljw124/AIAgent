@@ -7,6 +7,18 @@
  *   学习目标：掌握 LangGraph 的 getState/getStateHistory API，实现 Time Travel（回放/分叉）
  *   核心 API：graph.getState()、graph.getStateHistory()、graph.updateState()、StateSnapshot
  *   前置条件：已完成阶段七（MemorySaver 短期记忆），理解 thread_id 和 Checkpoint 概念
+ *   API 提示：
+ *     - agent.getState(config) — 获取当前线程的最新 StateSnapshot
+ *       - StateSnapshot.values — 当前状态值
+ *       - StateSnapshot.next — 下一步要执行的节点列表（空数组表示已结束）
+ *       - StateSnapshot.config — 当前检查点的 config（含 checkpoint_id）
+ *       - StateSnapshot.parentConfig — 父检查点的 config
+ *       - StateSnapshot.createdAt — 检查点创建时间
+ *       - StateSnapshot.metadata — 元数据（含 step 等）
+ *     - agent.getStateHistory(config) — 异步迭代器，遍历所有历史 StateSnapshot
+ *     - agent.updateState(config, values) — 手动更新状态，可用于回退到历史状态
+ *     - agent.invoke(null, cp.config) — 回放（Replay）：从历史检查点重新执行
+ *     - agent.invoke({ messages: [...] }, cp.config) — 分叉（Fork）：从历史检查点继续执行新输入
 -->
 <template>
   <div>

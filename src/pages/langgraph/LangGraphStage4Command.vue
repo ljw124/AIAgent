@@ -8,6 +8,15 @@
  *   核心 API：new Command({ goto, update })、Command.goto、Command.update
  *   对比：Command（命令式/节点内决策）vs addConditionalEdges（声明式/边层面决策）
  *   场景：消息分析器 — 根据内容在节点内部动态决定跳转目标
+ *   API 提示：
+ *     - new Command({ goto, update, resume, graph }) — 命令式路由控制
+ *       - goto: string — 指定下一步要执行的节点名（替代条件边）
+ *       - update: object — 同时更新状态（合并到当前状态）
+ *       - resume: any — 恢复 interrupt 暂停的执行（见阶段五）
+ *       - graph: Command.PARENT — 返回到父图（子图场景）
+ *     - Command.goto(nodeName) — 快捷方式：仅指定跳转目标
+ *     - Command.update(stateUpdate) — 快捷方式：仅更新状态
+ *     - addNode(name, func, { ends }) — ends 选项声明节点可能跳转到的目标节点列表
 -->
 <template>
   <div>

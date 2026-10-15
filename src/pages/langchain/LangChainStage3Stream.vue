@@ -79,15 +79,15 @@ export default {
       loading: false,
       error: null,
       mode: 'stream', // 'stream' | 'invoke'
-      streamStats: null, // { chunks, duration }
+      streamStats: null // { chunks, duration }
     }
   },
 
   watch: {
     messages: {
       deep: true,
-      handler() { this.$nextTick(() => this.scrollToBottom()) },
-    },
+      handler() { this.$nextTick(() => this.scrollToBottom()) }
+    }
   },
 
   methods: {
@@ -117,7 +117,7 @@ export default {
 
         const langChainMessages = [
           new SystemMessage('你是一个有用的AI助手，请用中文回答。回答要详细、有条理。'),
-          ...historyMessages,
+          ...historyMessages
         ]
 
         const llm = new ChatOpenAI({
@@ -125,8 +125,8 @@ export default {
           apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
           temperature: 0.7,
           configuration: {
-            baseURL: window.location.origin + '/inner/',
-          },
+            baseURL: window.location.origin + '/inner/'
+          }
         })
 
         if (this.mode === 'stream') {
@@ -159,7 +159,6 @@ export default {
           this.messages[aiMsgIndex].content = response.content
         }
       } catch (err) {
-        console.error('[Stage6 Error]', err)
         this.error = `请求失败: ${err.message}`
         if (!this.messages[aiMsgIndex].content) {
           this.messages.splice(aiMsgIndex, 1)
@@ -178,8 +177,8 @@ export default {
     scrollToBottom() {
       const el = this.$refs.chatHistory
       if (el) el.scrollTop = el.scrollHeight
-    },
-  },
+    }
+  }
 }
 </script>
 

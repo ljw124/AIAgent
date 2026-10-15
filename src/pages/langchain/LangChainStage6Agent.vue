@@ -2,15 +2,24 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:45:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-03 10:45:41
+ * @LastEditTime: 2026-10-15 10:23:02
  * @Description: 阶段六：Agent — 智能体（增强版）
  *   学习目标：用 createReactAgent 自动处理工具调用循环
- *   核心 API：createReactAgent()、Agent 自动循环
+ *   核心 API：createReactAgent()、Agent 自动 Think→Act→Observe 循环
  *   增强特性：
  *     1. Agent 名称：name 选项
- *     2. 系统提示词：prompt 选项（替代已废弃的 messageModifier）
- *     3. 结构化输出：responseFormat + zod schema（structuredResponse 状态键）
- *     4. 流式输出：agent.stream(inputs, { streamMode: 'values' }) 逐步骤输出
+ *     2. Agent 描述：description 选项（supervisor 多 Agent 场景）
+ *     3. 系统提示词：prompt 选项（替代已废弃的 messageModifier）
+ *     4. 状态修改器：stateModifier 选项（prompt 的替代方案）
+ *     5. 自定义状态图：stateSchema 选项（扩展状态字段）
+ *     6. 运行时上下文：contextSchema 选项（config.configurable 注入）
+ *     7. 短期记忆：checkpointer 选项（MemorySaver 持久化对话历史）
+ *     8. 长期记忆：store 选项（InMemoryStore / PostgresStore）
+ *     9. 人机协同：interruptBefore / interruptAfter 选项
+ *    10. 模型钩子：preModelHook / postModelHook 选项
+ *    11. 并行工具调用：version: 'v2' 选项（Send API）
+ *    12. 结构化输出：responseFormat + zod schema（structuredResponse 状态键）
+ *    13. 流式输出：agent.stream(inputs, { streamMode: 'values' }) 逐步骤输出
  *   对比阶段五：不再手动 while 循环处理 tool_calls
 -->
 <template>
@@ -128,7 +137,7 @@ export default {
     messages: {
       deep: true,
       handler() { this.$nextTick(() => this.scrollToBottom()) }
-    },
+    }
   },
 
   methods: {
@@ -222,14 +231,53 @@ export default {
         tools,
         // 1. Agent 名称：name 选项。主要用于多 Agent 场景（supervisor），让 supervisor LLM 能识别这个 agent
         name: this.agentName || 'AI助手',
-        includeAgentName: 'inline', // 单 Agent 下通常不需要显示名称
-        // 2. 系统提示词：prompt 选项（替代已废弃的 messageModifier）
-        //    prompt 接收完整图状态，返回 SystemMessage 列表
-        prompt: this.systemPrompt || '你是一个有用的AI助手，可以使用工具来回答问题。回答请用中文。'
+        // 2. Agent 描述：description 选项。用于 supervisor 多 Agent 场景，描述此 Agent 的职责和能力
+        //    supervisor LLM 根据 description 决定将任务路由给哪个子 Agent
+        // description: '负责数学计算、天气查询和时间查询的通用助手',
+        // 3. includeAgentName：控制 Agent 名称在消息中的显示方式
+        //    'inline' — 将 name 注入到 AIMessage 的 name 字段（单 Agent 推荐）
+        //    true — 在消息列表中包裹 AgentNameMessage（多 Agent 场景使用）
+        includeAgentName: 'inline',
+        // 4. 系统提示词：prompt 选项（替代已废弃的 messageModifier）
+        //    支持类型：string | SystemMessage | (state) => messages[] | Runnable
+        //    string 类型会自动包装为 SystemMessage 并插入到消息列表最前面
+        prompt: this.systemPrompt || '你是一个有用的AI助手，可以使用工具来回答问题。回答请用中文。',
+        // 5. stateModifier：状态修改器（prompt 的替代方案，二选一）
+        //    与 prompt 互斥，接收完整 state 并返回修改后的 state
+        // stateModifier: (state) => ({ ...state, customField: 'value' }),
+        // 6. stateSchema：自定义状态图 Annotation schema
+        //    默认使用 createReactAgentAnnotation()（含 messages + structuredResponse）
+        //    可传入自定义 Annotation.Root({...}) 扩展状态字段
+        // stateSchema: Annotation.Root({ messages: ..., customField: Annotation() }),
+        // 7. contextSchema：运行时上下文注入 schema
+        //    定义通过 config.configurable 传入的额外上下文参数类型
+        // contextSchema: Annotation.Root({ userId: Annotation(), tenantId: Annotation() }),
+        // 8. checkpointer：检查点保存器（短期记忆/对话历史持久化）
+        //    传入 MemorySaver 或自定义 checkpointer，实现跨轮对话记忆
+        // checkpointer: new MemorySaver(),
+        // 9. store：长期记忆存储（跨会话持久化）
+        //    传入 InMemoryStore 或 PostgresStore，用于存储用户偏好等长期数据
+        // store: new InMemoryStore(),
+        // 10. interruptBefore / interruptAfter：人机协同中断点
+        //    在指定节点执行前/后暂停，等待人工审批后继续
+        // interruptBefore: ['tools'],  // 工具调用前暂停
+        // interruptAfter: ['agent'],   // Agent 推理后暂停
+        // 11. preModelHook / postModelHook：模型调用前后钩子
+        //     preModelHook(state) — 在调用 LLM 前修改输入消息
+        //     postModelHook(state) — 在 LLM 返回后处理输出消息
+        // preModelHook: (state) => ({ llmInputMessages: [...filteredMessages] }),
+        // postModelHook: (state) => ({ messages: [...processedMessages] }),
+        // 12. version：Agent 执行版本
+        //     'v1'（默认）— 串行工具调用
+        //     'v2' — 使用 Send API 并行执行多个工具调用
+        // version: 'v2'
       }
 
-      // 3. 结构化输出：responseFormat + zod schema
-      //    会在 Agent 循环结束后额外调用一次 LLM，将最终回复格式化为 schema 结构
+      // 13. 结构化输出：responseFormat + zod schema
+      //     会在 Agent 循环结束后额外调用一次 LLM，将最终回复格式化为 schema 结构
+      //     responseFormat 支持两种形式：
+      //       a) { schema: ZodSchema, prompt?: string, method?: 'jsonSchema' | 'functionCalling' | 'jsonMode' }
+      //       b) 直接传入 ZodSchema（使用默认 method）
       if (this.enableStructured) {
         params.responseFormat = {
           schema: z.object({
@@ -238,7 +286,10 @@ export default {
             temperatureDiff: z.number().nullable().describe('城市之间的温差，若无则为 null')
           }),
           prompt: '请将 Agent 的最终回复整理为结构化 JSON 输出。',
-          // 显式指定结构化输出策略（ContentStrategy）为 jsonSchema。可选值：'jsonSchema' | 'functionCalling'(ToolStrategy) | 'jsonMode'
+          // method：显式指定结构化输出策略
+          //   'jsonSchema' — 使用 withStructuredOutput() 的 jsonSchema 模式（推荐，最稳定）
+          //   'functionCalling' — 使用 function calling 模式（ToolStrategy）
+          //   'jsonMode' — 使用 JSON mode（仅部分模型支持）
           method: 'jsonSchema'
         }
       }

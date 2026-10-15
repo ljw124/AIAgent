@@ -9,6 +9,16 @@
  *            graph.getState()（状态快照）、graph.getStateHistory()（历史检查点）、graph.updateState()（状态回退）
  *   对比阶段六：Agent 每次调用都重新构建，无记忆能力；本阶段注入 MemorySaver 实现上下文保持
  *   关联阶段：MemorySaver 是 interrupt（阶段五）和 Time Travel（阶段九）的基础设施
+ *   API 提示：
+ *     - new MemorySaver() — 内存检查点保存器，自动保存每次 superstep 的状态快照
+ *     - createReactAgent({ checkpointer }) — 注入 checkpointer 启用短期记忆
+ *     - config.configurable.thread_id — 线程 ID，用于隔离不同对话的记忆
+ *     - config.configurable.checkpoint_ns — 检查点命名空间（可选，用于分支管理）
+ *     - agent.getState(config) — 获取当前线程的最新状态快照（StateSnapshot）
+ *     - agent.getStateHistory(config) — 异步迭代器，遍历当前线程的所有历史检查点
+ *     - agent.updateState(config, values) — 手动更新状态（用于分支/回退）
+ *     - agent.invoke(null, cp.config) — 传入 null 和检查点 config 实现回放（Replay）
+ *     - agent.invoke({ messages: [...] }, cp.config) — 从历史检查点分叉（Fork）执行
 -->
 <template>
   <div>

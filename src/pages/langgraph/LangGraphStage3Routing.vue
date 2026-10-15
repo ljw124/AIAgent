@@ -7,6 +7,14 @@
  *   学习目标：掌握 addConditionalEdges 的用法，理解条件边如何让图拥有「决策能力」
  *   核心 API：addConditionalEdges、router 函数、toolsCondition、ToolNode
  *   对比：条件边（声明式）vs 普通边（固定路由），手动 ReAct 循环 vs createReactAgent
+ *   API 提示：
+ *     - addConditionalEdges(source, routerFn, [pathMap]) — 添加条件边，根据 routerFn 返回值动态路由
+ *       - routerFn: (state) => string — 返回目标节点名
+ *       - pathMap: { key: nodeName } — 可选，映射 routerFn 返回值到节点名
+ *     - toolsCondition — 预构建的路由函数，根据 AIMessage 中的 tool_calls 自动路由到 'tools' 或 '__end__'
+ *     - new ToolNode(tools, { name, tags, handleToolErrors }) — 工具执行节点
+ *     - llm.bindTools(tools) — 将工具绑定到 LLM，返回支持 tool calling 的 Runnable
+ *     - app.invoke(state, { recursion_limit }) — 设置最大递归深度（默认 25），防止无限循环
 -->
 <template>
   <div>

@@ -8,6 +8,11 @@
  *   核心 API：new Send(node, args)、addConditionalEdges 返回 Send[]、reducer 合并并行结果
  *   场景：对多个文档并行生成摘要 → 汇总为最终摘要
  *   ⚡ 真实 LLM：使用 ChatOpenAI 调用内网大模型并行生成摘要
+ *   API 提示：
+ *     - new Send(nodeName, args) — 创建一个并行执行任务，args 会作为节点的输入状态
+ *     - addConditionalEdges(source, routerFn) — routerFn 返回 Send[] 时触发扇出（fan-out）
+ *     - 并行结果通过 reducer 合并：每个 Send 实例独立执行，结果通过 Annotation 的 reducer 归并
+ *     - 扇出-扇入模式：dispatcher 返回 Send[] → N 个并行实例 → reducer 合并 → 下一个节点
 -->
 <template>
   <div>

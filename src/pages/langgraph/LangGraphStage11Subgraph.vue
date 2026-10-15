@@ -8,6 +8,13 @@
  *   核心 API：StateGraph.addNode(name, compiledSubgraph)、子图状态隔离、状态映射
  *   场景：多 Agent 协作 — 摘要 Agent（子图A）+ 翻译 Agent（子图B）→ 父图编排
  *   ⚡ 真实 LLM：使用 ChatOpenAI 调用内网大模型
+ *   API 提示：
+ *     - StateGraph.addNode(name, compiledSubgraph) — 将已编译的子图作为父图的节点
+ *     - 子图必须先 .compile() 再作为节点添加
+ *     - 状态映射：父图通过状态键名匹配自动将状态映射到子图输入（同名键自动传递）
+ *     - 状态隔离：子图有独立的状态空间（自己的 Annotation.Root），与父图状态分离
+ *     - 子图复用：同一个已编译子图实例可被多个父图引用
+ *     - 典型模式：Supervisor 模式（父图编排多个子 Agent）、分层架构
 -->
 <template>
   <div>

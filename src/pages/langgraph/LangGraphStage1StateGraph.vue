@@ -2,11 +2,21 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-16 10:58:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-24 10:17:21
+ * @LastEditTime: 2026-10-15 10:47:12
  * @Description: 阶段一：StateGraph 入门 — 构建第一个状态图
  *   学习目标：掌握 StateGraph 的基本结构（定义状态 → 添加节点 → 添加边 → 编译 → 执行）
- *   核心 API：StateGraph、Annotation.Root、addNode、addEdge、START、END、compile、invoke
+ *   核心 API：StateGraph、Annotation.Root、addNode、addEdge、START、END、compile、invoke、stream、getGraphAsync、drawMermaid
  *   对比：createReactAgent（预构建图） vs StateGraph（自定义图）
+ *   API 提示：
+ *     - Annotation.Root({...}) — 定义状态 Schema，每个字段通过 Annotation() 或 Annotation({ reducer, default }) 定义
+ *     - new StateGraph(stateSchema) — 创建状态图实例，参数为 Annotation.Root 返回的状态定义
+ *     - .addNode(name, func) — 添加节点，func 签名为 async (state) => partialState
+ *     - .addEdge(from, to) — 添加普通边，from/to 可以是节点名、START 或 END
+ *     - .compile({ checkpointer, interruptBefore, interruptAfter, name }) — 编译图，返回可执行的 CompiledStateGraph
+ *     - app.invoke(input, config) — 同步执行图，返回最终状态
+ *     - app.stream(input, config) — 流式执行图，config.streamMode 可选 'values'/'updates'/'messages'/'custom'/'debug'
+ *     - app.getGraphAsync() — 获取 DrawableGraph 对象
+ *     - drawableGraph.drawMermaid() — 生成 Mermaid 格式的图结构可视化代码
 -->
 <template>
   <div>

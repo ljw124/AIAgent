@@ -14,6 +14,18 @@
  *   学习目标：掌握 Annotation.Root 的高级用法（reducer、默认值、类型推导、MessagesAnnotation）
  *   核心 API：Annotation.Root、Annotation&lt;Type&gt;()、Annotation&lt;Type&gt;({ reducer, default })、MessagesAnnotation、messagesStateReducer
  *   对比：LastValue（覆盖） vs 自定义 reducer（追加/累加） vs MessagesAnnotation（预构建） vs messagesStateReducer（官方推荐）
+ *   API 提示：
+ *     - Annotation() — 定义状态字段，默认 reducer 为 LastValue（新值覆盖旧值）
+ *     - Annotation({ reducer, default }) — 自定义 reducer 和默认值
+ *       - reducer: (prev, next) => merged — 状态更新时的归并函数
+ *       - default: () => initialValue — 状态初始值的工厂函数
+ *     - Annotation.Root({...}) — 定义完整的状态 Schema，返回 StateDefinition 对象
+ *     - MessagesAnnotation — 预定义的消息列表状态（内置 messagesStateReducer）
+ *     - messagesStateReducer — 消息列表的默认 reducer：追加新消息、用 ID 去重替换已有消息
+ *     - 常用 reducer 模式：
+ *       - concat: (prev, next) => prev.concat(next) — 数组追加（如消息列表）
+ *       - add: (prev, next) => prev + next — 数值累加（如计数器）
+ *       - LastValue（默认）: (prev, next) => next — 新值覆盖（如当前步骤名）
 -->
 <template>
   <div>

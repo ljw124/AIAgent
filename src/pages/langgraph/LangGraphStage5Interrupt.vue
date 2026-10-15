@@ -8,6 +8,14 @@
  *   核心 API：interrupt()、new Command({ resume })、MemorySaver、checkpointer
  *   场景：AI 生成方案 → interrupt 暂停等待人工审批 → 审批后继续执行
  *   ⚡ 真实 LLM：使用 ChatOpenAI 调用内网大模型生成方案
+ *   API 提示：
+ *     - interrupt(value) — 在节点中暂停执行，value 会作为 Interrupt 抛给调用方
+ *     - new Command({ resume }) — 恢复暂停的执行，resume 值会作为 interrupt() 的返回值
+ *     - new MemorySaver() — 内存检查点保存器（开发/测试用，生产用 SqliteSaver/PostgresSaver）
+ *     - graph.compile({ checkpointer }) — 编译时注入 checkpointer，启用中断/恢复能力
+ *     - isInterrupted(result) — 检查 invoke 返回值是否包含中断（返回 Interrupt 对象或 null）
+ *     - INTERRUPT — 特殊常量键，用于从 stream 输出中提取中断信息
+ *     - isGraphInterrupt(error) — 检查捕获的异常是否为 GraphInterrupt 类型
 -->
 <template>
   <div>
