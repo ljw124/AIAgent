@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@langchain/core": "^1.2.9",
+    "@langchain/langgraph": "^1.5.0",
     "@langchain/openai": "^1.5.10",
     "@langchain/textsplitters": "^1.0.1",
     "core-js": "^3.8.3",

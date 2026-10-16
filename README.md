@@ -146,38 +146,22 @@
 
 ### 📄 配套学习文档
 
-项目在 [`src/docs/`](src/docs) 目录下整理了丰富的学习资料：
+项目在 [`src/docs/`](src/docs) 目录下整理了 24 篇学习资料，按分类索引：
 
-**AI-Agent 文档**（位于 [`src/docs/agent/`](src/docs/agent)）：
-
-- [什么是AI-Agent-三层模型演进之路.md](src/docs/agent/什么是AI-Agent-三层模型演进之路.md)
-- [AI-Agent三种核心模式详解.md](src/docs/agent/AI-Agent三种核心模式详解.md)
-- [构建高效的AI-Agent.md](src/docs/agent/构建高效的AI-Agent.md)
-
-**LangChain 学习文档**（位于 [`src/docs/langchain/`](src/docs/langchain)）：
-
-- [LangChain-Agent集成完整流程.md](src/docs/langchain/LangChain-Agent集成完整流程.md)
-- [LangChain详细指南.md](src/docs/langchain/LangChain详细指南.md)
-- [LangChain.js前端学习路径.md](src/docs/langchain/LangChain.js前端学习路径.md)
-- [LangChain.js深入学习路线.md](src/docs/langchain/LangChain.js深入学习路线.md)
-- [学习LangChain所需的Python知识.md](src/docs/langchain/学习LangChain所需的Python知识.md)
-- [LangChain-中间件Middleware详解.md](src/docs/langchain/LangChain-中间件Middleware详解.md)
-- [LangChain.js RAG 检索增强生成详解.md](src/docs/langchain/LangChain.js%20RAG%20检索增强生成详解.md)
-- [LangSmith追踪集成总结.md](src/docs/langchain/LangSmith追踪集成总结.md)
-- [LangChain-智能客服项目实战.md](src/docs/langchain/LangChain-智能客服项目实战.md)
-
-**LangGraph 学习文档**（位于 [`src/docs/langgraph/`](src/docs/langgraph)）：
-
-- [LangGraph.js深入学习路线.md](src/docs/langgraph/LangGraph.js深入学习路线.md)
-- [LangGraph.js短期记忆Memory详解.md](src/docs/langgraph/LangGraph.js短期记忆Memory详解.md)
-- [LangGraph.js长期记忆Store详解.md](src/docs/langgraph/LangGraph.js长期记忆Store详解.md)
-- [LangGraph.js多Agent系统详解.md](src/docs/langgraph/LangGraph.js多Agent系统详解.md)
+| 分类 | 数量 | 目录入口 | 推荐索引 |
+| --- | --- | --- | --- |
+| AI-Agent 理论 | 3 篇 | [`src/docs/agent/`](src/docs/agent) | [构建高效的AI-Agent.md](src/docs/agent/构建高效的AI-Agent.md) |
+| LangChain.js | 9 篇 | [`src/docs/langchain/`](src/docs/langchain) | [LangChain.js深入学习路线.md](src/docs/langchain/LangChain.js深入学习路线.md) |
+| LangGraph.js | 12 篇 | [`src/docs/langgraph/`](src/docs/langgraph) | [LangGraph.js深入学习路线.md](src/docs/langgraph/LangGraph.js深入学习路线.md) |
 
 ---
 
 ## 📁 项目结构
 
-```
+<details>
+<summary>📁 点击展开完整目录树</summary>
+
+```text
 ├── .env                      # 环境变量（API Key、Base URL、LangSmith 配置）
 ├── .npmrc                    # pnpm 配置（shamefully-hoist、npmmirror 镜像）
 ├── package.json              # 项目依赖与脚本
@@ -220,6 +204,8 @@
         ├── modelscope/       # 魔搭 ModelScope（平台）
         └── ollama/           # 本地 Ollama（平台）
 ```
+
+</details>
 
 ---
 
