@@ -22,8 +22,9 @@
 10. [阶段九：Checkpoint 检查点 — getState/getStateHistory + Time Travel](#10-阶段九checkpoint-检查点--getstategetstatehistory--time-travel)
 11. [阶段十：Context 运行时上下文 — runtime.context 注入](#11-阶段十context-运行时上下文--runtimecontext-注入)
 12. [阶段十一：Subgraph — 子图嵌套与复用](#12-阶段十一subgraph--子图嵌套与复用)
-13. [进阶主题](#13-进阶主题)
-14. [🆕 Python 快速对照速查表](#14-python-快速对照速查表)
+13. [阶段十三：Multi-Agent — 多智能体系统](#13-阶段十三multi-agent--多智能体系统)
+14. [进阶主题](#14-进阶主题)
+15. [🆕 Python 快速对照速查表](#15-python-快速对照速查表)
 
 ---
 
@@ -31,7 +32,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
-│                      LangGraph.js 深入学习路线（10 个阶段）                              │
+│                      LangGraph.js 深入学习路线（11 个阶段）                              │
 ├──────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                      │
 │  起点（LangChain 阶段六）                                                              │
@@ -53,11 +54,11 @@
 │  │ 人机协同 │   │ 并行执行 │   │ 短期记忆 │   │ 长期记忆 │                          │
 │  └──────────┘   └──────────┘   └──────────┘   └──────────┘                          │
 │                                                                                      │
-│  阶段九          阶段十          阶段十一                                              │
-│  ┌──────────┐   ┌──────────┐   ┌──────────┐                                        │
-│  │Checkpoint│ → │ Context  │ → │ Subgraph │                                        │
-│  │TimeTravel│   │ 运行时上下文│   │ 子图嵌套 │                                        │
-│  └──────────┘   └──────────┘   └──────────┘                                        │
+│  阶段九          阶段十          阶段十一        阶段十三                                │
+│  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐                          │
+│  │Checkpoint│ → │ Context  │ → │ Subgraph │ → │MultiAgent│                          │
+│  │TimeTravel│   │ 运行时上下文│   │ 子图嵌套 │   │ 多智能体 │                          │
+│  └──────────┘   └──────────┘   └──────────┘   └──────────┘                          │
 │                                                                                      │
 │  每个阶段 = 概念讲解 + 可运行示例代码（Vue 组件） + JS/Python 对比 + 与官网文档对照         │
 │                                                                                      │
@@ -103,7 +104,10 @@ src/pages/langgraph/
 ├── LangGraphStage7Memory.vue        ← 阶段七：MemorySaver 短期记忆
 ├── LangGraphStage8Store.vue         ← 阶段八：Store 长期记忆
 ├── LangGraphStage9Checkpoint.vue    ← 阶段九：Checkpoint 检查点 + Time Travel
-└── LangGraphStage10Context.vue      ← 阶段十：runtime.context 运行时上下文
+├── LangGraphStage10Context.vue      ← 阶段十：runtime.context 运行时上下文
+├── LangGraphStage11Subgraph.vue     ← 阶段十一：Subgraph 子图嵌套
+├── LangGraphStage12Functional.vue   ← 阶段十二（进阶）：Functional API 函数式
+└── LangGraphStage13MultiAgent.vue   ← 阶段十三：Multi-Agent 多智能体
 ```
 
 ### 与 LangChain 阶段六的关系
@@ -1804,9 +1808,236 @@ Supervisor 子图负责任务分配和结果汇总，Worker 子图负责具体�
 
 ---
 
-## 13. 进阶主题
+## 13. 阶段十三：Multi-Agent — 多智能体系统
 
-完成十一个阶段后，可以进一步探索：
+> **文件：** [`LangGraphStage13MultiAgent.vue`](../../pages/langgraph/LangGraphStage13MultiAgent.vue)
+>
+> **详解文档：** [`LangGraph.js多Agent系统详解.md`](./LangGraph.js多Agent系统详解.md)
+>
+> **核心 API：** `Command({ goto })`、`createReactAgent`、`tool()`（handoff 工具）、`streamMode: 'updates'`、`recursionLimit`
+>
+> **前置条件：** 阶段十一（Subgraph），理解子图作为节点的机制
+
+### 13.1 概念
+
+多 Agent 系统是 LangGraph 的核心高级特性，通过将多个 Agent 组合成一个协作网络来处理复杂任务。与单 Agent 相比，多 Agent 解决了三个关键问题：
+
+- **上下文爆炸**：单 Agent 工具太多导致 prompt 过长，多 Agent 各司其职
+- **职责混杂**：售前/售后/技术支持混在一个 Agent 中，LLM 容易混淆
+- **工具冲突**：不同领域的工具名可能冲突，分 Agent 隔离
+
+LangGraph 支持三种多 Agent 架构模式：
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  LangGraph 多 Agent 三种架构模式                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ① Supervisor 模式（中心化）          ② Swarm 模式（去中心化）      │
+│  ┌────────────┐                     ┌────────┐    ┌────────┐   │
+│  │ Supervisor │                     │ Agent A│←──→│ Agent B│   │
+│  └─────┬──────┘                     └────────┘    └────────┘   │
+│        │ 分发/汇总                        ↑ 交接（handoff）↑      │
+│   ┌────┼────┬─────────┐                                        │
+│   ▼    ▼    ▼         │            ③ Network 模式（全连接）       │
+│ ┌────┐┌────┐┌────┐    │            ┌────┐ ←→ ┌────┐            │
+│ │ A  ││ B  ││ C  │    │            │ A  │    │ B  │            │
+│ └────┘└────┘└────┘    │            └─┬──┘    └─┬──┘            │
+│   Worker Agents       │              ↕   ↕   ↕                 │
+│                       │            ┌────┐ ←→ ┌────┐            │
+│                       │            │ C  │    │ D  │            │
+│                       │            └────┘    └────┘            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+| 模式 | 中心化程度 | 通信方式 | 实现复杂度 | 典型场景 |
+|------|-----------|----------|-----------|----------|
+| **Supervisor** | 高（有主管） | Worker 只与 Supervisor 通信 | ⭐⭐ | 客服分流、任务编排 |
+| **Swarm** | 低（无中心） | Agent 之间直接 handoff | ⭐⭐⭐ | 售前转售后、多轮转接 |
+| **Network** | 无 | 任意 Agent 互相调用 | ⭐⭐⭐⭐ | 复杂协作（需防死循环） |
+
+**与 Stage11 子图的关系**：子图是构建多 Agent 的底层机制（已编译图作为节点），多 Agent 是上层架构（LLM 动态决策路由 / handoff 工具交接）。
+
+### 13.2 核心 API
+
+| API | 说明 |
+|-----|------|
+| [`Command({ goto, update })`](node_modules/@langchain/langgraph/dist/constants.d.ts:28) | Supervisor 节点返回，指定下一个 Worker 并更新状态 |
+| [`createReactAgent({ llm, tools, prompt })`](node_modules/@langchain/langgraph/dist/prebuilt/react_agent_executor.d.ts) | 快速构建 Worker Agent（预构建图） |
+| [`tool()`](node_modules/@langchain/core/dist/tools/index.d.ts) | 创建 handoff 工具（JS 版无 `create_handoff_tool`，用 `tool()` + `Command` 实现） |
+| `streamMode: 'updates'` | 观察 Agent 间交接事件流（每次状态更新触发回调） |
+| `recursionLimit` | 死循环防护（默认 25，多 Agent 场景建议 10-15） |
+| `Annotation.Root({ messages })` | 共享状态：Supervisor 模式所有 Agent 共用一个 messages 列表 |
+
+### 13.3 🆕 JS vs Python 对比
+
+#### API 对照表
+
+| 操作 | LangGraph.js | LangGraph Python |
+|------|-------------|------------------|
+| Supervisor 路由 | `new Command({ goto: 'agentName' })` | `Command(goto='agent_name')` |
+| 创建 Worker | `createReactAgent({ llm, tools, prompt })` | `create_react_agent(llm, tools, prompt=...)` |
+| Handoff 工具 | `tool(fn, { name, description, schema })` 内部返回 `Command` | `create_handoff_tool(agent_name, description)` |
+| 共享状态 | `Annotation.Root({ messages: { reducer, default } })` | `MessagesState`（内置 messages reducer） |
+| 流式观察 | `streamMode: 'updates'` | `stream_mode='updates'` |
+| 递归限制 | `{ recursionLimit: 10 }` | `{'recursion_limit': 10}` |
+
+#### Supervisor 模式代码对比
+
+```js
+// ============ LangGraph.js ============
+// Supervisor 节点：LLM 决策路由
+const supervisorNode = async (state) => {
+  const lastMessage = state.messages[state.messages.length - 1]
+  const routeResult = await llm.invoke([
+    new HumanMessage(`分析消息决定路由：${lastMessage.content}\n只输出：salesAgent / supportAgent / generalAgent / FINISH`)
+  ])
+  const decision = routeResult.content.trim()
+  if (decision === 'FINISH') return new Command({ goto: END })
+  return new Command({ goto: decision })
+}
+
+// Worker：createReactAgent 预构建
+const salesAgent = createReactAgent({
+  llm, tools: [getPriceTool],
+  prompt: '你是售前顾问，负责产品咨询和报价。'
+})
+
+// 组装图
+const graph = new StateGraph(SupervisorState)
+  .addNode('supervisor', supervisorNode)
+  .addNode('salesAgent', salesAgent)
+  .addNode('supportAgent', supportAgent)
+  .addNode('generalAgent', generalAgent)
+  .addEdge(START, 'supervisor')
+  .addEdge('salesAgent', 'supervisor')    // Worker 完成后回到 supervisor
+  .addEdge('supportAgent', 'supervisor')
+  .addEdge('generalAgent', 'supervisor')
+  .compile()
+
+// 执行
+const result = await graph.invoke(
+  { messages: [new HumanMessage('我想退货，订单号 A12345')] },
+  { recursionLimit: 10 }
+)
+// 轨迹：supervisor → supportAgent → supervisor → FINISH
+```
+
+```python
+# ============ LangGraph Python ============
+from langgraph.graph import StateGraph, START, END, MessagesState
+from langgraph.types import Command
+from langgraph.prebuilt import create_react_agent
+
+# Supervisor 节点
+def supervisor_node(state: MessagesState) -> Command:
+    last_message = state["messages"][-1]
+    decision = llm.invoke(f"分析消息决定路由：{last_message.content}").content.strip()
+    if decision == "FINISH":
+        return Command(goto=END)
+    return Command(goto=decision)
+
+# Worker
+sales_agent = create_react_agent(llm, [get_price_tool], prompt="你是售前顾问...")
+
+# 组装图（与 JS 结构一致）
+graph = (
+    StateGraph(MessagesState)
+    .add_node("supervisor", supervisor_node)
+    .add_node("salesAgent", sales_agent)
+    .add_edge(START, "supervisor")
+    .add_edge("salesAgent", "supervisor")
+    .compile()
+)
+
+# 执行（Python 的 recursionLimit 是蛇形命名）
+result = graph.invoke(
+    {"messages": [HumanMessage("我想退货")]},
+    {"recursion_limit": 10}
+)
+```
+
+#### Swarm 模式 Handoff 工具对比
+
+```js
+// ============ LangGraph.js ============
+// ⚠️ JS 版无 create_handoff_tool，用 tool() + Command 实现
+function createHandoffTool(targetAgent, description) {
+  return tool(
+    async ({ reason }) => {
+      return new Command({
+        goto: targetAgent,
+        update: { handoffLog: [`交接 → ${targetAgent}（${reason}）`] }
+      })
+    },
+    {
+      name: `transfer_to_${targetAgent}`,
+      description,
+      schema: z.object({ reason: z.string().describe('转接原因') })
+    }
+  )
+}
+
+// Agent 绑定自己的工具 + 他人的 handoff 工具
+const salesAgent = createReactAgent({
+  llm,
+  tools: [
+    getPriceTool,
+    createHandoffTool('supportAgent', '订单/退货问题转接售后'),
+    createHandoffTool('generalAgent', '一般问题转接通用')
+  ],
+  prompt: '你是售前顾问。价格问题直接查；订单问题必须转接售后...'
+})
+```
+
+```python
+# ============ LangGraph Python ============
+# Python 有现成的 create_handoff_tool 辅助函数
+from langchain.agents import create_handoff_tool
+
+transfer_to_support = create_handoff_tool(
+    agent_name="supportAgent",
+    description="转接给售后客服"
+)
+
+sales_agent = create_react_agent(
+    llm,
+    [get_price_tool, transfer_to_support, transfer_to_general],
+    prompt="你是售前顾问..."
+)
+```
+
+> **核心差异总结**：
+> - Supervisor 模式：JS/Python 几乎一致，都是 `Command(goto=...)` 动态路由
+> - Swarm 模式：Python 有 `create_handoff_tool` 辅助函数，JS 需手动用 `tool()` + `Command` 实现
+> - 状态定义：JS 用 `Annotation.Root`，Python 用 `MessagesState`（内置 messages reducer）
+> - 命名约定：JS 驼峰式 `recursionLimit`，Python 蛇形式 `recursion_limit`
+
+### 13.4 学习要点
+
+- Supervisor 模式的核心：Supervisor 节点用 LLM 决策，返回 `Command({ goto })` 动态路由
+- Worker Agent 用 `createReactAgent` 预构建，每个 Worker 有独立的 System Prompt + 工具集
+- Swarm 模式的核心：handoff 工具内部返回 `Command({ goto })`，Agent 之间直接交接
+- JS 版无 `create_handoff_tool`，需用 `tool()` + `Command` 手动实现
+- 共享 state（Supervisor）vs 消息转发（Swarm）的取舍
+- `streamMode: 'updates'` 观察 Agent 间交接事件流
+- `recursionLimit` 死循环防护：多 Agent 场景建议 10-15
+- 三种模式的选型：简单任务用 Supervisor，需要灵活转接用 Swarm，复杂协作用 Network
+
+### 13.5 官网对照
+
+| 官网章节 | JS 文档 | Python 文档 |
+|----------|--------|-------------|
+| Multi-agent Concepts | [JS Multi-agent](https://langchain-ai.github.io/langgraphjs/concepts/multi_agent/) | [Python Multi-agent](https://langchain-ai.github.io/langgraph/concepts/multi_agent/) |
+| Supervisor Agent | [JS Supervisor How-to](https://langchain-ai.github.io/langgraphjs/how-tos/multi-agent-multi-turn-conversations/) | [Python Supervisor How-to](https://langchain-ai.github.io/langgraph/how-tos/multi-agent-multi-turn-conversations/) |
+| Swarm / Handoff | [JS Swarm How-to](https://langchain-ai.github.io/langgraphjs/how-tos/swarm/) | [Python Swarm How-to](https://langchain-ai.github.io/langgraph/how-tos/swarm/) |
+| createReactAgent | [JS API](https://langchain-ai.github.io/langgraphjs/reference/prebuilt/#createReactAgent) | [Python API](https://langchain-ai.github.io/langgraph/reference/prebuilt/#create_react_agent) |
+
+---
+
+## 14. 进阶主题
+
+完成十三个阶段后，可以进一步探索：
 
 | 主题 | 说明 | JS API | Python API |
 |------|------|--------|------------|
@@ -1822,11 +2053,11 @@ Supervisor 子图负责任务分配和结果汇总，Worker 子图负责具体�
 
 ---
 
-## 11. 🆕 Python 快速对照速查表
+## 15. 🆕 Python 快速对照速查表
 
 > 以下速查表汇总了 LangGraph.js 与 LangGraph Python 在所有核心 API 上的对应关系，方便快速查阅。
 
-### 11.1 包导入
+### 15.1 包导入
 
 | 功能 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -1837,7 +2068,7 @@ Supervisor 子图负责任务分配和结果汇总，Worker 子图负责具体�
 | Functional API | `@langchain/langgraph` | `langgraph.func` |
 | 类型定义 | `@langchain/langgraph` | `langgraph.types` |
 
-### 11.2 图构建 API
+### 15.2 图构建 API
 
 | 操作 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -1850,7 +2081,7 @@ Supervisor 子图负责任务分配和结果汇总，Worker 子图负责具体�
 | 执行图 | `app.invoke(input)` | `app.invoke(input)` |
 | 流式执行 | `app.stream(input)` | `app.stream(input)` |
 
-### 11.3 状态定义
+### 15.3 状态定义
 
 | 操作 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -1860,7 +2091,7 @@ Supervisor 子图负责任务分配和结果汇总，Worker 子图负责具体�
 | 消息状态 | `MessagesAnnotation` | `MessagesState` |
 | 默认值 | `{ default: () => value }` | 在节点中处理 |
 
-### 11.4 路由与控制
+### 15.4 路由与控制
 
 | 操作 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -1871,7 +2102,7 @@ Supervisor 子图负责任务分配和结果汇总，Worker 子图负责具体�
 | 预构建路由 | `toolsCondition` | `tools_condition` |
 | 预构建工具节点 | `new ToolNode(tools)` | `ToolNode(tools)` |
 
-### 11.5 Functional API
+### 15.5 Functional API
 
 | 操作 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -1880,7 +2111,7 @@ Supervisor 子图负责任务分配和结果汇总，Worker 子图负责具体�
 | 并行执行 | `Promise.all([...])` | `asyncio.gather(...)` |
 | 获取历史状态 | `getPreviousState()` | `get_previous_state()` |
 
-### 11.6 命名约定差异
+### 15.6 命名约定差异
 
 | 方面 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -1890,7 +2121,7 @@ Supervisor 子图负责任务分配和结果汇总，Worker 子图负责具体�
 | 类型系统 | TypeScript 泛型 | Python `TypedDict` + `Annotated` |
 | 状态更新返回 | `Partial<State>` 对象 | `dict` 字典 |
 
-### 11.7 关键心智模型差异
+### 15.7 关键心智模型差异
 
 | 方面 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -1922,4 +2153,5 @@ Supervisor 子图负责任务分配和结果汇总，Worker 子图负责具体�
 - [本项目 LangChain.js 深入学习路线](../langchain/LangChain.js深入学习路线.md)
 - [本项目 LangGraph.js 短期记忆 Memory 详解](./LangGraph.js短期记忆Memory详解.md)
 - [本项目 LangGraph.js 长期记忆 Store 详解](./LangGraph.js长期记忆Store详解.md)
+- [本项目 LangGraph.js 多 Agent 系统详解](./LangGraph.js多Agent系统详解.md)
 - [本项目 LangChain 详细指南（含 Python 版）](../langchain/LangChain详细指南.md)

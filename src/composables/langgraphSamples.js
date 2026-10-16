@@ -1890,3 +1890,148 @@ export const stage12PyCode = [
   '#',
   '# # Functional API 只需 3 行实现并行，StateGraph 需要 ~20 行！',
 ].join('\n')
+
+// ============================================================
+// Stage13: 多 Agent 系统 — Supervisor & Swarm 模式
+// ============================================================
+
+export const stage13SupervisorJsCode = `// ============ Supervisor 模式（LangGraph.js）============
+import { StateGraph, Annotation, START, END, Command } from '@langchain/langgraph'
+import { createReactAgent } from '@langchain/langgraph/prebuilt'
+
+// 1. 共享状态：所有 Agent 共用一个 messages 列表
+const SupervisorState = Annotation.Root({
+  messages: Annotation({
+    reducer: (curr, update) => curr.concat(update),
+    default: () => []
+  })
+})
+
+// 2. Worker Agent（createReactAgent 预构建，各有独立工具集）
+const salesAgent = createReactAgent({
+  llm, tools: [getPriceTool],
+  prompt: '你是售前顾问，负责产品咨询和报价...'
+})
+
+// 3. Supervisor 节点：LLM 决策路由
+const supervisorNode = async (state) => {
+  const lastMsg = state.messages[state.messages.length - 1]
+  const decision = await llm.invoke(
+    \`分析消息决定路由：\${lastMsg.content}\n只输出：salesAgent/supportAgent/generalAgent/FINISH\`
+  )
+  if (decision.content.trim() === 'FINISH') {
+    return new Command({ goto: END })  // 判定完成 → 结束
+  }
+  return new Command({ goto: decision.content.trim() })  // 路由到 Worker
+}
+
+// 4. 组装：Worker 完成后回到 supervisor（循环由 supervisor 控制）
+const graph = new StateGraph(SupervisorState)
+  .addNode('supervisor', supervisorNode, { ends: ['salesAgent', 'supportAgent', 'generalAgent', END] })
+  .addNode('salesAgent', salesAgent, { ends: ['supervisor'] })
+  .addNode('supportAgent', supportAgent, { ends: ['supervisor'] })
+  .addNode('generalAgent', generalAgent, { ends: ['supervisor'] })
+  .addEdge(START, 'supervisor')
+  .addEdge('salesAgent', 'supervisor')     // ⚠️ 回到 supervisor
+  .addEdge('supportAgent', 'supervisor')
+  .addEdge('generalAgent', 'supervisor')
+  .compile()
+
+// 5. 执行（recursionLimit 防死循环）
+const result = await graph.invoke(
+  { messages: [new HumanMessage('我想退货，订单号 A12345')] },
+  { recursionLimit: 10 }
+)`
+
+export const stage13SwarmJsCode = `// ============ Swarm 模式（LangGraph.js）============
+import { StateGraph, Annotation, START, END, Command } from '@langchain/langgraph'
+import { createReactAgent } from '@langchain/langgraph/prebuilt'
+import { tool } from '@langchain/core/tools'
+
+// 1. handoff 工具：交接的核心
+//    ⚠️ 工具内部返回 Command({ goto })，触发 Agent 跳转
+function createHandoffTool(targetAgent, description) {
+  return tool(
+    async ({ reason }) => {
+      return new Command({
+        goto: targetAgent,  // 跳转到目标 Agent
+        update: { handoffLog: [\`交接 → \${targetAgent}（\${reason}）\`] }
+      })
+    },
+    {
+      name: \`transfer_to_\${targetAgent}\`,
+      description,
+      schema: z.object({ reason: z.string().describe('转接原因') })
+    }
+  )
+}
+
+// 2. Swarm Agent：绑定自己的工具 + 他人的 handoff 工具
+const salesAgent = createReactAgent({
+  llm,
+  tools: [
+    getPriceTool,
+    createHandoffTool('supportAgent', '订单/退货问题转接售后'),
+    createHandoffTool('generalAgent', '一般问题转接通用')
+  ],
+  prompt: '你是售前顾问。价格问题直接查；订单问题必须转接售后...'
+})
+
+// 3. 组装：无 supervisor 节点！
+//    Agent 输出含 handoff（Command goto）→ 自动跳转
+//    Agent 输出普通回复 → END
+const graph = new StateGraph(SwarmState)
+  .addNode('salesAgent', salesAgent, { ends: ['supportAgent', 'generalAgent', END] })
+  .addNode('supportAgent', supportAgent, { ends: ['salesAgent', 'generalAgent', END] })
+  .addNode('generalAgent', generalAgent, { ends: ['salesAgent', 'supportAgent', END] })
+  .addEdge(START, 'salesAgent')  // ⚠️ 入口固定（Swarm 需指定初始 Agent）
+  .addEdge('salesAgent', END)
+  .addEdge('supportAgent', END)
+  .addEdge('generalAgent', END)
+  .compile()
+
+// 4. 执行：观察交接过程
+const result = await graph.invoke(
+  { messages: [new HumanMessage('先查价格再查订单 A12345')] },
+  { recursionLimit: 10 }
+)
+// 轨迹：salesAgent（查价格）→ handoff → supportAgent（查订单）→ END`
+
+export const stage13MultiAgentPyCode = `# ============ LangGraph Python 对比 ============
+from langgraph.graph import StateGraph, START, END, MessagesState
+from langgraph.types import Command
+from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_handoff_tool  # Python 有现成辅助函数
+
+# Supervisor 节点：返回 Command(goto=...)
+def supervisor_node(state: MessagesState) -> Command:
+    last_message = state["messages"][-1]
+    decision = llm.invoke(f"分析消息决定路由：{last_message.content}").content.strip()
+    if decision == "FINISH":
+        return Command(goto=END)
+    return Command(goto=decision)
+
+# Worker：create_react_agent 预构建
+sales_agent = create_react_agent(llm, [get_price_tool], prompt="你是售前顾问...")
+
+# Swarm 交接工具：Python 用 create_handoff_tool
+transfer_to_support = create_handoff_tool(
+    agent_name="supportAgent",
+    description="转接给售后客服"
+)
+
+# 组装图（与 JS 结构一致）
+graph = (
+    StateGraph(MessagesState)
+    .add_node("supervisor", supervisor_node)
+    .add_node("salesAgent", sales_agent)
+    .add_edge(START, "supervisor")
+    .add_edge("salesAgent", "supervisor")
+    .compile()
+)
+
+# 执行（Python 的 recursionLimit 是蛇形命名）
+result = graph.invoke(
+    {"messages": [HumanMessage("我想退货")]},
+    {"recursion_limit": 10}
+)`

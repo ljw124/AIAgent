@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-07 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-15 10:37:39
+ * @LastEditTime: 2026-10-15 14:05:11
  * @Description: 阶段八：中间件 Middleware — LangChain.js 中间件演示
  *   学习目标：理解 LangChain.js 的中间件机制（beforeModel/afterModel）
  *   核心 API：createMiddleware（自定义中间件）、createAgent + middleware（官方内置中间件）
@@ -15,7 +15,7 @@
 -->
 <template>
   <div>
-    <h1>阶段七：中间件 Middleware <span class="badge stage">LangChain</span></h1>
+    <h1>阶段八：中间件 Middleware <span class="badge stage">LangChain</span></h1>
     <div class="info-box">
       <strong>学习目标：</strong>理解 LangChain.js 的中间件机制，实现横切关注点（日志、缓存、限流、重试）<br />
       <strong>核心 API：</strong><code>createMiddleware</code>（自定义中间件）、<code>createAgent({ middleware: [...] })</code>（官方内置中间件）<br />
