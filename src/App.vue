@@ -285,13 +285,20 @@
               @click="currentPage = 'lg-stage12'"
             >
               <span class="nav-icon nav-badge">12</span>
-              <span class="nav-label">Functional API 函数式</span>
+              <span class="nav-label">Streaming 流式模式</span>
             </div>
             <div
               :class="['nav-item', { active: currentPage === 'lg-stage13' }]"
               @click="currentPage = 'lg-stage13'"
             >
               <span class="nav-icon nav-badge">13</span>
+              <span class="nav-label">Functional API 函数式</span>
+            </div>
+            <div
+              :class="['nav-item', { active: currentPage === 'lg-stage14' }]"
+              @click="currentPage = 'lg-stage14'"
+            >
+              <span class="nav-icon nav-badge">14</span>
               <span class="nav-label">Multi-Agent 多智能体</span>
             </div>
           </div>
@@ -349,8 +356,9 @@
       <LangGraphStage9Checkpoint v-if="currentPage === 'lg-stage9'" />
       <LangGraphStage10Context v-if="currentPage === 'lg-stage10'" />
       <LangGraphStage11Subgraph v-if="currentPage === 'lg-stage11'" />
-      <LangGraphStage12Functional v-if="currentPage === 'lg-stage12'" />
-      <LangGraphStage13MultiAgent v-if="currentPage === 'lg-stage13'" />
+      <LangGraphStage12Streaming v-if="currentPage === 'lg-stage12'" />
+      <LangGraphStage13Functional v-if="currentPage === 'lg-stage13'" />
+      <LangGraphStage14MultiAgent v-if="currentPage === 'lg-stage14'" />
       <OllamaChat v-if="currentPage === 'ollama-chat'" />
       <OllamaPythonChat v-if="currentPage === 'ollama-python'" />
       <DeepSeekModelChat v-if="currentPage === 'deepseek-js'" />
@@ -386,8 +394,9 @@ import LangGraphStage8Store from '@/pages/langgraph/LangGraphStage8Store.vue'
 import LangGraphStage9Checkpoint from '@/pages/langgraph/LangGraphStage9Checkpoint.vue'
 import LangGraphStage10Context from '@/pages/langgraph/LangGraphStage10Context.vue'
 import LangGraphStage11Subgraph from '@/pages/langgraph/LangGraphStage11Subgraph.vue'
-import LangGraphStage12Functional from '@/pages/langgraph/LangGraphStage12Functional.vue'
-import LangGraphStage13MultiAgent from '@/pages/langgraph/LangGraphStage13MultiAgent.vue'
+import LangGraphStage12Streaming from '@/pages/langgraph/LangGraphStage12Streaming.vue'
+import LangGraphStage13Functional from '@/pages/langgraph/LangGraphStage13Functional.vue'
+import LangGraphStage14MultiAgent from '@/pages/langgraph/LangGraphStage14MultiAgent.vue'
 import OllamaChat from '@/pages/ollama/OllamaChat.vue'
 import OllamaPythonChat from '@/pages/ollama/OllamaPythonChat.vue'
 import DeepSeekModelChat from '@/pages/DeepSeek/DeepSeekModelChat.vue'
@@ -423,8 +432,9 @@ export default {
     LangGraphStage9Checkpoint,
     LangGraphStage10Context,
     LangGraphStage11Subgraph,
-    LangGraphStage12Functional,
-    LangGraphStage13MultiAgent,
+    LangGraphStage12Streaming,
+    LangGraphStage13Functional,
+    LangGraphStage14MultiAgent,
     OllamaChat,
     OllamaPythonChat,
     DeepSeekModelChat,

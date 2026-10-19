@@ -25,7 +25,7 @@
 
 ## 🚀 项目简介
 
-本项目是一个面向大模型应用开发的学习与演示平台，通过统一的 Web 界面接入多种大模型服务，并配套完整的 **LangChain.js**（8 阶段）与 **LangGraph.js**（13 阶段）学习路径。项目同时提供 **JavaScript** 与 **Python** 两种调用方式，方便对比学习不同语言生态下的 LangChain/LangGraph 用法。
+本项目是一个面向大模型应用开发的学习与演示平台，通过统一的 Web 界面接入多种大模型服务，并配套完整的 **LangChain.js**（8 阶段）与 **LangGraph.js**（14 阶段）学习路径。项目同时提供 **JavaScript** 与 **Python** 两种调用方式，方便对比学习不同语言生态下的 LangChain/LangGraph 用法。
 
 前端基于 Vue 2 + Vue CLI 5，通过 [`vue.config.js`](vue.config.js) 配置多路代理解决跨域与公司网络限制问题；后端使用 Node.js 原生 `http` 模块（[`server.js`](server.js)）调用 Python 脚本完成内网模型与本地模型的推理，并提供 PostgreSQL 长期记忆 Store API。
 
@@ -36,12 +36,13 @@
 - **多模型平台接入**：内网 hikvision、本地 Ollama、百炼 DashScope、DeepSeek、魔搭 ModelScope 五大平台统一接入。
 - **双语言调用**：每个模型平台均提供 JS 与 Python 两种调用示例，便于对比学习。
 - **LangChain.js 八阶段学习**：从 Prompt Template 到 Middleware 中间件的完整进阶路线。
-- **LangGraph.js 十三阶段学习**：从 StateGraph 基础图到 Multi-Agent 多智能体的完整进阶路线。
-- **🎯 综合实战：智能客服**：串联 LangChain.js 全部 8 阶段 + LangGraph.js 全部 13 阶段知识的完整 Agent 应用，支持多租户（技术文档 / 学习辅导 / 通用助手）、流式对话、工具调用（计算器 / 天气 / 知识库搜索）、RAG 知识库检索、短期记忆（MemorySaver）+ 长期记忆（PostgresStore / PostgreSQL）、中间件日志与 Token 统计、Checkpoint 时光旅行（回放/分叉）。
+- **LangGraph.js 十四阶段学习**：从 StateGraph 基础图到 Streaming 流式、Multi-Agent 多智能体的完整进阶路线。
+- **🎯 综合实战：智能客服**：串联 LangChain.js 全部 8 阶段 + LangGraph.js 全部 14 阶段知识的完整 Agent 应用，支持多租户（技术文档 / 学习辅导 / 通用助手）、流式对话、工具调用（计算器 / 天气 / 知识库搜索）、RAG 知识库检索、短期记忆（MemorySaver）+ 长期记忆（PostgresStore / PostgreSQL）、中间件日志与 Token 统计、Checkpoint 时光旅行（回放/分叉）。
 - **短期记忆（Memory）**：基于 LangGraph `MemorySaver` Checkpoint 机制实现多轮对话上下文记忆，支持 `thread_id` 线程隔离、Checkpoint 历史查看、线程切换/删除管理。
 - **长期记忆（Store）**：基于 LangGraph `BaseStore` 实现跨会话信息持久化，通过自定义 `PostgresStore` 支持 namespace 命名空间隔离，后端通过 HTTP API 与 PostgreSQL 通信实现长期记忆存储。
 - **Checkpoint 检查点**：基于 `getState()` / `getStateHistory()` API 实现 Time Travel（回放/分叉），支持查看状态快照、遍历历史检查点、从任意检查点回放或分叉执行。
 - **运行时上下文（Context）**：基于 `runtime.context` 机制实现运行时上下文注入，支持用户名、会员等级、语言偏好等动态上下文。
+- **流式模式（Streaming）**：基于 `graph.stream()` 的 5 种 `streamMode`（values/updates/messages/custom/debug）实现流式输出，支持 `getWriter()` 自定义流事件、多模式组合与子图透传，`messages` 模式实现前端打字机效果。
 - **人机协同（Interrupt）**：基于 `interrupt()` API 实现人机协同，支持审批流程、动态决策等场景。
 - **并行执行（Send）**：基于 `Send()` API 实现多节点并行执行，支持扇出（fan-out）模式。
 - **Functional API 函数式**：基于 `entrypoint()` + `task()` 的函数式工作流，通过 `Promise.all` 实现任务并行，支持 `getPreviousState()` 状态回溯和 `entrypoint.final()` 返回值/持久化分离。
@@ -103,7 +104,7 @@
 
 ## 🔀 LangGraph.js 知识体系
 
-项目内置了从基础到高级的 **十三阶段** LangGraph 学习模块，每个阶段对应一个独立的 Vue 组件：
+项目内置了从基础到高级的 **十四阶段** LangGraph 学习模块，每个阶段对应一个独立的 Vue 组件：
 
 | 阶段 | 主题 | 组件 | 核心 API |
 | --- | --- | --- | --- |
@@ -118,14 +119,15 @@
 | 9 | **Checkpoint 检查点** | [`LangGraphStage9Checkpoint.vue`](src/pages/langgraph/LangGraphStage9Checkpoint.vue) | `getState()`、`getStateHistory()`、Time Travel |
 | 10 | **Context 运行时上下文** | [`LangGraphStage10Context.vue`](src/pages/langgraph/LangGraphStage10Context.vue) | `contextSchema`、`runtime.context` |
 | 11 | **Subgraph 子图嵌套** | [`LangGraphStage11Subgraph.vue`](src/pages/langgraph/LangGraphStage11Subgraph.vue) | `StateGraph.addNode(name, compiledSubgraph)`、子图状态隔离、状态映射 |
-| 12 | **Functional API 函数式** | [`LangGraphStage12Functional.vue`](src/pages/langgraph/LangGraphStage12Functional.vue) | `entrypoint()`、`task()`、`getPreviousState()`、`entrypoint.final()`、`Promise.all` 并行 |
-| 13 | **Multi-Agent 多智能体** | [`LangGraphStage13MultiAgent.vue`](src/pages/langgraph/LangGraphStage13MultiAgent.vue) | `createReactAgent`、Supervisor 模式、Swarm 模式、`handoff` 工具 |
+| 12 | **Streaming 流式模式** | [`LangGraphStage12Streaming.vue`](src/pages/langgraph/LangGraphStage12Streaming.vue) | `graph.stream()`、5 种 `streamMode`、`getWriter()`、多模式组合、`subgraphs` 透传 |
+| 13 | **Functional API 函数式** | [`LangGraphStage13Functional.vue`](src/pages/langgraph/LangGraphStage13Functional.vue) | `entrypoint()`、`task()`、`getPreviousState()`、`entrypoint.final()`、`Promise.all` 并行 |
+| 14 | **Multi-Agent 多智能体** | [`LangGraphStage14MultiAgent.vue`](src/pages/langgraph/LangGraphStage14MultiAgent.vue) | `createReactAgent`、Supervisor 模式、Swarm 模式、`handoff` 工具 |
 
 ---
 
 ## 🎯 综合实战：智能客服
 
-串联 LangChain.js 全部 8 阶段 + LangGraph.js 全部 13 阶段知识的完整 Agent 应用，基于手写 `StateGraph` 工作流构建。
+串联 LangChain.js 全部 8 阶段 + LangGraph.js 全部 14 阶段知识的完整 Agent 应用，基于手写 `StateGraph` 工作流构建。
 
 | 组件 | 核心 API |
 | --- | --- |
@@ -200,7 +202,7 @@
         ├── DeepSeek/           # DeepSeek 大模型（平台）
         ├── inner/            # 内网大模型（平台）
         ├── langchain/        # LangChain.js 知识体系（8 阶段学习）
-        ├── langgraph/        # LangGraph.js 知识体系（13 阶段学习）
+        ├── langgraph/        # LangGraph.js 知识体系（14 阶段学习）
         ├── modelscope/       # 魔搭 ModelScope（平台）
         └── ollama/           # 本地 Ollama（平台）
 ```

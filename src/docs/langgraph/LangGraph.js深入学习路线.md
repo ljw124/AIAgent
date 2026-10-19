@@ -22,9 +22,11 @@
 10. [阶段九：Checkpoint 检查点 — getState/getStateHistory + Time Travel](#10-阶段九checkpoint-检查点--getstategetstatehistory--time-travel)
 11. [阶段十：Context 运行时上下文 — runtime.context 注入](#11-阶段十context-运行时上下文--runtimecontext-注入)
 12. [阶段十一：Subgraph — 子图嵌套与复用](#12-阶段十一subgraph--子图嵌套与复用)
-13. [阶段十三：Multi-Agent — 多智能体系统](#13-阶段十三multi-agent--多智能体系统)
-14. [进阶主题](#14-进阶主题)
-15. [🆕 Python 快速对照速查表](#15-python-快速对照速查表)
+13. [阶段十二：Streaming — 流式输出模式](#13-阶段十二streaming--流式输出模式)
+14. [阶段十三：Functional API — entrypoint & task 函数式工作流](#14-阶段十三functional-api--entrypoint--task-函数式工作流)
+15. [阶段十四：Multi-Agent — 多智能体系统](#15-阶段十四multi-agent--多智能体系统)
+16. [进阶主题](#16-进阶主题)
+17. [🆕 Python 快速对照速查表](#17-python-快速对照速查表)
 
 ---
 
@@ -32,7 +34,7 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
-│                      LangGraph.js 深入学习路线（11 个阶段）                              │
+│                      LangGraph.js 深入学习路线（14 个阶段）                              │
 ├──────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                      │
 │  起点（LangChain 阶段六）                                                              │
@@ -54,11 +56,16 @@
 │  │ 人机协同 │   │ 并行执行 │   │ 短期记忆 │   │ 长期记忆 │                          │
 │  └──────────┘   └──────────┘   └──────────┘   └──────────┘                          │
 │                                                                                      │
-│  阶段九          阶段十          阶段十一        阶段十三                                │
-│  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐                          │
-│  │Checkpoint│ → │ Context  │ → │ Subgraph │ → │MultiAgent│                          │
-│  │TimeTravel│   │ 运行时上下文│   │ 子图嵌套 │   │ 多智能体 │                          │
-│  └──────────┘   └──────────┘   └──────────┘   └──────────┘                          │
+│  阶段九          阶段十          阶段十一        阶段十二                           │
+│  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐                           │
+│  │Checkpoint│ → │ Context  │ → │ Subgraph │ → │Streaming │                           │
+│  │TimeTravel│   │ 运行时上下文│   │ 子图嵌套 │   │ 流式输出 │                       │
+│  └──────────┘   └──────────┘   └──────────┘   └──────────┘                           │
+│                                                                                      │
+│  阶段十三                        阶段十四                                           │
+│  ┌──────────────────────┐   ┌──────────┐                                             │
+│  │Functional API 函数式 │ → │MultiAgent│                                            │
+│  └──────────────────────┘   └──────────┘                                             │
 │                                                                                      │
 │  每个阶段 = 概念讲解 + 可运行示例代码（Vue 组件） + JS/Python 对比 + 与官网文档对照         │
 │                                                                                      │
@@ -106,8 +113,9 @@ src/pages/langgraph/
 ├── LangGraphStage9Checkpoint.vue    ← 阶段九：Checkpoint 检查点 + Time Travel
 ├── LangGraphStage10Context.vue      ← 阶段十：runtime.context 运行时上下文
 ├── LangGraphStage11Subgraph.vue     ← 阶段十一：Subgraph 子图嵌套
-├── LangGraphStage12Functional.vue   ← 阶段十二（进阶）：Functional API 函数式
-└── LangGraphStage13MultiAgent.vue   ← 阶段十三：Multi-Agent 多智能体
+├── LangGraphStage12Streaming.vue    ← 阶段十二：Streaming 流式输出
+├── LangGraphStage13Functional.vue   ← 阶段十三（进阶）：Functional API 函数式
+└── LangGraphStage14MultiAgent.vue   ← 阶段十四：Multi-Agent 多智能体
 ```
 
 ### 与 LangChain 阶段六的关系
@@ -1052,166 +1060,6 @@ graph.add_edge('aggregator', END)
 
 ---
 
-## 8. 阶段七（进阶）：Functional API — entrypoint & task 函数式工作流
-
-### 8.1 概念
-
-LangGraph v1.x 引入了 **Functional API**（[`entrypoint`](node_modules/@langchain/langgraph/dist/func/index.d.ts) + [`task`](node_modules/@langchain/langgraph/dist/func/index.d.ts:37)），提供了一种更简洁的方式来定义工作流。与 `StateGraph` 的图构建模式不同，Functional API 更接近编写普通异步函数。
-
-```
-StateGraph 模式（声明式）:              Functional API（函数式）:
-                                      const addOne = task('add', async (a) => a + 1);
-graph.addNode('a', nodeA)             
-graph.addNode('b', nodeB)             const workflow = entrypoint('main', async (nums) => {
-graph.addEdge('a', 'b')                 const results = await Promise.all(
-graph.compile()                           nums.map(n => addOne(n))
-                                        );
-                                        return results;
-                                      });
-```
-
-**Functional API 的优势：**
-- ✅ 更简洁：不需要手动构建图结构
-- ✅ 更直观：像写普通 async 函数一样
-- ✅ 自动并行：`task` 调用自动支持并行执行
-- ✅ 类型安全：完整的 TypeScript 类型推导
-
-### 8.2 核心 API
-
-| API | 说明 |
-|-----|------|
-| [`entrypoint(name, fn)`](node_modules/@langchain/langgraph/dist/func/index.d.ts) | 定义工作流入口 |
-| [`task(name, fn)`](node_modules/@langchain/langgraph/dist/func/index.d.ts:37) | 定义可并行执行的任务 |
-| [`task(options, fn)`](node_modules/@langchain/langgraph/dist/func/index.d.ts) | 带重试/缓存配置的任务 |
-| [`getPreviousState()`](node_modules/@langchain/langgraph/dist/func/index.d.ts) | 获取上一次执行的状态 |
-| `entrypoint.invoke(input)` | 执行工作流 |
-| `entrypoint.stream(input)` | 流式执行工作流 |
-
-### 8.3 🆕 JS vs Python 对比
-
-#### API 对照表
-
-| 操作 | LangGraph.js | LangGraph Python |
-|------|-------------|------------------|
-| 定义入口 | `entrypoint('name', async (input) => {...})` | `@entrypoint()` 装饰器 或 `entrypoint()` |
-| 定义任务 | `task('name', async (input) => {...})` | `@task()` 装饰器 或 `task()` |
-| 调用任务 | `await taskName(input)` | `await task_name(input)` |
-| 并行执行 | `Promise.all(tasks)` | `asyncio.gather(*tasks)` |
-| 获取历史状态 | `getPreviousState()` | `get_previous_state()` |
-| 执行入口 | `entrypoint.invoke(input)` | `entrypoint.invoke(input)` |
-| 流式执行 | `entrypoint.stream(input)` | `entrypoint.stream(input)` |
-
-> **关键差异**：Python 版支持装饰器语法 `@entrypoint()` / `@task()`，JS 版使用函数调用方式。Python 用 `asyncio.gather` 并行，JS 用 `Promise.all`。
-
-#### 代码对比：函数式并行工作流
-
-```js
-// ============ LangGraph.js ============
-import { entrypoint, task } from '@langchain/langgraph';
-
-// 定义可复用的 task
-const analyzeSentiment = task('analyzeSentiment', async (text) => {
-  const result = await llm.invoke(`分析情感：${text}`);
-  return { sentiment: result.content };
-});
-
-const extractKeywords = task('extractKeywords', async (text) => {
-  const result = await llm.invoke(`提取关键词：${text}`);
-  return { keywords: result.content };
-});
-
-const generateSummary = task('generateSummary', async (text) => {
-  const result = await llm.invoke(`生成摘要：${text}`);
-  return { summary: result.content };
-});
-
-// 定义工作流入口
-const workflow = entrypoint('documentAnalysis', async (document) => {
-  // 三个 task 自动并行执行
-  const [sentiment, keywords, summary] = await Promise.all([
-    analyzeSentiment(document),
-    extractKeywords(document),
-    generateSummary(document),
-  ]);
-
-  return {
-    sentiment: sentiment.sentiment,
-    keywords: keywords.keywords,
-    summary: summary.summary,
-  };
-});
-
-// 执行
-const result = await workflow.invoke('这是一篇关于AI发展的文章...');
-```
-
-```python
-# ============ LangGraph Python ============
-import asyncio
-from langgraph.func import entrypoint, task
-
-# 定义可复用的 task
-@task
-async def analyze_sentiment(text: str) -> dict:
-    result = await llm.ainvoke(f'分析情感：{text}')
-    return {'sentiment': result.content}
-
-@task
-async def extract_keywords(text: str) -> dict:
-    result = await llm.ainvoke(f'提取关键词：{text}')
-    return {'keywords': result.content}
-
-@task
-async def generate_summary(text: str) -> dict:
-    result = await llm.ainvoke(f'生成摘要：{text}')
-    return {'summary': result.content}
-
-# 定义工作流入口
-@entrypoint()
-async def document_analysis(document: str) -> dict:
-    # 三个 task 自动并行执行
-    sentiment, keywords, summary = await asyncio.gather(
-        analyze_sentiment(document),
-        extract_keywords(document),
-        generate_summary(document),
-    )
-
-    return {
-        'sentiment': sentiment['sentiment'],
-        'keywords': keywords['keywords'],
-        'summary': summary['summary'],
-    }
-
-# 执行
-result = await document_analysis.ainvoke('这是一篇关于AI发展的文章...')
-```
-
-> **核心差异总结**：
-> - JS: `task('name', fn)` 函数调用，Python: `@task` 装饰器（也支持函数调用方式）
-> - JS: `entrypoint('name', fn)`，Python: `@entrypoint()` 装饰器
-> - JS 并行用 `Promise.all([...])`，Python 用 `asyncio.gather(...)`
-> - JS 执行用 `workflow.invoke()`，Python 用 `workflow.ainvoke()`（异步）或 `workflow.invoke()`（同步）
-
-### 8.4 示例代码
-
-→ [`LangGraphStage12Functional.vue`](../../pages/langgraph/LangGraphStage12Functional.vue)
-
-**学习要点：**
-- `entrypoint` 定义工作流入口，`task` 定义可并行任务
-- `task` 调用返回 Promise，天然支持 `Promise.all` 并行
-- 与 `StateGraph` 的对比：何时用 Functional API，何时用 StateGraph
-- `task` 的 `retry` 和 `cachePolicy` 配置
-- Functional API 也支持 `checkpointer` 和 `interrupt`
-
-### 8.5 官网对照
-
-| 官网章节 | JS 文档 | Python 文档 |
-|----------|--------|-------------|
-| Functional API | [JS Functional API Concepts](https://langchain-ai.github.io/langgraphjs/concepts/functional_api/) | [Python Functional API Concepts](https://langchain-ai.github.io/langgraph/concepts/functional_api/) |
-| entrypoint & task | [JS Functional API How-tos](https://langchain-ai.github.io/langgraphjs/how-tos/#functional-api) | [Python Functional API How-tos](https://langchain-ai.github.io/langgraph/how-tos/#functional-api) |
-
----
-
 ## 8. 阶段七：MemorySaver 短期记忆 — Checkpoint 持久化
 
 > **文件：** [`LangGraphStage7Memory.vue`](../../src/pages/langgraph/LangGraphStage7Memory.vue)
@@ -1808,9 +1656,252 @@ Supervisor 子图负责任务分配和结果汇总，Worker 子图负责具体�
 
 ---
 
-## 13. 阶段十三：Multi-Agent — 多智能体系统
+## 13. 阶段十二：Streaming — 流式输出模式
 
-> **文件：** [`LangGraphStage13MultiAgent.vue`](../../pages/langgraph/LangGraphStage13MultiAgent.vue)
+> **文件：** [`LangGraphStage12Streaming.vue`](../../pages/langgraph/LangGraphStage12Streaming.vue)
+>
+> **核心 API：** `graph.stream(input, { streamMode })`、`getWriter()`
+>
+> **前置条件：** 阶段一（StateGraph），理解图的基本执行流程
+>
+> **详解文档：** [LangGraph.js 流式 Streaming 详解](./LangGraph.js流式Streaming详解.md)
+
+### 13.1 概念
+
+`invoke()` 会阻塞到整张图执行完毕才返回——LLM 生成完整回答往往需要数十秒，用户面对空白页面等待体验很差。`stream()` 让结果「边生成边推送」：
+
+- **token 级流式**：LLM 每生成一个 token 就推给前端，实现「打字机」效果
+- **节点级流式**：每执行完一个节点就推送一次状态更新，实时显示执行进度
+- **自定义流式**：节点内部通过 `getWriter()` 主动推送任意数据（进度、日志、中间结果）
+
+### 13.2 五种 streamMode
+
+| streamMode | 推送内容 | 典型场景 |
+|-----------|---------|---------|
+| `values` | 每步之后的**完整状态快照** | 状态回放、调试 |
+| `updates` | 每个节点的**增量更新**（仅变化的键） | 显示「正在执行 XX 节点」 |
+| `messages` | `[messageChunk, metadata]` 元组 | **LLM token 打字机**（最常用） |
+| `custom` | `getWriter()` 写入的自定义数据 | 进度条、工具执行过程 |
+| `debug` | 任务开始/结束等调试事件 | 深度调试、性能分析 |
+
+### 13.3 关键代码
+
+```js
+// ① messages 模式：token 打字机（过滤中间节点，只渲染 answer 节点的输出）
+const stream = await graph.stream({ question }, { streamMode: 'messages' });
+for await (const [messageChunk, metadata] of stream) {
+  if (metadata.langgraph_node === 'respond') {
+    typewriterText += messageChunk.content;  // 逐 token 拼接
+  }
+}
+
+// ② custom 模式：节点内通过 getWriter(config) 主动推送
+// ⚠️ 浏览器等无 AsyncLocalStorage 的环境必须传入节点函数第二参数 config
+const analyze = async (state, config) => {
+  const writer = getWriter(config);
+  writer('🔍 正在分析问题：' + state.question);  // 仅 streamMode 含 'custom' 时生效
+  // ...
+};
+
+// ③ 多模式组合：chunk 变为 [mode, data] 元组
+for await (const [mode, data] of await graph.stream(input, {
+  streamMode: ['updates', 'custom', 'messages'],
+})) {
+  if (mode === 'messages') {
+    const [messageChunk, metadata] = data;
+    // ...
+  }
+}
+```
+
+### 13.4 🆕 JS vs Python 对比
+
+| 操作 | LangGraph.js | LangGraph Python |
+|------|-------------|------------------|
+| 流式执行 | `graph.stream(input, { streamMode })` | `graph.stream(input, stream_mode=...)` |
+| 多模式组合 | `streamMode: ['updates', 'custom']` | `stream_mode=["updates", "custom"]` |
+| 自定义写入 | `getWriter(config)` → `writer(chunk)` | `get_stream_writer()` → `writer(chunk)` |
+| 子图透传 | `{ subgraphs: true }` | `subgraphs=True` |
+| 元数据过滤 | `metadata.langgraph_node` | `metadata["langgraph_node"]` |
+
+### 13.5 官网对照
+
+| 官网章节 | JS 文档 | Python 文档 |
+|----------|--------|-------------|
+| Streaming | [JS Streaming Concepts](https://langchain-ai.github.io/langgraphjs/concepts/streaming/) | [Python Streaming Concepts](https://langchain-ai.github.io/langgraph/concepts/streaming/) |
+| Streaming How-tos | [JS How-tos](https://langchain-ai.github.io/langgraphjs/how-tos/#streaming) | [Python How-tos](https://langchain-ai.github.io/langgraph/how-tos/#streaming) |
+
+---
+
+## 14. 阶段十三：Functional API — entrypoint & task 函数式工作流
+
+> **文件：** [`LangGraphStage13Functional.vue`](../../pages/langgraph/LangGraphStage13Functional.vue)
+>
+> **核心 API：** `entrypoint`、`task`、`getPreviousState()`
+>
+> **前置条件：** 阶段十二（Streaming），理解 `getWriter()` 自定义流式输出
+
+### 14.1 概念
+
+LangGraph v1.x 引入了 **Functional API**（[`entrypoint`](node_modules/@langchain/langgraph/dist/func/index.d.ts) + [`task`](node_modules/@langchain/langgraph/dist/func/index.d.ts:37)），提供了一种更简洁的方式来定义工作流。与 `StateGraph` 的图构建模式不同，Functional API 更接近编写普通异步函数。
+
+```
+StateGraph 模式（声明式）:              Functional API（函数式）:
+                                      const addOne = task('add', async (a) => a + 1);
+graph.addNode('a', nodeA)             
+graph.addNode('b', nodeB)             const workflow = entrypoint('main', async (nums) => {
+graph.addEdge('a', 'b')                 const results = await Promise.all(
+graph.compile()                           nums.map(n => addOne(n))
+                                        );
+                                        return results;
+                                      });
+```
+
+**Functional API 的优势：**
+- ✅ 更简洁：不需要手动构建图结构
+- ✅ 更直观：像写普通 async 函数一样
+- ✅ 自动并行：`task` 调用自动支持并行执行
+- ✅ 类型安全：完整的 TypeScript 类型推导
+
+### 14.2 核心 API
+
+| API | 说明 |
+|-----|------|
+| [`entrypoint(name, fn)`](node_modules/@langchain/langgraph/dist/func/index.d.ts) | 定义工作流入口 |
+| [`task(name, fn)`](node_modules/@langchain/langgraph/dist/func/index.d.ts:37) | 定义可并行执行的任务 |
+| [`task(options, fn)`](node_modules/@langchain/langgraph/dist/func/index.d.ts) | 带重试/缓存配置的任务 |
+| [`getPreviousState()`](node_modules/@langchain/langgraph/dist/func/index.d.ts) | 获取上一次执行的状态 |
+| `entrypoint.invoke(input)` | 执行工作流 |
+| `entrypoint.stream(input)` | 流式执行工作流 |
+
+### 14.3 🆕 JS vs Python 对比
+
+#### API 对照表
+
+| 操作 | LangGraph.js | LangGraph Python |
+|------|-------------|------------------|
+| 定义入口 | `entrypoint('name', async (input) => {...})` | `@entrypoint()` 装饰器 或 `entrypoint()` |
+| 定义任务 | `task('name', async (input) => {...})` | `@task()` 装饰器 或 `task()` |
+| 调用任务 | `await taskName(input)` | `await task_name(input)` |
+| 并行执行 | `Promise.all(tasks)` | `asyncio.gather(*tasks)` |
+| 获取历史状态 | `getPreviousState()` | `get_previous_state()` |
+| 执行入口 | `entrypoint.invoke(input)` | `entrypoint.invoke(input)` |
+| 流式执行 | `entrypoint.stream(input)` | `entrypoint.stream(input)` |
+
+> **关键差异**：Python 版支持装饰器语法 `@entrypoint()` / `@task()`，JS 版使用函数调用方式。Python 用 `asyncio.gather` 并行，JS 用 `Promise.all`。
+
+#### 代码对比：函数式并行工作流
+
+```js
+// ============ LangGraph.js ============
+import { entrypoint, task } from '@langchain/langgraph';
+
+// 定义可复用的 task
+const analyzeSentiment = task('analyzeSentiment', async (text) => {
+  const result = await llm.invoke(`分析情感：${text}`);
+  return { sentiment: result.content };
+});
+
+const extractKeywords = task('extractKeywords', async (text) => {
+  const result = await llm.invoke(`提取关键词：${text}`);
+  return { keywords: result.content };
+});
+
+const generateSummary = task('generateSummary', async (text) => {
+  const result = await llm.invoke(`生成摘要：${text}`);
+  return { summary: result.content };
+});
+
+// 定义工作流入口
+const workflow = entrypoint('documentAnalysis', async (document) => {
+  // 三个 task 自动并行执行
+  const [sentiment, keywords, summary] = await Promise.all([
+    analyzeSentiment(document),
+    extractKeywords(document),
+    generateSummary(document),
+  ]);
+
+  return {
+    sentiment: sentiment.sentiment,
+    keywords: keywords.keywords,
+    summary: summary.summary,
+  };
+});
+
+// 执行
+const result = await workflow.invoke('这是一篇关于AI发展的文章...');
+```
+
+```python
+# ============ LangGraph Python ============
+import asyncio
+from langgraph.func import entrypoint, task
+
+# 定义可复用的 task
+@task
+async def analyze_sentiment(text: str) -> dict:
+    result = await llm.ainvoke(f'分析情感：{text}')
+    return {'sentiment': result.content}
+
+@task
+async def extract_keywords(text: str) -> dict:
+    result = await llm.ainvoke(f'提取关键词：{text}')
+    return {'keywords': result.content}
+
+@task
+async def generate_summary(text: str) -> dict:
+    result = await llm.ainvoke(f'生成摘要：{text}')
+    return {'summary': result.content}
+
+# 定义工作流入口
+@entrypoint()
+async def document_analysis(document: str) -> dict:
+    # 三个 task 自动并行执行
+    sentiment, keywords, summary = await asyncio.gather(
+        analyze_sentiment(document),
+        extract_keywords(document),
+        generate_summary(document),
+    )
+
+    return {
+        'sentiment': sentiment['sentiment'],
+        'keywords': keywords['keywords'],
+        'summary': summary['summary'],
+    }
+
+# 执行
+result = await document_analysis.ainvoke('这是一篇关于AI发展的文章...')
+```
+
+> **核心差异总结**：
+> - JS: `task('name', fn)` 函数调用，Python: `@task` 装饰器（也支持函数调用方式）
+> - JS: `entrypoint('name', fn)`，Python: `@entrypoint()` 装饰器
+> - JS 并行用 `Promise.all([...])`，Python 用 `asyncio.gather(...)`
+> - JS 执行用 `workflow.invoke()`，Python 用 `workflow.ainvoke()`（异步）或 `workflow.invoke()`（同步）
+
+### 14.4 示例代码
+
+→ [`LangGraphStage13Functional.vue`](../../pages/langgraph/LangGraphStage13Functional.vue)
+
+**学习要点：**
+- `entrypoint` 定义工作流入口，`task` 定义可并行任务
+- `task` 调用返回 Promise，天然支持 `Promise.all` 并行
+- 与 `StateGraph` 的对比：何时用 Functional API，何时用 StateGraph
+- `task` 的 `retry` 和 `cachePolicy` 配置
+- Functional API 也支持 `checkpointer` 和 `interrupt`
+
+### 14.5 官网对照
+
+| 官网章节 | JS 文档 | Python 文档 |
+|----------|--------|-------------|
+| Functional API | [JS Functional API Concepts](https://langchain-ai.github.io/langgraphjs/concepts/functional_api/) | [Python Functional API Concepts](https://langchain-ai.github.io/langgraph/concepts/functional_api/) |
+| entrypoint & task | [JS Functional API How-tos](https://langchain-ai.github.io/langgraphjs/how-tos/#functional-api) | [Python Functional API How-tos](https://langchain-ai.github.io/langgraph/how-tos/#functional-api) |
+
+---
+
+## 15. 阶段十四：Multi-Agent — 多智能体系统
+
+> **文件：** [`LangGraphStage14MultiAgent.vue`](../../pages/langgraph/LangGraphStage14MultiAgent.vue)
 >
 > **详解文档：** [`LangGraph.js多Agent系统详解.md`](./LangGraph.js多Agent系统详解.md)
 >
@@ -1818,7 +1909,7 @@ Supervisor 子图负责任务分配和结果汇总，Worker 子图负责具体�
 >
 > **前置条件：** 阶段十一（Subgraph），理解子图作为节点的机制
 
-### 13.1 概念
+### 15.1 概念
 
 多 Agent 系统是 LangGraph 的核心高级特性，通过将多个 Agent 组合成一个协作网络来处理复杂任务。与单 Agent 相比，多 Agent 解决了三个关键问题：
 
@@ -1858,7 +1949,7 @@ LangGraph 支持三种多 Agent 架构模式：
 
 **与 Stage11 子图的关系**：子图是构建多 Agent 的底层机制（已编译图作为节点），多 Agent 是上层架构（LLM 动态决策路由 / handoff 工具交接）。
 
-### 13.2 核心 API
+### 15.2 核心 API
 
 | API | 说明 |
 |-----|------|
@@ -1869,7 +1960,7 @@ LangGraph 支持三种多 Agent 架构模式：
 | `recursionLimit` | 死循环防护（默认 25，多 Agent 场景建议 10-15） |
 | `Annotation.Root({ messages })` | 共享状态：Supervisor 模式所有 Agent 共用一个 messages 列表 |
 
-### 13.3 🆕 JS vs Python 对比
+### 15.3 🆕 JS vs Python 对比
 
 #### API 对照表
 
@@ -2013,7 +2104,7 @@ sales_agent = create_react_agent(
 > - 状态定义：JS 用 `Annotation.Root`，Python 用 `MessagesState`（内置 messages reducer）
 > - 命名约定：JS 驼峰式 `recursionLimit`，Python 蛇形式 `recursion_limit`
 
-### 13.4 学习要点
+### 15.4 学习要点
 
 - Supervisor 模式的核心：Supervisor 节点用 LLM 决策，返回 `Command({ goto })` 动态路由
 - Worker Agent 用 `createReactAgent` 预构建，每个 Worker 有独立的 System Prompt + 工具集
@@ -2024,7 +2115,7 @@ sales_agent = create_react_agent(
 - `recursionLimit` 死循环防护：多 Agent 场景建议 10-15
 - 三种模式的选型：简单任务用 Supervisor，需要灵活转接用 Swarm，复杂协作用 Network
 
-### 13.5 官网对照
+### 15.5 官网对照
 
 | 官网章节 | JS 文档 | Python 文档 |
 |----------|--------|-------------|
@@ -2035,29 +2126,29 @@ sales_agent = create_react_agent(
 
 ---
 
-## 14. 进阶主题
+## 16. 进阶主题
 
-完成十三个阶段后，可以进一步探索：
+完成十四个阶段后，可以进一步探索：
 
 | 主题 | 说明 | JS API | Python API |
 |------|------|--------|------------|
-| **Functional API** | entrypoint & task 函数式工作流 | [`entrypoint`](node_modules/@langchain/langgraph/dist/func/index.d.ts) | `langgraph.func` |
+| **Functional API** | ✅ 已在阶段十三详解 | [`entrypoint`](node_modules/@langchain/langgraph/dist/func/index.d.ts) | `langgraph.func` |
 | **PostgresSaver** | 生产环境持久化 | `@langchain/langgraph-checkpoint-postgres` | `langgraph.checkpoint.postgres` |
-| **Stream Mode** | 多种流式模式 | [`StreamMode`](node_modules/@langchain/langgraph/dist/pregel/types.d.ts) | `langgraph.types.StreamMode` |
+| **Stream Mode** | ✅ 已在阶段十二详解 | [`StreamMode`](node_modules/@langchain/langgraph/dist/pregel/types.d.ts) | `langgraph.types.StreamMode` |
 | **RetryPolicy** | 节点级重试策略 | [`RetryPolicy`](node_modules/@langchain/langgraph/dist/pregel/utils/index.d.ts) | `langgraph.types.RetryPolicy` |
 | **CachePolicy** | 节点级缓存策略 | [`CachePolicy`](node_modules/@langchain/langgraph/dist/pregel/utils/index.d.ts) | `langgraph.types.CachePolicy` |
 | **NodeTimeout** | 节点超时控制 | [`TimeoutPolicy`](node_modules/@langchain/langgraph/dist/pregel/utils/timeout.d.ts) | `langgraph.types.TimeoutPolicy` |
 | **ErrorHandler** | 节点级错误处理 | [`NodeErrorHandler`](node_modules/@langchain/langgraph/dist/graph/graph.d.ts:96) | `langgraph.types.NodeErrorHandler` |
-| **writer** | 自定义流式输出 | [`writer`](node_modules/@langchain/langgraph/dist/writer.d.ts) | `langgraph.types.writer` / `get_stream_writer()` |
+| **writer** | ✅ 已在阶段十二详解（getWriter） | [`writer`](node_modules/@langchain/langgraph/dist/writer.d.ts) | `langgraph.types.writer` / `get_stream_writer()` |
 | **LangGraph Platform** | 部署到 LangGraph Cloud | [`remote`](node_modules/@langchain/langgraph/dist/remote.d.ts) | `langgraph.remote` |
 
 ---
 
-## 15. 🆕 Python 快速对照速查表
+## 17. 🆕 Python 快速对照速查表
 
 > 以下速查表汇总了 LangGraph.js 与 LangGraph Python 在所有核心 API 上的对应关系，方便快速查阅。
 
-### 15.1 包导入
+### 17.1 包导入
 
 | 功能 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -2068,7 +2159,7 @@ sales_agent = create_react_agent(
 | Functional API | `@langchain/langgraph` | `langgraph.func` |
 | 类型定义 | `@langchain/langgraph` | `langgraph.types` |
 
-### 15.2 图构建 API
+### 17.2 图构建 API
 
 | 操作 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -2081,7 +2172,7 @@ sales_agent = create_react_agent(
 | 执行图 | `app.invoke(input)` | `app.invoke(input)` |
 | 流式执行 | `app.stream(input)` | `app.stream(input)` |
 
-### 15.3 状态定义
+### 17.3 状态定义
 
 | 操作 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -2091,7 +2182,7 @@ sales_agent = create_react_agent(
 | 消息状态 | `MessagesAnnotation` | `MessagesState` |
 | 默认值 | `{ default: () => value }` | 在节点中处理 |
 
-### 15.4 路由与控制
+### 17.4 路由与控制
 
 | 操作 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -2102,7 +2193,7 @@ sales_agent = create_react_agent(
 | 预构建路由 | `toolsCondition` | `tools_condition` |
 | 预构建工具节点 | `new ToolNode(tools)` | `ToolNode(tools)` |
 
-### 15.5 Functional API
+### 17.5 Functional API
 
 | 操作 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -2111,7 +2202,7 @@ sales_agent = create_react_agent(
 | 并行执行 | `Promise.all([...])` | `asyncio.gather(...)` |
 | 获取历史状态 | `getPreviousState()` | `get_previous_state()` |
 
-### 15.6 命名约定差异
+### 17.6 命名约定差异
 
 | 方面 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|
@@ -2121,7 +2212,7 @@ sales_agent = create_react_agent(
 | 类型系统 | TypeScript 泛型 | Python `TypedDict` + `Annotated` |
 | 状态更新返回 | `Partial<State>` 对象 | `dict` 字典 |
 
-### 15.7 关键心智模型差异
+### 17.7 关键心智模型差异
 
 | 方面 | LangGraph.js | LangGraph Python |
 |------|-------------|------------------|

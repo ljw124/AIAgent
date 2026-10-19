@@ -484,7 +484,7 @@ const workflow = new StateGraph(ParentState)
 
 ### 7.1 Subgraph 是 Multi-Agent 的底层机制
 
-[阶段十三（Multi-Agent）](./LangGraph.js多Agent系统详解.md) 中使用的 `createReactAgent` 本质上也是一个已编译的图：
+[阶段十四（Multi-Agent）](./LangGraph.js多Agent系统详解.md) 中使用的 `createReactAgent` 本质上也是一个已编译的图：
 
 ```js
 import { createReactAgent } from '@langchain/langgraph/prebuilt'

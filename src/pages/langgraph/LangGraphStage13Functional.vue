@@ -2,8 +2,8 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-10-13 11:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-13 16:26:40
- * @Description: 阶段十二：Functional API — entrypoint & task 函数式工作流
+ * @LastEditTime: 2026-10-16 17:20:52
+ * @Description: 阶段十三：Functional API — entrypoint & task 函数式工作流
  *   学习目标：掌握 LangGraph v1.x 的 Functional API，理解函数式工作流与 StateGraph 的区别
  *   核心 API：entrypoint()、task()、getPreviousState()、entrypoint.final()、getWriter()
  *   场景：文档分析 — 并行执行情感分析、关键词提取、摘要生成
@@ -23,7 +23,7 @@
 -->
 <template>
   <div>
-    <h1>阶段十二：Functional API — entrypoint & task 函数式工作流 <span class="badge stage">LangGraph</span></h1>
+    <h1>阶段十三：Functional API — entrypoint & task 函数式工作流 <span class="badge stage">LangGraph</span></h1>
 
     <!-- 学习目标 -->
     <div class="info-box">
@@ -361,10 +361,10 @@ import { HumanMessage } from '@langchain/core/messages'
 // - getWriter: 获取自定义流式输出 writer，用于推送 streamMode='custom' 事件
 // - MemorySaver: 内存检查点保存器，用于支持 getPreviousState 和 entrypoint.final
 import { entrypoint, task, getPreviousState, getWriter, MemorySaver } from '@langchain/langgraph'
-import { stage12JsCode, stage12PyCode } from '@/composables/langgraphSamples.js'
+import { stage13JsCode, stage13PyCode } from '@/composables/langgraphSamples.js'
 
 export default {
-  name: 'LangGraphStage12Functional',
+  name: 'LangGraphStage13Functional',
 
   data() {
     return {
@@ -388,8 +388,8 @@ export default {
   },
 
   created() {
-    this.jsCodeSample = stage12JsCode
-    this.pyCodeSample = stage12PyCode
+    this.jsCodeSample = stage13JsCode
+    this.pyCodeSample = stage13PyCode
   },
 
   methods: {
@@ -434,7 +434,7 @@ export default {
     /**
      * 执行工作流
      *
-     * 阶段十二核心：使用 Functional API（entrypoint + task）构建工作流
+     * 阶段十三核心：使用 Functional API（entrypoint + task）构建工作流
      *
      * Functional API 模式流程：
      *   INPUT → entrypoint 入口 → Promise.all([taskA, taskB, taskC]) → 合并结果 → OUTPUT
@@ -488,14 +488,14 @@ export default {
       // - 第二个参数是异步执行函数，接收 entrypoint 传入的参数
       // - task 支持 TaskOptions：retry（重试策略）、cachePolicy（缓存策略）、timeout（超时策略）
       // ============================================================
-      const analyzeSentiment = task('analyzeSentiment', async (inputText) => {
+      const analyzeSentiment = task('analyzeSentiment', async (inputText, config) => {
         const startTime = Date.now()
 
-        // getWriter() — 获取自定义流式输出 writer
+        // getWriter(config) — 获取自定义流式输出 writer
         // 在 task 内部调用，用于向 streamMode='custom' 推送自定义事件
-        // 注意：每次调用 getWriter() 返回同一个 writer 实例
+        // ⚠️ 浏览器等无 AsyncLocalStorage 的环境必须传入 task 函数第二参数 config
         if (self.enableStream) {
-          const writer = getWriter()
+          const writer = getWriter(config)
           writer('🔍 开始情感分析...')
           self.addStreamLog('analyzeSentiment', '🔍 开始情感分析...')
         }
@@ -506,7 +506,7 @@ export default {
         const result = msg.content.trim()
 
         if (self.enableStream) {
-          const writer = getWriter()
+          const writer = getWriter(config)
           writer('✅ 情感分析完成：' + result)
           self.addStreamLog('analyzeSentiment', '✅ 情感分析完成：' + result)
         }
@@ -527,11 +527,11 @@ export default {
       // 定义 task：关键词提取
       // 每个 task 独立定义，由 entrypoint 通过 Promise.all 统一调度并行执行
       // ============================================================
-      const extractKeywords = task('extractKeywords', async (inputText) => {
+      const extractKeywords = task('extractKeywords', async (inputText, config) => {
         const startTime = Date.now()
 
         if (self.enableStream) {
-          const writer = getWriter()
+          const writer = getWriter(config)
           writer('🔑 开始关键词提取...')
           self.addStreamLog('extractKeywords', '🔑 开始关键词提取...')
         }
@@ -542,7 +542,7 @@ export default {
         const result = msg.content.trim()
 
         if (self.enableStream) {
-          const writer = getWriter()
+          const writer = getWriter(config)
           writer('✅ 关键词提取完成：' + result)
           self.addStreamLog('extractKeywords', '✅ 关键词提取完成：' + result)
         }
@@ -563,11 +563,11 @@ export default {
       // 定义 task：摘要生成
       // task 之间相互独立，无共享状态，天然支持并行
       // ============================================================
-      const generateSummary = task('generateSummary', async (inputText) => {
+      const generateSummary = task('generateSummary', async (inputText, config) => {
         const startTime = Date.now()
 
         if (self.enableStream) {
-          const writer = getWriter()
+          const writer = getWriter(config)
           writer('📝 开始摘要生成...')
           self.addStreamLog('generateSummary', '📝 开始摘要生成...')
         }
@@ -578,7 +578,7 @@ export default {
         const result = msg.content.trim()
 
         if (self.enableStream) {
-          const writer = getWriter()
+          const writer = getWriter(config)
           writer('✅ 摘要生成完成：' + result)
           self.addStreamLog('generateSummary', '✅ 摘要生成完成：' + result)
         }

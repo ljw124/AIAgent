@@ -2,8 +2,8 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-10-15 14:38:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-16 09:59:27
- * @Description: 阶段十三：Multi-Agent 多智能体系统
+ * @LastEditTime: 2026-10-16 16:11:33
+ * @Description: 阶段十四：Multi-Agent 多智能体系统
  *   学习目标：掌握 Supervisor / Swarm 两种多 Agent 架构模式，理解 handoff 交接机制
  *   核心 API：Command({ goto })、createReactAgent、tool() 定义 handoff 工具
  *   场景：智能客服 — 售前 Agent（查价格）+ 售后 Agent（查订单）+ 通用 Agent
@@ -19,7 +19,7 @@
 -->
 <template>
   <div>
-    <h1>阶段十三：Multi-Agent 多智能体系统 <span class="badge stage">LangGraph</span></h1>
+    <h1>阶段十四：Multi-Agent 多智能体系统 <span class="badge stage">LangGraph</span></h1>
 
     <!-- 学习目标 -->
     <div class="info-box">
@@ -277,10 +277,10 @@ import { tool } from '@langchain/core/tools'
 import { HumanMessage } from '@langchain/core/messages'
 import { z } from 'zod'
 import mermaid from 'mermaid'
-import { stage13SupervisorJsCode, stage13SwarmJsCode, stage13MultiAgentPyCode } from '@/composables/langgraphSamples'
+import { stage14SupervisorJsCode, stage14SwarmJsCode, stage14MultiAgentPyCode } from '@/composables/langgraphSamples'
 
 export default {
-  name: 'LangGraphStage13MultiAgent',
+  name: 'LangGraphStage14MultiAgent',
 
   data() {
     return {
@@ -300,10 +300,10 @@ export default {
 
   computed: {
     jsCodeSample() {
-      return this.mode === 'supervisor' ? stage13SupervisorJsCode : stage13SwarmJsCode
+      return this.mode === 'supervisor' ? stage14SupervisorJsCode : stage14SwarmJsCode
     },
     pyCodeSample() {
-      return stage13MultiAgentPyCode
+      return stage14MultiAgentPyCode
     }
   },
 

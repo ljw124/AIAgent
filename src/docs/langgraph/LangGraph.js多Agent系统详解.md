@@ -4,7 +4,7 @@
 >
 > 目标：掌握官网 Multi-agent 专题的三种架构模式（Supervisor / Swarm / Network），能独立构建多 Agent 协作系统，理解消息传递机制与死循环防护。
 >
-> 🆕 本文档与 [`LangGraphStage13MultiAgent.vue`](../../pages/langgraph/LangGraphStage13MultiAgent.vue) 组件配套，所有代码均可在浏览器中运行（内网大模型）。
+> 🆕 本文档与 [`LangGraphStage14MultiAgent.vue`](../../pages/langgraph/LangGraphStage14MultiAgent.vue) 组件配套，所有代码均可在浏览器中运行（内网大模型）。
 
 ---
 
@@ -680,6 +680,6 @@ for await (const update of stream) {
 
 - [LangGraph.js Multi-agent Concepts](https://langchain-ai.github.io/langgraphjs/concepts/multi_agent/)
 - [LangGraph.js How-to Guides](https://langchain-ai.github.io/langgraphjs/how-tos/)
-- 本项目配套组件：[`LangGraphStage13MultiAgent.vue`](../../pages/langgraph/LangGraphStage13MultiAgent.vue)
+- 本项目配套组件：[`LangGraphStage14MultiAgent.vue`](../../pages/langgraph/LangGraphStage14MultiAgent.vue)
 - 前置知识：[LangGraph.js 深入学习路线 — 阶段十一 Subgraph](./LangGraph.js深入学习路线.md)
 - 场景呼应：[LangChain-智能客服项目实战](../langchain/LangChain-智能客服项目实战.md)
