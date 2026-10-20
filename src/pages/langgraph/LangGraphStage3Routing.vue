@@ -82,7 +82,7 @@
       <label>
         LLM 模型：
         <select v-model="modelName">
-          <option value="EB-DeepSeek-V4-Pro">EB-DeepSeek-V4-Pro</option>
+          <option value="EB-DeepSeek-Flash">EB-DeepSeek-Flash</option>
           <option value="EB-Kimi-K2.6">EB-Kimi-K2.6</option>
         </select>
       </label>
@@ -291,7 +291,7 @@ export default {
     return {
       userInput: '',
       routerMode: 'toolsCondition',
-      modelName: 'EB-DeepSeek-V4-Pro',
+      modelName: 'EB-DeepSeek-Flash',
       recursionLimit: 50,
       loading: false,
       error: null,

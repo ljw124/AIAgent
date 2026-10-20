@@ -76,8 +76,8 @@
         <label>
           模型：
           <select v-model="config.model">
-            <option value="EB-DeepSeek-V4-Pro">EB-DeepSeek-V4-Pro（推荐）</option>
-            <option value="EB-GLM-5.2">EB-GLM-5.2</option>
+            <option value="EB-DeepSeek-Flash">EB-DeepSeek-Flash（推荐）</option>
+            <option value="EB-GLM-Flash">EB-GLM-Flash</option>
           </select>
         </label>
         <label class="ml-24">
@@ -135,7 +135,7 @@ export default {
       loading: false,
       error: null,
       config: {
-        model: 'EB-DeepSeek-V4-Pro',
+        model: 'EB-DeepSeek-Flash',
         temperature: 0.7
       },
       // 下拉多选：选中的中间件 key 数组

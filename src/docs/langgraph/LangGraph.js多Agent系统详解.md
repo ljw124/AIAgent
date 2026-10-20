@@ -251,7 +251,7 @@ function buildSupervisorGraph(llm) {
 // 6. 执行
 // ============================================================
 const llm = new ChatOpenAI({
-  model: 'EB-DeepSeek-V4-Pro',
+  model: 'EB-DeepSeek-Flash',
   apiKey: INNER_API_KEY,
   configuration: { baseURL: window.location.origin + '/inner/' }
 })

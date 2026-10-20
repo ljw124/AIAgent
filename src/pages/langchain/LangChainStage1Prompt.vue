@@ -85,7 +85,7 @@ export default {
   created() {
     // #1 修复：在 created 中初始化 LLM 实例（复用连接池）
     this.llm = new ChatOpenAI({
-      model: 'EB-DeepSeek-V4-Pro',
+      model: 'EB-DeepSeek-Flash',
       apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
       temperature: 0.7,
       configuration: {

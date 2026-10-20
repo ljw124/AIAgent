@@ -377,7 +377,7 @@ const ParallelState = Annotation.Root({
   })
 })
 
-const llm = new ChatOpenAI({ model: 'EB-DeepSeek-V4-Pro' })
+const llm = new ChatOpenAI({ model: 'EB-DeepSeek-Flash' })
 
 // 2. 分发节点
 const dispatcher = (state) => {

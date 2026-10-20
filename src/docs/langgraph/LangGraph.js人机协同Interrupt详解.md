@@ -342,7 +342,7 @@ import { ChatOpenAI } from '@langchain/openai'
 import { interrupt } from '@langchain/langgraph'
 
 const llm = new ChatOpenAI({
-  model: 'EB-DeepSeek-V4-Pro',
+  model: 'EB-DeepSeek-Flash',
   temperature: 0.7
 })
 

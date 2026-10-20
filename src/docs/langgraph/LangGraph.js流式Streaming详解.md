@@ -305,10 +305,10 @@ for await (const chunk of await graph.stream(input, { streamMode: 'custom' })) {
 | 行为 | 说明 |
 |------|------|
 | 返回值 | **可直接调用的函数**（JS 版没有 `writer.write()` 包装，直接 `writer(x)`） |
-| 生效条件 | 仅当 `stream` 配置的 `streamMode` 包含 `'custom'`；否则 `writer()` 是**空操作**（不报错） |
-| 调用位置 | 节点函数内部（StateGraph）或 task 内部（Functional API） |
+| 生效条件 | 仅当 `stream` 配置的 `streamMode` 包含 `'custom'`；否则 `writer` 可能为 `undefined`，**调用前请判空** `if (typeof writer === 'function')` |
+| 调用位置 | **StateGraph 节点内**（节点函数签名 `async (state, config)`，config 由框架注入）；**Functional API 的 task 内不行**，见 §8 |
 | 内容类型 | 任意可序列化值：字符串、对象、数字……原样透传给消费端 |
-| 获取失败 | 无 AsyncLocalStorage 的环境（如浏览器）**直接抛异常** `Config not retrievable...`；节点函数签名必须为 `async (state, config)`，并传入 `getWriter(config)` |
+| 获取失败 | 无 AsyncLocalStorage 的环境（如浏览器）**直接抛异常** `Config not retrievable...`；节点函数签名必须为 `async (state, config)`，并传入 `getWriter(config)`（不传参会退回 AsyncLocalStorage 兜底，浏览器中必然失败） |
 
 ### 5.3 推送结构化事件
 
@@ -416,31 +416,41 @@ for await (const [namespace, mode, data] of await parentGraph.stream(
 
 [阶段十三 Functional API](./LangGraph.js深入学习路线.md)（`entrypoint` + `task`）的流式与 StateGraph 完全同构：
 
+> ⚠️ **最容易踩的坑**：`task` 函数**拿不到 config**。
+> `entrypoint` 的包装是 `func(input, config)`（框架注入），而 `task` 的包装是 `func(...args)`（只转发你显式传入的实参），源码见 `@langchain/langgraph/dist/pregel/call.cjs`。
+> 所以在浏览器（无 AsyncLocalStorage）环境下，**必须**在 `entrypoint` 内取 writer 再传给 task：
+
 ```js
 import { entrypoint, task, getWriter } from '@langchain/langgraph'
 
-const analyze = task('analyze', async (q, config) => {
-  const writer = getWriter(config)   // ⚠️ 浏览器等无 AsyncLocalStorage 的环境必须传 config
-  writer('🔍 分析中...')
+// ✅ task 的第二个参数是 writer —— 由 entrypoint 显式传入（框架不会给 task 注入 config）
+const analyze = task('analyze', async (q, writer) => {
+  if (typeof writer === 'function') writer('🔍 分析中...')   // 必须判空
   return { steps: ['...'] }
 })
 
-const workflow = entrypoint({ name: 'qa' }, async (q) => {
-  const r = await analyze(q)
+const workflow = entrypoint({ name: 'qa' }, async (q, config) => {
+  // ✅ 只有 entrypoint 的第二个参数才是注入的 config
+  const writer = getWriter(config)
+  const r = await analyze(q, writer)
+  if (typeof writer === 'function') writer('✅ 完成')
   return { answer: '...' }
 })
 
-// 消费方式与 StateGraph 一致
-for await (const chunk of await workflow.stream(q, { streamMode: 'custom' })) {
-  console.log(chunk)
+// 消费端：streamMode 传数组可同时订阅 custom 与 values
+for await (const [mode, payload] of await workflow.stream(q, { streamMode: ['custom', 'values'] })) {
+  if (mode === 'custom') console.log('writer 事件:', payload)
+  if (mode === 'values') console.log('最终结果:', payload)   // values 里已含返回值
 }
 ```
+
+> 不要写成「先 `stream()` 再 `invoke()`」来「既拿流又拿结果」——那会让整个工作流**执行两遍**（LLM 调用翻倍、`executionCount` 异常递增）。用 `streamMode: ['custom', 'values']` 即可一次执行同时拿到两者。
 
 差异点：
 
 | 维度 | StateGraph | Functional API |
 |------|-----------|----------------|
-| 自定义流 | 节点内 `getWriter()` | task 内 `getWriter()`（同一 API） |
+| 自定义流 | 节点内 `getWriter(config)`（config 由框架注入） | **entrypoint 内** `getWriter(config)`，再传给 task；task 内调用会抛 `Config not retrievable` |
 | `updates` 事件键 | 节点名 | task 名称 |
 | `values` 事件 | 状态快照 | entrypoint 返回值累积 |
 | checkpointer | `compile({ checkpointer })` | `entrypoint({ checkpointer }, fn)` |
@@ -551,7 +561,7 @@ Python 侧完整示例见示例组件中的「🐍 LangGraph Python 对比代码
 2. **custom 推结构化对象**：`writer({ type, ... })` 优于裸字符串，前端按 `type` 路由更健壮
 3. **组合模式先解构**：`const [mode, chunk] = ...` 是组合模式的第一行代码
 4. **debug 只在本地开**：事件量最大，生产环境开启会拖慢流并刷爆日志
-5. **getWriter 必传 config**：节点签名 `async (state, config)` + `getWriter(config)`；浏览器等无 AsyncLocalStorage 环境无参调用会直接抛异常
+5. **getWriter 必传 config**：StateGraph 节点签名 `async (state, config)` + `getWriter(config)`；Functional API 中 task **拿不到 config**，须在 entrypoint 内取 writer 再传入。浏览器等无 AsyncLocalStorage 环境无参调用会直接抛异常
 6. **流结束补最终状态**：`messages` 模式不含状态事件，需要最终状态时组合 `updates` 或流后再 `invoke`
 7. **错误处理包住整个循环**：流中途异常（网络断开、recursionLimit）要在 try/catch 内消费
 8. **与 checkpointer 无冲突**：stream 与 invoke 产生同样的检查点，可放心配合 thread_id 使用
@@ -562,8 +572,9 @@ Python 侧完整示例见示例组件中的「🐍 LangGraph Python 对比代码
 |----|------|-----------|
 | 打字机出现「两段回答」 | 最终答案里混入了分析步骤文本 | 没过滤 `langgraph_node`，中间节点令牌也被拼接了 |
 | 组合模式渲染出 `[object Object]` | 页面显示元组而非数据 | 忘了解构 `[mode, chunk]` |
-| `writer()` 推送的事件收不到 | custom 流为空 | `streamMode` 没包含 `'custom'`（writer 是空操作） |
-| `Config not retrievable...` 报错 | 节点内 getWriter 抛异常 | 环境不支持 AsyncLocalStorage（如浏览器）；节点签名加 `config` 参数并传入 `getWriter(config)` |
+| `writer()` 推送的事件收不到 | custom 流为空 | `streamMode` 没包含 `'custom'`；或 writer 为 `undefined` 时未判空 |
+| `Config not retrievable...` 报错 | 节点 / task 内 getWriter 抛异常 | 环境不支持 AsyncLocalStorage（如浏览器）；StateGraph 节点加 `config` 参数；**Functional API 的 task 无法拿 config，必须在 entrypoint 内 `getWriter(config)` 后传入 task** |
+| 结果与日志重复、LLM 调用翻倍 | 工作流执行了两次 | 同时调用了 `stream()` 和 `invoke()`；改用 `streamMode: ['custom', 'values']` 一次执行取结果 |
 | 子图事件看不到 | 父图流里没有子图节点更新 | 没开 `{ subgraphs: true }` |
 | `await graph.stream()` 漏 await | `for await` 直接报错 | `stream()` 返回 Promise，需先 await 得到 async iterable |
 

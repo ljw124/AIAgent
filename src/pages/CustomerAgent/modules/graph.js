@@ -173,7 +173,7 @@ export class CustomerGraphBuilder {
     if (this.llm) return this.llm
     // eslint-disable-next-line no-undef
     this.llm = new ChatOpenAI({
-      model: 'EB-DeepSeek-V4-Pro',
+      model: 'EB-DeepSeek-Flash',
       apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
       temperature: 0.7,
       configuration: {

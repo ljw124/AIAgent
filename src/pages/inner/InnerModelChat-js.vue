@@ -87,7 +87,7 @@ export default {
           },
           body: JSON.stringify({
             // model: 'Qwen3-Coder-Flash',
-            model: 'EB-DeepSeek-V4-Pro',
+            model: 'EB-DeepSeek-Flash',
             messages: apiMessages,
           }),
         })

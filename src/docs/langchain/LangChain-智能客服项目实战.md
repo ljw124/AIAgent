@@ -1,7 +1,7 @@
 # 智能客服智能体 — 设计方案
 
 > 基于 LangChain.js 10 阶段知识体系，设计一款「智能客服」学习型智能体应用。
-> 架构：纯前端 Vue 2 + 内网大模型 API（EB-DeepSeek-V4-Pro），与现有 Stage1-Stage10 架构一致。
+> 架构：纯前端 Vue 2 + 内网大模型 API（EB-DeepSeek-Flash），与现有 Stage1-Stage10 架构一致。
 > 定位：**以学习 LangChain 全栈知识为核心目标**，保留多租户设计。
 
 ---
@@ -141,7 +141,7 @@
                                │ HTTP API 调用
                                ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│              内网大模型 API (EB-DeepSeek-V4-Pro)                   │
+│              内网大模型 API (EB-DeepSeek-Flash)                   │
 │              base_url: http://lanz.hikvision.com/v3/openai/model  │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -171,7 +171,7 @@ import { InMemoryStore } from '@langchain/langgraph'
 
 // 初始化 LLM（与现有 Stage 一致）
 const llm = new ChatOpenAI({
-  model: 'EB-DeepSeek-V4-Pro',
+  model: 'EB-DeepSeek-Flash',
   apiKey: INNER_API_KEY,        // webpack DefinePlugin 注入
   baseURL: 'http://lanz.hikvision.com/v3/openai/model',
   temperature: 0.7,

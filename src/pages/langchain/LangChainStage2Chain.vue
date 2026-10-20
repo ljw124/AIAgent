@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:35:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-14 10:22:47
+ * @LastEditTime: 2026-10-20 13:51:52
  * @Description: 阶段二：Chain — 链式调用（LCEL 管道模式）
  *   学习目标：用 .pipe() 串联 PromptTemplate → ChatOpenAI → StringOutputParser
  *   核心 API：.pipe()、StringOutputParser、RunnableSequence
@@ -45,7 +45,7 @@
       <button @click="send" :disabled="loading">
         {{ loading ? '请求中...' : '翻译 (Ctrl+Enter)' }}
       </button>
-      <button @click="clear" class="btn-clear">清空</button>
+      <button @click="clear" class="btn-clear">清空对话</button>
     </div>
 
     <div v-if="error" class="error-msg">{{ error }}</div>
@@ -105,7 +105,7 @@ export default {
       // 2. new ChatOpenAI({...}) — 创建 OpenAI 兼容的聊天模型实例
       //    temperature: 0.3 翻译任务用较低温度，保证输出一致性
       const llm = new ChatOpenAI({
-        model: 'EB-DeepSeek-V4-Pro',
+        model: 'EB-DeepSeek-Flash',
         apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
         temperature: 0.3,
         configuration: {

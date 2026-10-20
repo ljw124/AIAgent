@@ -53,7 +53,7 @@
 | 消息类型 | `@langchain/core/messages` | 已安装 ✅ |
 | API 代理 | Vue CLI devServer proxy `/inner` | 已配置 ✅ |
 | API Key | Webpack DefinePlugin 注入 `INNER_API_KEY` | 已配置 ✅ |
-| 模型 | `EB-DeepSeek-V4-Pro`（内网） | 已可用 ✅ |
+| 模型 | `EB-DeepSeek-Flash`（内网） | 已可用 ✅ |
 
 ### 示例代码位置
 

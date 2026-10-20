@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-01 11:30:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-15 10:09:09
+ * @LastEditTime: 2026-10-20 13:51:31
  * @Description: 阶段四：Structured Output — 结构化输出
  *   学习目标：让 LLM 输出符合预定义结构的数据（JSON Schema）
  *   核心 API：withStructuredOutput()、zod、StructuredOutputParser
@@ -59,7 +59,7 @@
       <button @click="send" :disabled="loading">
         {{ loading ? '提取中...' : '提取结构化数据 (Ctrl+Enter)' }}
       </button>
-      <button @click="clear" class="btn-clear">清空</button>
+      <button @click="clear" class="btn-clear">清空对话</button>
     </div>
 
     <div v-if="error" class="error-msg">{{ error }}</div>
@@ -187,7 +187,7 @@ export default {
         const schemaName = SCHEMA_NAMES[this.scenario]
 
         const llm = new ChatOpenAI({
-          model: 'EB-DeepSeek-V4-Pro',
+          model: 'EB-DeepSeek-Flash',
           apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
           temperature: 0, // 结构化输出建议用 0 温度
           configuration: {
@@ -265,7 +265,7 @@ export default {
           //   - 对比方式一：无 schema 自动校验，需手动 JSON.parse，容错性较低
           // ============================================================
           const jsonLlm = new ChatOpenAI({
-            model: 'EB-DeepSeek-V4-Pro',
+            model: 'EB-DeepSeek-Flash',
             apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
             temperature: 0,
             configuration: {

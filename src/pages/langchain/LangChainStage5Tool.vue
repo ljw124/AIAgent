@@ -201,7 +201,7 @@ export default {
 
         // 2. 创建模型并绑定工具
         const llm = new ChatOpenAI({
-          model: 'EB-DeepSeek-V4-Pro',
+          model: 'EB-DeepSeek-Flash',
           apiKey: typeof INNER_API_KEY !== 'undefined' ? INNER_API_KEY : undefined,
           temperature: 0,
           configuration: {

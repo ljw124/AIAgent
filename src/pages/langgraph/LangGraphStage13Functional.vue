@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-10-13 11:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-16 17:20:52
+ * @LastEditTime: 2026-10-20 18:42:55
  * @Description: 阶段十三：Functional API — entrypoint & task 函数式工作流
  *   学习目标：掌握 LangGraph v1.x 的 Functional API，理解函数式工作流与 StateGraph 的区别
  *   核心 API：entrypoint()、task()、getPreviousState()、entrypoint.final()、getWriter()
@@ -96,8 +96,8 @@
       <label>
         LLM 模型：
         <select v-model="modelName">
-          <option value="EB-DeepSeek-V4-Pro">EB-DeepSeek-V4-Pro</option>
-          <option value="EB-GLM-5.2">EB-GLM-5.2</option>
+          <option value="EB-DeepSeek-Flash">EB-DeepSeek-Flash</option>
+          <option value="EB-GLM-Flash">EB-GLM-Flash</option>
         </select>
       </label>
       <label>
@@ -274,8 +274,8 @@
             <td>分离「返回给调用方的值」和「持久化到 checkpoint 的状态」</td>
           </tr>
           <tr>
-            <td><strong>getWriter()</strong></td>
-            <td>获取自定义流式写入器，可在 task 内部推送自定义事件到 stream</td>
+            <td><strong>getWriter(config)</strong></td>
+            <td>在 <strong>entrypoint 内部</strong>获取自定义流式写入器（task 拿不到 config，需由 entrypoint 传入 writer）</td>
           </tr>
         </tbody>
       </table>
@@ -330,8 +330,8 @@
           </tr>
           <tr>
             <td><strong>writer 流式输出</strong></td>
-            <td>✅ 支持（getWriter）</td>
-            <td>✅ 支持（getWriter）</td>
+            <td>✅ 支持（节点内 <code>getWriter(config)</code>，config 由框架注入）</td>
+            <td>✅ 支持（<strong>仅 entrypoint 内</strong> <code>getWriter(config)</code>，task 内调用会抛错）</td>
           </tr>
         </tbody>
       </table>
@@ -370,7 +370,7 @@ export default {
     return {
       userInput: '',
       demoMode: 'functional',
-      modelName: 'EB-DeepSeek-V4-Pro',
+      modelName: 'EB-DeepSeek-Flash',
       enableStream: true,
       enableCheckpoint: false,
       loading: false,
@@ -488,14 +488,16 @@ export default {
       // - 第二个参数是异步执行函数，接收 entrypoint 传入的参数
       // - task 支持 TaskOptions：retry（重试策略）、cachePolicy（缓存策略）、timeout（超时策略）
       // ============================================================
-      const analyzeSentiment = task('analyzeSentiment', async (inputText, config) => {
+      // ⚠️ 重要：task 函数只会收到「调用时显式传入的参数」，LangGraph 不会给它注入 config
+      //   （源码 @langchain/langgraph/dist/pregel/call.cjs：func: (input) => func(...input)）
+      //   只有 entrypoint 的函数才会收到 config（func: (input, config) => func(input, config)）
+      //   所以这里第二个参数是 writer —— 由 entrypoint 通过 getWriter(config) 取得后显式传进来
+      const analyzeSentiment = task('analyzeSentiment', async (inputText, writer) => {
         const startTime = Date.now()
 
-        // getWriter(config) — 获取自定义流式输出 writer
-        // 在 task 内部调用，用于向 streamMode='custom' 推送自定义事件
-        // ⚠️ 浏览器等无 AsyncLocalStorage 的环境必须传入 task 函数第二参数 config
-        if (self.enableStream) {
-          const writer = getWriter(config)
+        // writer(chunk) — 向 streamMode='custom' 推送自定义事件
+        // 未启用流式（或 streamMode 不含 'custom'）时 writer 为 undefined，需先判空
+        if (typeof writer === 'function') {
           writer('🔍 开始情感分析...')
           self.addStreamLog('analyzeSentiment', '🔍 开始情感分析...')
         }
@@ -505,8 +507,7 @@ export default {
         ])
         const result = msg.content.trim()
 
-        if (self.enableStream) {
-          const writer = getWriter(config)
+        if (typeof writer === 'function') {
           writer('✅ 情感分析完成：' + result)
           self.addStreamLog('analyzeSentiment', '✅ 情感分析完成：' + result)
         }
@@ -527,11 +528,10 @@ export default {
       // 定义 task：关键词提取
       // 每个 task 独立定义，由 entrypoint 通过 Promise.all 统一调度并行执行
       // ============================================================
-      const extractKeywords = task('extractKeywords', async (inputText, config) => {
+      const extractKeywords = task('extractKeywords', async (inputText, writer) => {
         const startTime = Date.now()
 
-        if (self.enableStream) {
-          const writer = getWriter(config)
+        if (typeof writer === 'function') {
           writer('🔑 开始关键词提取...')
           self.addStreamLog('extractKeywords', '🔑 开始关键词提取...')
         }
@@ -541,8 +541,7 @@ export default {
         ])
         const result = msg.content.trim()
 
-        if (self.enableStream) {
-          const writer = getWriter(config)
+        if (typeof writer === 'function') {
           writer('✅ 关键词提取完成：' + result)
           self.addStreamLog('extractKeywords', '✅ 关键词提取完成：' + result)
         }
@@ -563,11 +562,10 @@ export default {
       // 定义 task：摘要生成
       // task 之间相互独立，无共享状态，天然支持并行
       // ============================================================
-      const generateSummary = task('generateSummary', async (inputText, config) => {
+      const generateSummary = task('generateSummary', async (inputText, writer) => {
         const startTime = Date.now()
 
-        if (self.enableStream) {
-          const writer = getWriter(config)
+        if (typeof writer === 'function') {
           writer('📝 开始摘要生成...')
           self.addStreamLog('generateSummary', '📝 开始摘要生成...')
         }
@@ -577,8 +575,7 @@ export default {
         ])
         const result = msg.content.trim()
 
-        if (self.enableStream) {
-          const writer = getWriter(config)
+        if (typeof writer === 'function') {
           writer('✅ 摘要生成完成：' + result)
           self.addStreamLog('generateSummary', '✅ 摘要生成完成：' + result)
         }
@@ -617,12 +614,19 @@ export default {
         entrypointOptions.checkpointer = this.checkpointer
       }
 
-      const workflow = entrypoint(entrypointOptions, async (inputText) => {
+      // ⚠️ 关键：entrypoint 的第二个参数才是 config（LangGraph 会注入）
+      //   在 entrypoint 内用 getWriter(config) 取到 writer，再显式传给各个 task
+      //   这样即使在浏览器（无 AsyncLocalStorage）环境也不会触发
+      //   "Config not retrievable" 错误
+      const workflow = entrypoint(entrypointOptions, async (inputText, config) => {
+        // writer 仅在 streamMode 包含 'custom' 时有值；未启用流式时为 undefined
+        const writer = self.enableStream ? getWriter(config) : undefined
         self.addStreamLog('entrypoint', '🚀 工作流启动，输入文本长度：' + inputText.length + ' 字符')
 
         // getPreviousState() — 获取上一次执行通过 entrypoint.final 保存的状态
-        // 仅在配置了 checkpointer 时可用
-        // 首次执行时返回 undefined（无历史状态）
+        // 仅在配置了 checkpointer 时可用；首次执行时返回 undefined（无历史状态）
+        // ⚠️ getPreviousState() 没有 config 参数，内部依赖 AsyncLocalStorage
+        //   浏览器（MockAsyncLocalStorage）下会抛 TypeError，所以必须 try/catch 兜底
         let previousState = undefined
         if (self.enableCheckpoint) {
           try {
@@ -631,7 +635,8 @@ export default {
               self.addStreamLog('entrypoint', '📜 获取到上次执行状态：' + JSON.stringify(previousState))
             }
           } catch (e) {
-            // getPreviousState 在没有历史状态时会返回 undefined
+            // 浏览器等无 AsyncLocalStorage 的环境无法读取历史状态（检查点仍会正常保存）
+            self.addStreamLog('entrypoint', 'ℹ️ 当前环境无法读取历史状态，跳过 getPreviousState()')
           }
         }
 
@@ -641,9 +646,9 @@ export default {
         self.addStreamLog('entrypoint', '⚡ 启动 3 个 task 并行执行（Promise.all）...')
 
         const [sentimentResult, keywordsResult, summaryResult] = await Promise.all([
-          analyzeSentiment(inputText),
-          extractKeywords(inputText),
-          generateSummary(inputText)
+          analyzeSentiment(inputText, writer),
+          extractKeywords(inputText, writer),
+          generateSummary(inputText, writer)
         ])
 
         self.addStreamLog('entrypoint', '✅ 所有 task 执行完成，合并结果')
@@ -690,16 +695,23 @@ export default {
       let finalResult
       if (this.enableStream) {
         // workflow.stream(input, config) — 流式执行 entrypoint
-        // streamMode: 'custom' 接收 task 内部通过 getWriter().writer() 推送的自定义事件
-        // 其他 streamMode: 'values'（状态值）, 'updates'（状态更新）, 'messages'（LLM 消息令牌）
+        // streamMode 传数组可同时订阅多种事件，yield 出 [mode, payload]：
+        //   'custom' — entrypoint / task 内通过 writer 推送的自定义事件
+        //   'values' — 每步之后的完整状态值（用它取最终返回值）
+        // 其他可选：'updates'（节点级增量）、'messages'（LLM 消息令牌）
+        // ⚠️ 不要写成「先 stream() 再 invoke()」：那会让整个工作流执行两遍
+        //    （LLM 调用翻倍、executionCount 异常递增），values 事件里已含最终结果
         this.addStreamLog('system', '📡 使用 stream() 执行（接收 writer 自定义事件）...')
-        for await (const chunk of await workflow.stream(text, { ...config, streamMode: 'custom' })) {
-          // writer 推送的自定义事件
-          self.addStreamLog('stream', typeof chunk === 'string' ? chunk : JSON.stringify(chunk))
+        for await (const chunk of await workflow.stream(text, { ...config, streamMode: ['custom', 'values'] })) {
+          const [mode, payload] = chunk
+          if (mode === 'custom') {
+            // writer 推送的自定义事件
+            self.addStreamLog('stream', typeof payload === 'string' ? payload : JSON.stringify(payload))
+          } else if (mode === 'values' && payload && typeof payload === 'object') {
+            finalResult = payload
+          }
         }
-        // workflow.invoke(input, config) — 同步执行 entrypoint，返回最终结果
-        // stream 模式先 stream 再 invoke 是为了同时获取流式事件和最终返回值
-        finalResult = await workflow.invoke(text, config)
+        finalResult = finalResult || {}
       } else {
         // 非流式模式直接 invoke 获取结果
         finalResult = await workflow.invoke(text, config)
@@ -916,14 +928,6 @@ export default {
 .input-section button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.btn-clear {
-  background: #6b7280 !important;
-}
-
-.btn-clear:hover {
-  background: #4b5563 !important;
 }
 
 /* Functional API 图结构 */

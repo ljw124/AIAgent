@@ -414,7 +414,7 @@ import { HumanMessage } from '@langchain/core/messages'
 import { Command } from '@langchain/langgraph'
 
 const llm = new ChatOpenAI({
-  model: 'EB-DeepSeek-V4-Pro',
+  model: 'EB-DeepSeek-Flash',
   temperature: 0
 })
 

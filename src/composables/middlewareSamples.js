@@ -269,7 +269,7 @@ export function buildOfficialMiddlewares(llm, options = {}) {
 export async function chatWithMiddleware(message, options = {}) {
   const {
     temperature = 0.7,
-    model = 'EB-DeepSeek-V4-Pro',
+    model = 'EB-DeepSeek-Flash',
     middleware: middlewareConfig = {}
   } = options
 

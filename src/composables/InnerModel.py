@@ -45,7 +45,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 def chat(message, temperature=0.7):
     """调用内网大模型并返回回复"""
     llm = ChatOpenAI(
-        model="EB-DeepSeek-V4-Pro",
+        model="EB-DeepSeek-Flash",
         api_key=API_KEY,
         base_url=BASE_URL,
         temperature=temperature,

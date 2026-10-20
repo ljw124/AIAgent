@@ -40,8 +40,8 @@
         </select>
         <label style="margin-left: 16px;">LLM 模型：</label>
         <select v-model="modelName">
-          <option value="EB-DeepSeek-V4-Pro">EB-DeepSeek-V4-Pro</option>
-          <option value="EB-GLM-5.2">EB-GLM-5.2</option>
+          <option value="EB-DeepSeek-Flash">EB-DeepSeek-Flash</option>
+          <option value="EB-GLM-Flash">EB-GLM-Flash</option>
         </select>
         <label style="margin-left: 16px;">
           <input type="checkbox" v-model="loopDemo" />
@@ -285,7 +285,7 @@ export default {
   data() {
     return {
       mode: 'supervisor',
-      modelName: 'EB-DeepSeek-V4-Pro',
+      modelName: 'EB-DeepSeek-Flash',
       loopDemo: false,
       userInput: '',
       loading: false,

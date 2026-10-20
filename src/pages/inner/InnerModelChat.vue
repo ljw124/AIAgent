@@ -52,7 +52,7 @@ export default {
       messages: [],
       loading: false,
       error: null,
-      model: 'EB-DeepSeek-V4-Pro'
+      model: 'EB-DeepSeek-Flash'
     }
   },
 

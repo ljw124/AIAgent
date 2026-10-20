@@ -629,7 +629,7 @@ const langChainMessages = [
 
 // 5. 调用 LLM
 const llm = new ChatOpenAI({
-  model: 'EB-DeepSeek-V4-Pro',
+  model: 'EB-DeepSeek-Flash',
   temperature: 0.3,  // 低温度，减少创造性，提高准确性
   // ...
 })

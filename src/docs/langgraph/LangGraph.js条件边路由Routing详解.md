@@ -442,7 +442,7 @@ const calculator = tool(async ({ expression }) => {
 import { ChatOpenAI } from '@langchain/openai'
 
 const llm = new ChatOpenAI({
-  model: 'EB-DeepSeek-V4-Pro',
+  model: 'EB-DeepSeek-Flash',
   temperature: 0
 })
 

@@ -393,7 +393,7 @@ import { ChatOpenAI } from '@langchain/openai'
 // 第一步：创建 ChatOpenAI 实例
 // ============================================================
 const llm = new ChatOpenAI({
-  model: 'EB-DeepSeek-V4-Pro',
+  model: 'EB-DeepSeek-Flash',
   temperature: 0.7,
   configuration: { baseURL: window.location.origin + '/inner/' }
 })

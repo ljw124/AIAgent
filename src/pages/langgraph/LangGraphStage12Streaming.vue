@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-10-16 15:56:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-16 17:47:19
+ * @LastEditTime: 2026-10-20 13:50:32
  * @Description: 阶段十二：Streaming 流式模式 — 5 种 streamMode 全解析
  *   学习目标：掌握 LangGraph v1.x 的 5 种 streamMode（values/updates/messages/custom/debug），
  *            理解各模式的数据形态与选型，掌握 getWriter 自定义流与多模式组合
@@ -95,8 +95,8 @@
       <label>
         LLM 模型：
         <select v-model="modelName">
-          <option value="EB-DeepSeek-V4-Pro">EB-DeepSeek-V4-Pro</option>
-          <option value="EB-GLM-5.2">EB-GLM-5.2</option>
+          <option value="EB-DeepSeek-Flash">EB-DeepSeek-Flash</option>
+          <option value="EB-GLM-Flash">EB-GLM-Flash</option>
         </select>
       </label>
       <label>
@@ -365,7 +365,7 @@ export default {
   data() {
     return {
       userInput: '',
-      modelName: 'EB-DeepSeek-V4-Pro',
+      modelName: 'EB-DeepSeek-Flash',
       streamMode: 'messages',
       enableWriter: true,
       loading: false,
@@ -820,14 +820,6 @@ export default {
 .input-section button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.btn-clear {
-  background: #6b7280 !important;
-}
-
-.btn-clear:hover {
-  background: #4b5563 !important;
 }
 
 /* 通用样式（与现有组件保持一致） */

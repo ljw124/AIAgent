@@ -78,8 +78,8 @@
       <label>
         LLM 模型：
         <select v-model="modelName">
-          <option value="EB-DeepSeek-V4-Pro">EB-DeepSeek-V4-Pro</option>
-          <option value="EB-GLM-5.2">EB-GLM-5.2</option>
+          <option value="EB-DeepSeek-Flash">EB-DeepSeek-Flash</option>
+          <option value="EB-GLM-Flash">EB-GLM-Flash</option>
         </select>
       </label>
       <label>
@@ -324,7 +324,7 @@ export default {
     return {
       userInput: '',
       demoMode: 'subgraph',
-      modelName: 'EB-DeepSeek-V4-Pro',
+      modelName: 'EB-DeepSeek-Flash',
       loading: false,
       error: null,
       result: null,

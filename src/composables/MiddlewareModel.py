@@ -2,7 +2,7 @@
 Author: lujinwei lujinwei@hikvision.com.cn
 Date: 2026-09-07 10:00:00
 LastEditors: lujinwei lujinwei@hikvision.com.cn
-LastEditTime: 2026-09-08 12:39:35
+LastEditTime: 2026-10-20 16:46:32
 Description: LangChain Python 中间件（Middleware）演示脚本
 '''
 """
@@ -37,7 +37,7 @@ MiddlewareModel.py — LangChain Python 中间件（Middleware）演示
     python src/composables/MiddlewareModel.py "你好，请介绍一下你自己"
 
     # 通过后端 API 调用（JSON 模式）
-    python src/composables/MiddlewareModel.py --json '{"message":"你好","temperature":0.7,"model":"EB-DeepSeek-V4-Pro"}'
+    python src/composables/MiddlewareModel.py --json '{"message":"你好","temperature":0.7,"model":"EB-DeepSeek-Flash"}'
 ============================================================
 """
 
@@ -444,7 +444,7 @@ def build_official_middlewares(enable_summarization=True, enable_human_in_the_lo
         #   keep: 保留最近的消息数量，如 ('messages', 20) 保留最近 20 条
         middlewares.append(SummarizationMiddleware(
             model=ChatOpenAI(
-                model="EB-DeepSeek-V4-Pro",
+                model="EB-DeepSeek-Flash",
                 api_key=API_KEY,
                 base_url=BASE_URL,
                 temperature=0.3,  # 摘要用较低温度，更稳定
@@ -502,7 +502,7 @@ def build_official_middlewares(enable_summarization=True, enable_human_in_the_lo
 # 第五部分：核心聊天函数
 # ============================================================
 
-def chat(message, temperature=0.7, model="EB-DeepSeek-V4-Pro", middleware_config=None):
+def chat(message, temperature=0.7, model="EB-DeepSeek-Flash", middleware_config=None):
     """
     使用中间件调用内网大模型并返回回复。
 
@@ -521,7 +521,7 @@ def chat(message, temperature=0.7, model="EB-DeepSeek-V4-Pro", middleware_config
         - 1 = 平衡
         - 2 = 创造性输出（适合创意写作）
     - model: str，模型名称（内网大模型）
-        - "EB-DeepSeek-V4-Pro"：DeepSeek V4 Pro（推荐）
+        - "EB-DeepSeek-Flash"：DeepSeek Flash（推荐）
     - middleware_config: dict，中间件开关配置
         格式：{"before": True, "after": False, ...}
         不传则默认启用所有中间件
@@ -613,7 +613,7 @@ if __name__ == "__main__":
             params = json.loads(sys.argv[2])
             message = params.get("message", "你好")
             temperature = params.get("temperature", 0.7)
-            model = params.get("model", "EB-DeepSeek-V4-Pro")
+            model = params.get("model", "EB-DeepSeek-Flash")
             middleware_config = params.get("middleware", {})
 
             # 调用核心函数

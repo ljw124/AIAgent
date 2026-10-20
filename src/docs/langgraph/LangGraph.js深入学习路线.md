@@ -84,7 +84,7 @@
 | Store | `InMemoryStore` | 已安装 ✅ |
 | Schema | `zod` v4.4.3 | 已安装 ✅ |
 | API 代理 | Vue CLI devServer proxy `/inner` | 已配置 ✅ |
-| 模型 | `EB-DeepSeek-V4-Pro`（内网） | 已可用 ✅ |
+| 模型 | `EB-DeepSeek-Flash`（内网） | 已可用 ✅ |
 
 ### 🆕 Python 版环境（对比学习用）
 
