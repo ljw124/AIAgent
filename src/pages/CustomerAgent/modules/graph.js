@@ -351,29 +351,34 @@ export class CustomerGraphBuilder {
     try {
       const tenant = getTenantById(state.tenantId || this.currentTenantId)
 
-      // === 加载长期记忆（用户偏好） ===
+      // === 加载长期记忆（用户偏好 + 用户事实记忆） ===
       let userPreferences = null
+      let userMemories = []
       try {
         const tenantId = state.tenantId || this.currentTenantId
         const userId = state.userId || this.currentUserId
         userPreferences = await this.memoryManager.loadUserPreferences(tenantId, userId)
+        userMemories = await this.memoryManager.loadUserMemories(tenantId, userId)
       } catch (err) {
         console.warn('[FAQ] 加载长期记忆失败:', err.message)
       }
 
-      // 构建用户偏好上下文（包含所有非空字段）
-      let userContext = ''
+      // 构建用户上下文（用户偏好 + 事实记忆，包含所有非空字段）
+      const parts = []
       if (userPreferences) {
         const prefs = userPreferences.preferences || userPreferences
-        const parts = []
         if (prefs.name) parts.push(`名称: ${prefs.name}`)
         if (prefs.interests) parts.push(`爱好: ${prefs.interests}`)
         if (prefs.expertise) parts.push(`专业领域: ${prefs.expertise}`)
         if (prefs.language) parts.push(`偏好语言: ${prefs.language}`)
-        if (parts.length > 0) {
-          userContext = `\n当前用户信息: ${parts.join(', ')}`
+      }
+      if (Array.isArray(userMemories)) {
+        for (const item of userMemories) {
+          const content = item.value?.content || item.value?.value?.content
+          if (content && typeof content === 'string') parts.push(content.trim())
         }
       }
+      const userContext = parts.length > 0 ? `\n当前用户信息: ${parts.join(', ')}` : ''
 
       // 使用 SystemMessage/HumanMessage 直接调用，以便注入用户上下文
       const { SystemMessage, HumanMessage } = await import('@langchain/core/messages')
@@ -555,14 +560,16 @@ export class CustomerGraphBuilder {
 
     const tenant = getTenantById(state.tenantId || this.currentTenantId)
 
-    // === Stage10: 加载长期记忆（用户偏好 + 历史对话摘要） ===
+    // === Stage10: 加载长期记忆（用户偏好 + 历史对话摘要 + 用户事实记忆） ===
     let userPreferences = null
     let conversationHistory = null
+    let userMemories = []
     try {
       const tenantId = state.tenantId || this.currentTenantId
       const userId = state.userId || this.currentUserId
       userPreferences = await this.memoryManager.loadUserPreferences(tenantId, userId)
       conversationHistory = await this.memoryManager.getConversationHistory(tenantId, userId)
+      userMemories = await this.memoryManager.loadUserMemories(tenantId, userId)
     } catch (err) {
       console.warn('[GenerateAnswer] 加载长期记忆失败:', err.message)
     }
@@ -580,6 +587,20 @@ export class CustomerGraphBuilder {
         if (prefs.language) contextParts.push(`- 偏好语言: ${prefs.language}`)
         if (prefs.interests) contextParts.push(`- 兴趣领域: ${prefs.interests}`)
         if (prefs.expertise) contextParts.push(`- 技术水平: ${prefs.expertise}`)
+      }
+    }
+
+    // 长期记忆：用户事实记忆（memories namespace，如“用户姓名是小米”“用户叫小米”）
+    if (Array.isArray(userMemories) && userMemories.length > 0) {
+      const memoryLines = userMemories
+        .map((item) => {
+          const content = item.value?.content || item.value?.value?.content
+          return content && typeof content === 'string' ? content.trim() : ''
+        })
+        .filter(Boolean)
+      if (memoryLines.length > 0) {
+        contextParts.push('## 用户记忆（长期记忆）')
+        contextParts.push(memoryLines.map((line) => `- ${line}`).join('\n'))
       }
     }
 
@@ -624,7 +645,7 @@ export class CustomerGraphBuilder {
 
     ## 回答要求
     - 只回答用户当前的问题，不要对「历史对话」中的内容进行评论或复述
-    - 如果上下文中有用户偏好信息（如用户名称），请直接使用，不要提及「根据对话历史」等字样
+    - 如果上下文中有「用户偏好」或「用户记忆」信息（如用户名称、用户叫法、兴趣等），请直接使用这些信息回答用户关于自身的问题，不要说你不知道
     - 如果上下文中有知识库检索结果，请引用来源
     - 如果上下文中有工具调用结果，请基于结果回答
     - 如果上下文为空，请基于你的知识回答`
@@ -790,26 +811,76 @@ export class CustomerGraphBuilder {
       }
     )
 
-    // 标记：第一次 yield 时清空从 checkpoint 恢复的旧值，防止上一轮回答混入
-    let isFirstYield = true
+    // 在 streamMode 'values' 下，每次 yield 都是累积后的完整 state，并且会从
+    // MemorySaver checkpoint 恢复上一轮结束时的旧值。仅清空第一次 yield 是不够的：
+    // 后续节点（如 classify_intent）再次 yield 时，finalAnswer / retrievedDocs /
+    // toolResults 又会变回 checkpoint 中恢复的旧值，导致旧回答、旧检索结果混入本轮。
+    //
+    // 修复：记录第一轮恢复的旧值作为基线，后续 yield 中按「内容」与基线比较，
+    // 仍等于基线旧值的字段说明本轮尚未真正更新，则屏蔽为空；只有本轮节点真正
+    // 产出新值才放行。执行轨迹 executionTrace 是累积 reducer，按长度做增量切片，
+    // 只推送本轮新增的 trace。
+    const sameContent = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+
+    let baseline = null
 
     for await (const state of stream) {
-      // 回调执行轨迹
-      if (onTrace && state.executionTrace) {
-        const lastTrace = state.executionTrace[state.executionTrace.length - 1]
-        if (lastTrace) onTrace(lastTrace)
+      // 执行轨迹：增量推送本轮新增的 trace，跳过 checkpoint 恢复的旧轨迹
+      if (onTrace && Array.isArray(state.executionTrace)) {
+        const traces =
+          baseline === null ? [] : state.executionTrace.slice(baseline.traceCount)
+        for (const trace of traces) {
+          if (trace) onTrace(trace)
+        }
       }
 
-      // 第一次 yield 时，清空从 checkpoint 恢复的旧 finalAnswer 和 structuredResponse
-      if (isFirstYield) {
-        isFirstYield = false
+      // 第一次 yield：记录 checkpoint 恢复的旧值作为基线，并全部清空
+      if (baseline === null) {
+        baseline = {
+          intent: state.intent ?? 'unknown',
+          intentConfidence: state.intentConfidence ?? 0,
+          finalAnswer: state.finalAnswer ?? '',
+          structuredResponse: state.structuredResponse ?? null,
+          retrievedDocs: state.retrievedDocs ?? [],
+          toolResults: state.toolResults ?? [],
+          traceCount: Array.isArray(state.executionTrace) ? state.executionTrace.length : 0
+        }
         yield {
           ...state,
+          intent: 'unknown',
+          intentConfidence: 0,
           finalAnswer: '',
-          structuredResponse: null
+          structuredResponse: null,
+          retrievedDocs: [],
+          toolResults: [],
+          executionTrace: Array.isArray(state.executionTrace) ? [] : state.executionTrace
         }
-      } else {
-        yield state
+        continue
+      }
+
+      // 屏蔽仍等于基线旧值的字段，防止上一轮残留混入本轮
+      yield {
+        ...state,
+        intent: sameContent(state.intent, baseline.intent) ? 'unknown' : state.intent,
+        intentConfidence:
+          state.intentConfidence === baseline.intentConfidence
+            ? 0
+            : state.intentConfidence,
+        finalAnswer: sameContent(state.finalAnswer, baseline.finalAnswer)
+          ? ''
+          : state.finalAnswer,
+        structuredResponse: sameContent(state.structuredResponse, baseline.structuredResponse)
+          ? null
+          : state.structuredResponse,
+        retrievedDocs: sameContent(state.retrievedDocs, baseline.retrievedDocs)
+          ? []
+          : state.retrievedDocs,
+        toolResults: sameContent(state.toolResults, baseline.toolResults)
+          ? []
+          : state.toolResults,
+        executionTrace: Array.isArray(state.executionTrace)
+          ? state.executionTrace.slice(baseline.traceCount)
+          : state.executionTrace
       }
     }
   }

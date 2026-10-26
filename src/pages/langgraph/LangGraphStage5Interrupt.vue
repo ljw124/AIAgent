@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-21 12:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-09-24 10:29:50
+ * @LastEditTime: 2026-10-26 11:33:58
  * @Description: 阶段五：Human-in-the-Loop — interrupt 人机协同
  *   学习目标：掌握 interrupt() 的用法，理解人机协同工作流
  *   核心 API：interrupt()、new Command({ resume })、MemorySaver、checkpointer
@@ -273,6 +273,12 @@
 /* global INNER_API_KEY */
 import { ChatOpenAI } from '@langchain/openai'
 import { HumanMessage } from '@langchain/core/messages'
+// LangGraph 核心 API 导入说明：
+//   Command      — 恢复中断时向图注入新指令（resume）
+//   interrupt    — 在节点内抛出 GraphInterrupt 暂停执行
+//   MemorySaver  — 内存检查点保存器（使中断/恢复成为可能）
+//   isInterrupted / INTERRUPT — 检测 invoke 结果中的中断标记
+//   isGraphInterrupt          — 检测捕获异常是否为 GraphInterrupt
 import { StateGraph, Annotation, START, END, Command, interrupt, MemorySaver, isInterrupted, INTERRUPT, isGraphInterrupt } from '@langchain/langgraph'
 import mermaid from 'mermaid'
 import { stage5JsCode, stage5PyCode } from '@/composables/langgraphSamples.js'
@@ -365,7 +371,7 @@ export default {
     },
 
     /**
-     * 启动审批工作流（第一次调用）
+     * 启动审批工作流
      *
      * 阶段五核心：使用 interrupt() 在节点中暂停执行，等待人工审批
      * 流程：START → generate(LLM生成方案) → approval(interrupt暂停) → [人工审批]
@@ -390,14 +396,17 @@ export default {
         // 1. 定义状态
         // ============================================================
         const ApprovalState = Annotation.Root({
+          // 方案内容
           plan: Annotation({
             reducer: (_, right) => right,
             default: () => ''
           }),
+          // 审批结果
           approved: Annotation({
             reducer: (_, right) => right,
             default: () => false
           }),
+          // 执行结果
           result: Annotation({
             reducer: (_, right) => right,
             default: () => ''
@@ -458,6 +467,8 @@ export default {
         }
 
         // 节点2：等待人工审批（interrupt 暂停）
+        //   该节点会在中断后「原地恢复」：恢复时从 interrupt() 调用点继续执行，
+        //   且 interrupt() 的返回值即为 Command({ resume }) 传入的 decision
         const waitApproval = (state) => {
           self.executionSteps.push({
             node: 'approval',
@@ -476,8 +487,11 @@ export default {
             }
           })
 
-          // interrupt() 抛出 GraphInterrupt，暂停图执行
-          // 返回值是用户通过 Command({ resume }) 传入的值
+          // interrupt(value)：在节点中暂停执行的核心 API。
+          //   ① 调用时抛出 GraphInterrupt 异常，图引擎捕获后把当前状态写入 checkpointer，
+          //      并把 value 作为 Interrupt 信息返回给调用方（此处即前端展示给用户审批）。
+          //   ② 用户调用 Command({ resume }) 恢复后，本函数从这行「续跑」，
+          //      且 interrupt() 的返回值就是 resume 传入的值（decision）。
           const decision = interrupt({
             question: '请审批以下方案：',
             plan: state.plan
@@ -579,6 +593,8 @@ export default {
 
         // ============================================================
         // 4. 构建图（必须配置 checkpointer，使用条件路由）
+        //    MemorySaver：内存检查点保存器，保存每个节点执行后的状态快照；
+        //    interrupt() 依赖它保存现场，Command({ resume }) 依赖它恢复现场
         // ============================================================
         const checkpointer = new MemorySaver()
         const graph = new StateGraph(ApprovalState)
@@ -588,6 +604,9 @@ export default {
           .addNode('revisePlan', revisePlan)
           .addEdge(START, 'generate')
           .addEdge('generate', 'approval')
+          // 条件边：approval 节点执行完毕后，根据 routeAfterApproval 的返回值路由到下一节点
+          //   返回 'execute'   → 路由到 execute 节点（批准后执行方案）
+          //   返回 'revisePlan' → 路由到 revisePlan 节点（拒绝后重新生成方案）
           .addConditionalEdges('approval', routeAfterApproval, {
             execute: 'execute',
             revisePlan: 'revisePlan'
@@ -595,7 +614,8 @@ export default {
           .addEdge('revisePlan', 'approval') // 循环路径
           .addEdge('execute', END)
 
-        // 编译图时传入检查点
+        // 编译图：compile({ checkpointer }) 注入检查点保存器，
+        // 这是 interrupt() 中断/恢复能力的必要条件（缺省会报错）
         const app = graph.compile({ checkpointer })
 
         // 保存图实例引用和 checkpointer，用于后续恢复，使用非响应式属性避免 Vue 响应式系统干扰 AsyncLocalStorage
@@ -605,6 +625,8 @@ export default {
         // ============================================================
         // 5. 第一次调用：执行到 interrupt 处暂停
         // ============================================================
+        // 生成唯一的 thread_id：checkpointer 以 thread_id 为键保存/恢复该会话的执行现场，
+        // 后续 resume 必须使用同一个 thread_id 才能恢复到中断点
         this.threadId = 'thread-' + Date.now()
         const config = { configurable:
           {
@@ -616,9 +638,12 @@ export default {
         // 使用 invoke() 执行图——invoke() 内部通过 isInterrupted() 检测中断状态
         // stream() 在非嵌套图中会 suppress GraphInterrupt（_suppressInterrupt 返回 true），导致 for await 正常结束而不抛出异常，无法检测到中断。
         // invoke() 会检查每个 chunk 是否包含 __interrupt__ 标记，正确返回中断信息。
+        // 第一次调用：invoke({ plan: '' }, config) 启动图执行，
+        // 执行到 approval 节点内的 interrupt() 时暂停并返回中断结果
         const result = await app.invoke({ plan: '' }, config) // 执行图时传入配置（threadId）
 
-        // 检查是否被中断
+        // 检测中断：isInterrupted(result) 判断 invoke 返回值是否携带中断标记；
+        // 若被中断，通过 INTERRUPT 特殊键取出中断数组（每个元素含 value、id、resumable 等）
         if (isInterrupted(result)) {
           const interrupts = result[INTERRUPT]
           const interruptValue = interrupts[0]?.value
@@ -640,7 +665,9 @@ export default {
           this.result = result
         }
 
-        // 获取 Mermaid 图结构
+        // 获取图的 Mermaid 结构并渲染：
+        //   getGraphAsync() — 异步获取编译后图的结构信息（节点/边）
+        //   drawMermaid()   — 将图结构转换为 Mermaid 文本（用于渲染 SVG 流程图）
         try {
           const graphObj = await app.getGraphAsync()
           this.mermaidGraph = graphObj.drawMermaid({
@@ -730,7 +757,9 @@ export default {
           }
         }
 
-        // 使用 invoke() 恢复执行
+        // 恢复执行的核心 API：new Command({ resume })。
+        //   resume 值会作为 approval 节点中 interrupt() 的返回值（即 decision），
+        //   图从检查点恢复现场后继续执行后续逻辑（条件路由 → execute/revisePlan）
         const result = await this._compiledGraph.invoke(
           new Command({ resume: resumeValue }),
           resumeConfig

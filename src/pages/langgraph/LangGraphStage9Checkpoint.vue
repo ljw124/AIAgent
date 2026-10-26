@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-24 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-08 11:17:00
+ * @LastEditTime: 2026-10-26 14:06:51
  * @Description: 阶段九：Checkpoint 检查点 — getState/getStateHistory + Time Travel 回溯演示
  *   学习目标：掌握 LangGraph 的 getState/getStateHistory API，实现 Time Travel（回放/分叉）
  *   核心 API：graph.getState()、graph.getStateHistory()、graph.updateState()、StateSnapshot
@@ -210,6 +210,11 @@
 
 <script>
 /* global INNER_API_KEY */
+// 核心 API 导入说明：
+//   tool            — 将普通函数包装为 LLM 可调用的工具（配 schema 声明入参结构）
+//   MemorySaver     — 内存检查点保存器，为多轮会话与 Time Travel 提供状态持久化
+//   createReactAgent — 预构建的 ReAct 智能体（自动编排「思考→调工具→回答」循环）
+//   z               — Zod 校验库，用于声明工具入参 schema（供 LLM 生成结构化参数）
 import { ChatOpenAI } from '@langchain/openai'
 import { HumanMessage } from '@langchain/core/messages'
 import { tool } from '@langchain/core/tools'
@@ -261,9 +266,13 @@ export default {
     // ============================================================
     // 构建 Agent
     // ============================================================
+    // 构建（并缓存）ReAct 智能体：
+    //   仅首次调用时创建，之后复用 agentCache，保证同一个 MemorySaver 贯穿所有线程会话
     buildAgent() {
       if (this.agentCache) return this.agentCache
 
+      // 使用 tool() 定义一个「计算器」工具：
+      //   schema 通过 z.object 声明入参 expression，供 LLM 理解如何传参
       const calculatorTool = tool(
         async ({ expression }) => {
           const sanitized = expression.replace(/[^0-9+\-*/().%\s]/g, '')
@@ -293,6 +302,9 @@ export default {
         }
       })
 
+      // 创建 ReAct 智能体并注入 checkpointer：
+      //   checkpointer 是 getState/getStateHistory/Time Travel 的基础，
+      //   它以 thread_id 为键保存每个会话的执行现场
       this.agentCache = createReactAgent({
         llm,
         tools: [calculatorTool],
@@ -322,11 +334,14 @@ export default {
       try {
         const agent = this.buildAgent()
 
+        // config 以 thread_id 标识当前会话：
+        //   相同 thread_id 会命中同一段历史，checkpointer 据此恢复状态并追加新消息
         const config = {
           configurable: { thread_id: this.currentThreadId }
         }
 
         // 只传入最新的用户消息，让 checkpointer 自动从上次 checkpoint 恢复并追加
+        //   streamMode: 'values' — 每次状态更新都产出完整状态值（便于直接读取 messages）
         const stream = await agent.stream(
           { messages: [new HumanMessage(text)] },
           { ...config, streamMode: 'values' }
@@ -362,6 +377,12 @@ export default {
     // ============================================================
     // getState — 查看当前状态快照
     // ============================================================
+    // getState(config)：获取当前线程最新的 StateSnapshot（状态快照）
+    //   snapshot.values       — 当前状态值（此处含 messages）
+    //   snapshot.next         — 下一步待执行节点（空数组表示已结束）
+    //   snapshot.config       — 当前检查点 config（含 checkpoint_id）
+    //   snapshot.parentConfig — 父检查点 config（用于构建检查点链）
+    //   snapshot.createdAt    — 检查点创建时间
     async refreshState() {
       try {
         const agent = this.buildAgent()
@@ -395,16 +416,19 @@ export default {
     // ============================================================
     // getStateHistory — 遍历历史检查点
     // ============================================================
+    // getStateHistory(config)：异步迭代器，按时间倒序遍历当前线程的所有历史检查点快照，
+    //   每个 snapshot 都携带 config/parentConfig/values/metadata，供回放与分叉使用
     async refreshHistory() {
       try {
         const agent = this.buildAgent()
         const config = { configurable: { thread_id: this.currentThreadId } }
         const history = []
 
+        // 遍历历史快照：每个 snapshot 代表一个已保存的执行现场
         for await (const snapshot of agent.getStateHistory(config)) {
-          console.log(123, snapshot)
           const msgs = snapshot.values?.messages || []
           history.push({
+            // checkpoint_id 截取前 8 位用于展示，同时保留完整值供回放/分叉时精确恢复
             checkpointId: snapshot.config?.configurable?.checkpoint_id
               ? snapshot.config.configurable.checkpoint_id.substring(0, 8)
               : '?',
@@ -442,6 +466,9 @@ export default {
     // ============================================================
     // Time Travel: 回放（Replay）
     // ============================================================
+    // Time Travel：回放（Replay）
+    //   使用历史检查点的 config 重新执行，且不追加新输入，
+    //   从而从该检查点「重放」后续执行过程
     async replayFromCheckpoint() {
       if (!this.selectedCheckpointId || this.loading) return
 
@@ -486,6 +513,9 @@ export default {
     // ============================================================
     // Time Travel: 分叉（Fork）
     // ============================================================
+    // Time Travel：分叉（Fork）
+    //   从历史检查点恢复现场，并在其上追加新输入继续执行，
+    //   生成一条「分支」而不影响原主线
     async forkFromCheckpoint() {
       if (!this.selectedCheckpointId || this.loading) return
 
@@ -574,6 +604,9 @@ export default {
       this.refreshHistory()
     },
 
+    // 删除当前线程：
+    //   先调用 memorySaver.deleteThread(tid) 清理该 thread_id 的全部检查点，
+    //   再同步清理本地缓存的会话数据
     async deleteCurrentThread() {
       if (this.loading) return
       const tid = this.currentThreadId
@@ -606,6 +639,7 @@ export default {
       return msgs.length
     },
 
+    // 清空当前线程：重置本地 UI 状态，并删除该 thread_id 在 MemorySaver 中的检查点记录
     clearAll() {
       this.messages = []
       this.currentState = null
