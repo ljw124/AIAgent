@@ -20,30 +20,55 @@ const { URL } = require('url')
 require('dotenv').config()
 
 const PORT = 22223
-const PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'InnerModel.py')
-const OLLAMA_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'OllamaModel.py')
-const MODELSCOPE_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'ModelScopeModel.py')
-const DASHSCOPE_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'DashScopeModel.py')
-const DEEPSEEK_PYTHON_SCRIPT = path.join(__dirname, 'src', 'composables', 'DeepSeekModel.py')
+
+// Python 解释器路径（集中管理，支持通过环境变量覆盖，避免硬编码个人用户名）
+const PYTHON_PATH = process.platform === 'win32'
+  ? (process.env.PYTHON_PATH || 'C:\\Users\\lujinwei\\AppData\\Local\\Programs\\Python\\Python313\\python.exe')
+  : 'python3'
+
+// Python 脚本路径（集中管理）
+const PYTHON_SCRIPTS = {
+  inner: path.join(__dirname, 'src', 'composables', 'InnerModel.py'),
+  ollama: path.join(__dirname, 'src', 'composables', 'OllamaModel.py'),
+  modelscope: path.join(__dirname, 'src', 'composables', 'ModelScopeModel.py'),
+  dashscope: path.join(__dirname, 'src', 'composables', 'DashScopeModel.py'),
+  deepseek: path.join(__dirname, 'src', 'composables', 'DeepSeekModel.py'),
+}
+
+// Python 调用器配置（集中管理各 provider 的超时与日志标签）
+const PYTHON_CALLERS = {
+  inner: { script: PYTHON_SCRIPTS.inner, timeout: 60000, label: 'Inner' },
+  ollama: { script: PYTHON_SCRIPTS.ollama, timeout: 120000, label: 'Ollama' },
+  modelscope: { script: PYTHON_SCRIPTS.modelscope, timeout: 120000, label: 'ModelScope' },
+  dashscope: { script: PYTHON_SCRIPTS.dashscope, timeout: 120000, label: 'DashScope' },
+  deepseek: { script: PYTHON_SCRIPTS.deepseek, timeout: 120000, label: 'DeepSeek' },
+}
+
+// chat 端点路由表（/api 前缀会被 vue.config.js 代理 strip，故统一归一化处理）
+const CHAT_ROUTES = {
+  '/inner/chat': { provider: 'inner', label: 'Inner' },
+  '/ollama/chat': { provider: 'ollama', label: 'Ollama' },
+  '/modelscope/chat': { provider: 'modelscope', label: 'ModelScope' },
+  '/DashScope/chat': { provider: 'dashscope', label: 'DashScope', defaultModel: 'qwen-plus' },
+  '/deepseek/chat': { provider: 'deepseek', label: 'DeepSeek', defaultModel: 'deepseek-chat' },
+}
 
 // PostgreSQL 长期记忆存储模块
 const pgStore = require('./src/composables/pgStore')
 
 /**
- * 调用 Python 脚本并返回结果
- * @param {string} message - 用户消息
- * @param {number} temperature - 温度参数
+ * 调用 Python 脚本并返回结果（统一工厂函数）
+ * @param {string} script - Python 脚本路径
+ * @param {number} timeout - 超时时间（毫秒）
+ * @param {string} label - 日志标签
+ * @param {object} args - 传给 Python 脚本的参数对象
  * @returns {Promise<{content?: string, error?: string}>}
  */
-function callPythonScript(message, temperature = 0.7) {
+function runPythonScript(script, timeout, label, args = {}) {
   return new Promise((resolve, reject) => {
-    const params = JSON.stringify({ message, temperature })
-    // 使用完整路径确保使用正确的 Python 环境（已安装 langchain_openai）
-    const pythonPath = process.platform === 'win32'
-      ? 'C:\\Users\\lujinwei\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
-      : 'python3'
-    const python = spawn(pythonPath, [PYTHON_SCRIPT, '--json', params], {
-      timeout: 60000, // 60 秒超时（内网模型推理较慢）
+    const params = JSON.stringify(args)
+    const python = spawn(PYTHON_PATH, [script, '--json', params], {
+      timeout,
       env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
     })
 
@@ -60,7 +85,7 @@ function callPythonScript(message, temperature = 0.7) {
 
     python.on('close', (code) => {
       if (code !== 0) {
-        console.error(`[Python] 进程退出码: ${code}, stderr: ${stderr}`)
+        console.error(`[${label} Python] 进程退出码: ${code}, stderr: ${stderr}`)
         // 尝试从 stdout 中解析 JSON 错误信息（Python --json 模式会将错误输出到 stdout）
         try {
           const errResult = JSON.parse(stdout.trim())
@@ -80,262 +105,32 @@ function callPythonScript(message, temperature = 0.7) {
         }
         resolve(result)
       } catch (e) {
-        console.error(`[Python] JSON 解析失败, stdout: ${stdout}`)
+        console.error(`[${label} Python] JSON 解析失败, stdout: ${stdout}`)
         reject(new Error(`Python 输出解析失败: ${stdout.substring(0, 200)}`))
       }
     })
 
     python.on('error', (err) => {
-      console.error(`[Python] 启动失败:`, err.message)
+      console.error(`[${label} Python] 启动失败:`, err.message)
       reject(new Error(`无法启动 Python: ${err.message}`))
     })
   })
 }
 
 /**
- * 调用 Ollama Python 脚本并返回结果
+ * 按 provider 调用对应 Python 脚本
+ * @param {string} provider - 调用器 key（inner/ollama/modelscope/dashscope/deepseek）
  * @param {string} message - 用户消息
  * @param {number} temperature - 温度参数
+ * @param {object} extra - 额外参数（如 model）
  * @returns {Promise<{content?: string, error?: string}>}
  */
-function callPythonScriptOllama(message, temperature = 0.7) {
-  return new Promise((resolve, reject) => {
-    const params = JSON.stringify({ message, temperature })
-    const pythonPath = process.platform === 'win32'
-      ? 'C:\\Users\\lujinwei\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
-      : 'python3'
-    const python = spawn(pythonPath, [OLLAMA_PYTHON_SCRIPT, '--json', params], {
-      timeout: 120000, // 120 秒超时（本地模型推理较慢）
-      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
-    })
-
-    let stdout = ''
-    let stderr = ''
-
-    python.stdout.on('data', (data) => {
-      stdout += data.toString()
-    })
-
-    python.stderr.on('data', (data) => {
-      stderr += data.toString()
-    })
-
-    python.on('close', (code) => {
-      if (code !== 0) {
-        console.error(`[Ollama Python] 进程退出码: ${code}, stderr: ${stderr}`)
-        try {
-          const errResult = JSON.parse(stdout.trim())
-          if (errResult.error) {
-            reject(new Error(errResult.error))
-            return
-          }
-        } catch (_) { /* stdout 不是 JSON，使用 stderr */ }
-        reject(new Error(stderr || stdout.trim() || `Python 进程退出码: ${code}`))
-        return
-      }
-      try {
-        const result = JSON.parse(stdout.trim())
-        if (result.error) {
-          reject(new Error(result.error))
-          return
-        }
-        resolve(result)
-      } catch (e) {
-        console.error(`[Ollama Python] JSON 解析失败, stdout: ${stdout}`)
-        reject(new Error(`Python 输出解析失败: ${stdout.substring(0, 200)}`))
-      }
-    })
-
-    python.on('error', (err) => {
-      console.error(`[Ollama Python] 启动失败:`, err.message)
-      reject(new Error(`无法启动 Python: ${err.message}`))
-    })
-  })
-}
-
-/**
- * 调用魔搭 ModelScope Python 脚本并返回结果
- * @param {string} message - 用户消息
- * @param {number} temperature - 温度参数
- * @returns {Promise<{content?: string, error?: string}>}
- */
-function callPythonScriptModelScope(message, temperature = 0.7) {
-  return new Promise((resolve, reject) => {
-    const params = JSON.stringify({ message, temperature })
-    const pythonPath = process.platform === 'win32'
-      ? 'C:\\Users\\lujinwei\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
-      : 'python3'
-    const python = spawn(pythonPath, [MODELSCOPE_PYTHON_SCRIPT, '--json', params], {
-      timeout: 120000, // 120 秒超时（云端模型推理）
-      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
-    })
-
-    let stdout = ''
-    let stderr = ''
-
-    python.stdout.on('data', (data) => {
-      stdout += data.toString()
-    })
-
-    python.stderr.on('data', (data) => {
-      stderr += data.toString()
-    })
-
-    python.on('close', (code) => {
-      if (code !== 0) {
-        console.error(`[ModelScope Python] 进程退出码: ${code}, stderr: ${stderr}`)
-        try {
-          const errResult = JSON.parse(stdout.trim())
-          if (errResult.error) {
-            reject(new Error(errResult.error))
-            return
-          }
-        } catch (_) { /* stdout 不是 JSON，使用 stderr */ }
-        reject(new Error(stderr || stdout.trim() || `Python 进程退出码: ${code}`))
-        return
-      }
-      try {
-        const result = JSON.parse(stdout.trim())
-        if (result.error) {
-          reject(new Error(result.error))
-          return
-        }
-        resolve(result)
-      } catch (e) {
-        console.error(`[ModelScope Python] JSON 解析失败, stdout: ${stdout}`)
-        reject(new Error(`Python 输出解析失败: ${stdout.substring(0, 200)}`))
-      }
-    })
-
-    python.on('error', (err) => {
-      console.error(`[ModelScope Python] 启动失败:`, err.message)
-      reject(new Error(`无法启动 Python: ${err.message}`))
-    })
-  })
-}
-
-/**
- * 调用百炼 DashScope Python 脚本并返回结果
- * @param {string} message - 用户消息
- * @param {number} temperature - 温度参数
- * @param {string} model - 模型名称
- * @returns {Promise<{content?: string, error?: string}>}
- */
-function callPythonScriptDashScope(message, temperature = 0.7, model = 'qwen-plus') {
-  return new Promise((resolve, reject) => {
-    const params = JSON.stringify({ message, temperature, model })
-    const pythonPath = process.platform === 'win32'
-      ? 'C:\\Users\\lujinwei\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
-      : 'python3'
-    const python = spawn(pythonPath, [DASHSCOPE_PYTHON_SCRIPT, '--json', params], {
-      timeout: 120000, // 120 秒超时（云端模型推理）
-      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
-    })
-
-    let stdout = ''
-    let stderr = ''
-
-    python.stdout.on('data', (data) => {
-      stdout += data.toString()
-    })
-
-    python.stderr.on('data', (data) => {
-      stderr += data.toString()
-    })
-
-    python.on('close', (code) => {
-      if (code !== 0) {
-        console.error(`[DashScope Python] 进程退出码: ${code}, stderr: ${stderr}`)
-        try {
-          const errResult = JSON.parse(stdout.trim())
-          if (errResult.error) {
-            reject(new Error(errResult.error))
-            return
-          }
-        } catch (_) { /* stdout 不是 JSON，使用 stderr */ }
-        reject(new Error(stderr || stdout.trim() || `Python 进程退出码: ${code}`))
-        return
-      }
-      try {
-        const result = JSON.parse(stdout.trim())
-        if (result.error) {
-          reject(new Error(result.error))
-          return
-        }
-        resolve(result)
-      } catch (e) {
-        console.error(`[DashScope Python] JSON 解析失败, stdout: ${stdout}`)
-        reject(new Error(`Python 输出解析失败: ${stdout.substring(0, 200)}`))
-      }
-    })
-
-    python.on('error', (err) => {
-      console.error(`[DashScope Python] 启动失败:`, err.message)
-      reject(new Error(`无法启动 Python: ${err.message}`))
-    })
-  })
-}
-
-/**
- * 调用 DeepSeek Python 脚本并返回结果
- * @param {string} message - 用户消息
- * @param {number} temperature - 温度参数
- * @param {string} model - 模型名称
- * @returns {Promise<{content?: string, error?: string}>}
- */
-function callPythonScriptDeepSeek(message, temperature = 0.7, model = 'deepseek-chat') {
-  return new Promise((resolve, reject) => {
-    const params = JSON.stringify({ message, temperature, model })
-    const pythonPath = process.platform === 'win32'
-      ? 'C:\\Users\\lujinwei\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
-      : 'python3'
-    const python = spawn(pythonPath, [DEEPSEEK_PYTHON_SCRIPT, '--json', params], {
-      timeout: 120000, // 120 秒超时（云端模型推理）
-      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
-    })
-
-    let stdout = ''
-    let stderr = ''
-
-    python.stdout.on('data', (data) => {
-      stdout += data.toString()
-    })
-
-    python.stderr.on('data', (data) => {
-      stderr += data.toString()
-    })
-
-    python.on('close', (code) => {
-      if (code !== 0) {
-        console.error(`[DeepSeek Python] 进程退出码: ${code}, stderr: ${stderr}`)
-        try {
-          const errResult = JSON.parse(stdout.trim())
-          if (errResult.error) {
-            reject(new Error(errResult.error))
-            return
-          }
-        } catch (_) { /* stdout 不是 JSON，使用 stderr */ }
-        reject(new Error(stderr || stdout.trim() || `Python 进程退出码: ${code}`))
-        return
-      }
-      try {
-        const result = JSON.parse(stdout.trim())
-        if (result.error) {
-          reject(new Error(result.error))
-          return
-        }
-        resolve(result)
-      } catch (e) {
-        console.error(`[DeepSeek Python] JSON 解析失败, stdout: ${stdout}`)
-        reject(new Error(`Python 输出解析失败: ${stdout.substring(0, 200)}`))
-      }
-    })
-
-    python.on('error', (err) => {
-      console.error(`[DeepSeek Python] 启动失败:`, err.message)
-      reject(new Error(`无法启动 Python: ${err.message}`))
-    })
-  })
+function callPythonScript(provider, message, temperature = 0.7, extra = {}) {
+  const cfg = PYTHON_CALLERS[provider]
+  if (!cfg) {
+    return Promise.reject(new Error(`未知的 Python provider: ${provider}`))
+  }
+  return runPythonScript(cfg.script, cfg.timeout, cfg.label, { message, temperature, ...extra })
 }
 
 /**
@@ -459,98 +254,24 @@ const server = http.createServer(async (req, res) => {
     // POST /api/inner/chat 或 /inner/chat — 内网大模型 Python 调用
     // （vue.config.js 中 /api 代理会 strip /api 前缀，所以两种路径都要支持）
     // ============================================================
-    if (method === 'POST' && (url === '/api/inner/chat' || url === '/inner/chat')) {
-      const body = await parseBody(req)
-      const { message, temperature } = body
+    if (method === 'POST') {
+      const chatRoute = CHAT_ROUTES[url.replace(/^\/api/, '')]
+      if (chatRoute) {
+        const body = await parseBody(req)
+        const { message, temperature, model } = body
 
-      if (!message || !message.trim()) {
-        sendJSON(res, 400, { error: 'message 参数不能为空' })
+        if (!message || !message.trim()) {
+          sendJSON(res, 400, { error: 'message 参数不能为空' })
+          return
+        }
+
+        console.log(`[${chatRoute.label} Chat] 收到消息: "${message.substring(0, 50)}..."`)
+        const extra = chatRoute.defaultModel ? { model: model || chatRoute.defaultModel } : {}
+        const result = await callPythonScript(chatRoute.provider, message, temperature, extra)
+        console.log(`[${chatRoute.label} Chat] 回复: "${(result.content || '').substring(0, 50)}..."`)
+        sendJSON(res, 200, result)
         return
       }
-
-      console.log(`[Inner Chat] 收到消息: "${message.substring(0, 50)}..."`)
-      const result = await callPythonScript(message, temperature)
-      console.log(`[Inner Chat] 回复: "${(result.content || '').substring(0, 50)}..."`)
-      sendJSON(res, 200, result)
-      return
-    }
-
-    // ============================================================
-    // POST /api/ollama/chat — 本地 Ollama Python 调用
-    // ============================================================
-    if (method === 'POST' && (url === '/api/ollama/chat' || url === '/ollama/chat')) {
-      const body = await parseBody(req)
-      const { message, temperature } = body
-
-      if (!message || !message.trim()) {
-        sendJSON(res, 400, { error: 'message 参数不能为空' })
-        return
-      }
-
-      console.log(`[Ollama Chat] 收到消息: "${message.substring(0, 50)}..."`)
-      const result = await callPythonScriptOllama(message, temperature)
-      console.log(`[Ollama Chat] 回复: "${(result.content || '').substring(0, 50)}..."`)
-      sendJSON(res, 200, result)
-      return
-    }
-
-    // ============================================================
-    // POST /api/modelscope/chat — 魔搭 ModelScope Python 调用
-    // ============================================================
-    if (method === 'POST' && (url === '/api/modelscope/chat' || url === '/modelscope/chat')) {
-      const body = await parseBody(req)
-      const { message, temperature } = body
-
-      if (!message || !message.trim()) {
-        sendJSON(res, 400, { error: 'message 参数不能为空' })
-        return
-      }
-
-      console.log(`[ModelScope Chat] 收到消息: "${message.substring(0, 50)}..."`)
-      const result = await callPythonScriptModelScope(message, temperature)
-      console.log(`[ModelScope Chat] 回复: "${(result.content || '').substring(0, 50)}..."`)
-      sendJSON(res, 200, result)
-      return
-    }
-
-    // ============================================================
-    // POST /api/DashScope/chat 或 /DashScope/chat — 百炼 DashScope Python 调用
-    // （vue.config.js 中 /api 代理会 strip /api 前缀，所以两种路径都要支持）
-    // ============================================================
-    if (method === 'POST' && (url === '/api/DashScope/chat' || url === '/DashScope/chat')) {
-      const body = await parseBody(req)
-      const { message, temperature, model } = body
-
-      if (!message || !message.trim()) {
-        sendJSON(res, 400, { error: 'message 参数不能为空' })
-        return
-      }
-
-      console.log(`[DashScope Chat] 收到消息: "${message.substring(0, 50)}..."`)
-      const result = await callPythonScriptDashScope(message, temperature, model)
-      console.log(`[DashScope Chat] 回复: "${(result.content || '').substring(0, 50)}..."`)
-      sendJSON(res, 200, result)
-      return
-    }
-
-    // ============================================================
-    // POST /api/deepseek/chat 或 /deepseek/chat — DeepSeek Python 调用
-    // （vue.config.js 中 /api 代理会 strip /api 前缀，所以两种路径都要支持）
-    // ============================================================
-    if (method === 'POST' && (url === '/api/deepseek/chat' || url === '/deepseek/chat')) {
-      const body = await parseBody(req)
-      const { message, temperature, model } = body
-
-      if (!message || !message.trim()) {
-        sendJSON(res, 400, { error: 'message 参数不能为空' })
-        return
-      }
-
-      console.log(`[DeepSeek Chat] 收到消息: "${message.substring(0, 50)}..."`)
-      const result = await callPythonScriptDeepSeek(message, temperature, model)
-      console.log(`[DeepSeek Chat] 回复: "${(result.content || '').substring(0, 50)}..."`)
-      sendJSON(res, 200, result)
-      return
     }
 
     // ============================================================
@@ -729,6 +450,6 @@ pgStore.initStoreTable().catch((err) => {
 server.listen(PORT, () => {
   console.log(`[Server] AI Agent 后端服务已启动: http://localhost:${PORT}`)
   console.log(`[Server] 内网 Python 调用端点: POST http://localhost:${PORT}/api/inner/chat`)
-  console.log(`[Server] Python 脚本路径: ${PYTHON_SCRIPT}`)
+  console.log(`[Server] Python 脚本路径: ${PYTHON_SCRIPTS.inner}`)
   console.log(`[Server] 长期记忆 Store API: POST http://localhost:${PORT}/api/store/{get,put,search,delete}`)
 })

@@ -29,7 +29,6 @@
  */
 
 /* global INNER_API_KEY */
-
 import { StateGraph, Annotation, START, END } from '@langchain/langgraph'
 import { ChatOpenAI } from '@langchain/openai'
 import { HumanMessage, AIMessage } from '@langchain/core/messages'
@@ -168,7 +167,6 @@ export class CustomerGraphBuilder {
   // ============================================================
   // 初始化
   // ============================================================
-
   initLLM() {
     if (this.llm) return this.llm
     // eslint-disable-next-line no-undef
@@ -225,7 +223,6 @@ export class CustomerGraphBuilder {
   // ============================================================
   // Stage1: StateGraph — 构建客服工作流图
   // ============================================================
-
   buildGraph() {
     if (this.compiled) return this.compiled
 
@@ -952,7 +949,6 @@ export class CustomerGraphBuilder {
   // ============================================================
   // 状态查询
   // ============================================================
-
   getKnowledgeStats() {
     return this.ragService?.getStats() || { ready: false, docCount: 0 }
   }
@@ -985,7 +981,6 @@ export class CustomerGraphBuilder {
   // ============================================================
   // 租户/线程管理
   // ============================================================
-
   switchTenant(tenantId) {
     this.currentTenantId = tenantId
     // 清除编译缓存，下次重新编译
@@ -1007,7 +1002,6 @@ export class CustomerGraphBuilder {
   // ============================================================
   // 长期记忆操作
   // ============================================================
-
   async loadUserPreferences() {
     return this.memoryManager.loadUserPreferences(this.currentTenantId, this.currentUserId)
   }

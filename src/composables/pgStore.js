@@ -28,6 +28,9 @@ const PG_CONNECTION_STRING =
 // 连接池（懒加载，首次调用时创建）
 let _pool = null
 
+// filter 字段名白名单：仅允许安全标识符，防止任意 JSON 路径注入
+const SAFE_FIELD_RE = /^[A-Za-z_][A-Za-z0-9_]*$/
+
 /**
  * 获取 PG 连接池
  */
@@ -50,32 +53,27 @@ function getPool() {
  */
 async function initStoreTable() {
   const pool = getPool()
-  const client = await pool.connect()
-  try {
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS langgraph_store (
-        namespace   text[]    NOT NULL,
-        key         text      NOT NULL,
-        value       jsonb     NOT NULL DEFAULT '{}',
-        created_at  timestamptz NOT NULL DEFAULT now(),
-        updated_at  timestamptz NOT NULL DEFAULT now(),
-        PRIMARY KEY (namespace, key)
-      )
-    `)
-    // 创建 GIN 索引用于 namespace 前缀搜索
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_langgraph_store_namespace
-      ON langgraph_store USING GIN (namespace)
-    `)
-    // 创建 updated_at 索引用于排序
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_langgraph_store_updated
-      ON langgraph_store (updated_at DESC)
-    `)
-    console.log('[PGStore] 数据表 langgraph_store 已就绪')
-  } finally {
-    client.release()
-  }
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS langgraph_store (
+      namespace   text[]    NOT NULL,
+      key         text      NOT NULL,
+      value       jsonb     NOT NULL DEFAULT '{}',
+      created_at  timestamptz NOT NULL DEFAULT now(),
+      updated_at  timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (namespace, key)
+    )
+  `)
+  // 创建 GIN 索引用于 namespace 前缀搜索
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_langgraph_store_namespace
+    ON langgraph_store USING GIN (namespace)
+  `)
+  // 创建 updated_at 索引用于排序
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_langgraph_store_updated
+    ON langgraph_store (updated_at DESC)
+  `)
+  console.log('[PGStore] 数据表 langgraph_store 已就绪')
 }
 
 /**
@@ -83,27 +81,21 @@ async function initStoreTable() {
  * GET 操作
  */
 async function getItem(namespace, key) {
-  const pool = getPool()
-  const client = await pool.connect()
-  try {
-    const result = await client.query(
-      `SELECT namespace, key, value, created_at, updated_at
-        FROM langgraph_store
-        WHERE namespace = $1::text[] AND key = $2
-        LIMIT 1`,
-      [namespace, key]
-    )
-    if (result.rows.length === 0) return null
-    const row = result.rows[0]
-    return {
-      namespace: row.namespace,
-      key: row.key,
-      value: row.value,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    }
-  } finally {
-    client.release()
+  const result = await getPool().query(
+    `SELECT namespace, key, value, created_at, updated_at
+      FROM langgraph_store
+      WHERE namespace = $1::text[] AND key = $2
+      LIMIT 1`,
+    [namespace, key]
+  )
+  if (result.rows.length === 0) return null
+  const row = result.rows[0]
+  return {
+    namespace: row.namespace,
+    key: row.key,
+    value: row.value,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
   }
 }
 
@@ -117,37 +109,25 @@ async function putItem(namespace, key, value) {
     return deleteItem(namespace, key)
   }
 
-  const pool = getPool()
-  const client = await pool.connect()
-  try {
-    await client.query(
-      `INSERT INTO langgraph_store (namespace, key, value, created_at, updated_at)
-        VALUES ($1::text[], $2, $3, now(), now())
-        ON CONFLICT (namespace, key)
-        DO UPDATE SET value = $3, updated_at = now()`,
-      [namespace, key, JSON.stringify(value)]
-    )
-    return { success: true }
-  } finally {
-    client.release()
-  }
+  await getPool().query(
+    `INSERT INTO langgraph_store (namespace, key, value, created_at, updated_at)
+      VALUES ($1::text[], $2, $3, now(), now())
+      ON CONFLICT (namespace, key)
+      DO UPDATE SET value = $3, updated_at = now()`,
+    [namespace, key, JSON.stringify(value)]
+  )
+  return { success: true }
 }
 
 /**
  * 删除 item
  */
 async function deleteItem(namespace, key) {
-  const pool = getPool()
-  const client = await pool.connect()
-  try {
-    await client.query(
-      `DELETE FROM langgraph_store WHERE namespace = $1::text[] AND key = $2`,
-      [namespace, key]
-    )
-    return { success: true }
-  } finally {
-    client.release()
-  }
+  await getPool().query(
+    `DELETE FROM langgraph_store WHERE namespace = $1::text[] AND key = $2`,
+    [namespace, key]
+  )
+  return { success: true }
 }
 
 /**
@@ -155,63 +135,54 @@ async function deleteItem(namespace, key) {
  */
 async function searchItems(namespacePrefix, options = {}) {
   const { filter = null, limit = 10, offset = 0 } = options
-  const pool = getPool()
-  const client = await pool.connect()
-  try {
-    // 使用 namespace 前缀匹配
-    let query = `
-      SELECT namespace, key, value, created_at, updated_at
-      FROM langgraph_store
-      WHERE namespace = $1::text[]
-    `
-    const params = [namespacePrefix]
 
-    // 支持 filter（jsonb 字段过滤）
-    if (filter && typeof filter === 'object') {
-      let filterIdx = 1
-      const filterClauses = []
-      for (const [field, val] of Object.entries(filter)) {
-        filterIdx++
-        filterClauses.push(`value->>$${filterIdx} = $${filterIdx + 1}`)
-        params.push(field, String(val))
+  // 使用 namespace 前缀匹配
+  let query = `
+    SELECT namespace, key, value, created_at, updated_at
+    FROM langgraph_store
+    WHERE namespace = $1::text[]
+  `
+  const params = [namespacePrefix]
+
+  // 支持 filter（jsonb 顶层字段过滤）
+  if (filter && typeof filter === 'object') {
+    const filterClauses = []
+    for (const [field, val] of Object.entries(filter)) {
+      // 字段名作为 JSON 路径的一部分，需白名单校验后安全拼入（不能作为参数绑定）
+      if (!SAFE_FIELD_RE.test(field)) {
+        throw new Error(`非法的 filter 字段名: ${field}`)
       }
-      if (filterClauses.length > 0) {
-        query += ' AND ' + filterClauses.join(' AND ')
-      }
+      params.push(String(val))
+      filterClauses.push(`value->>'${field}' = $${params.length}`)
     }
-
-    query += ` ORDER BY updated_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`
-    params.push(limit, offset)
-
-    const result = await client.query(query, params)
-
-    return result.rows.map((row) => ({
-      namespace: row.namespace,
-      key: row.key,
-      value: row.value,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    }))
-  } finally {
-    client.release()
+    if (filterClauses.length > 0) {
+      query += ' AND ' + filterClauses.join(' AND ')
+    }
   }
+
+  params.push(limit, offset)
+  query += ` ORDER BY updated_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`
+
+  const result = await getPool().query(query, params)
+
+  return result.rows.map((row) => ({
+    namespace: row.namespace,
+    key: row.key,
+    value: row.value,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }))
 }
 
 /**
  * 删除指定 namespace 前缀下的所有 items
  */
 async function deleteByNamespace(namespacePrefix) {
-  const pool = getPool()
-  const client = await pool.connect()
-  try {
-    const result = await client.query(
-      `DELETE FROM langgraph_store WHERE namespace = $1::text[]`,
-      [namespacePrefix]
-    )
-    return { success: true, deleted: result.rowCount }
-  } finally {
-    client.release()
-  }
+  const result = await getPool().query(
+    `DELETE FROM langgraph_store WHERE namespace = $1::text[]`,
+    [namespacePrefix]
+  )
+  return { success: true, deleted: result.rowCount }
 }
 
 /**
