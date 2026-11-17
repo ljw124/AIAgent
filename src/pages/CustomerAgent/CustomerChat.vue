@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-09-14 10:00:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-12 10:11:13
+ * @LastEditTime: 2026-11-17 17:16:52
  * @Description: 智能客服 Agent — LangChain + LangGraph 全阶段综合实战（重构版）
  *   从 createReactAgent 黑盒 → StateGraph 手写工作流
  *
@@ -1366,6 +1366,7 @@ h1 {
   min-height: 300px;
   max-height: 500px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .empty-chat {
@@ -1460,23 +1461,30 @@ h1 {
 }
 
 /* Markdown 渲染样式 */
+/* 注意：markdown 内容通过 v-html 渲染，内部元素没有 scoped 属性，
+  因此所有子元素选择器必须使用 ::v-deep 才能生效，否则
+  pre/code/table 会回退到浏览器默认样式（white-space: pre;
+  overflow: visible），导致长代码行横向溢出气泡 */
 .markdown-body {
   line-height: 1.8;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  max-width: 100%;
 }
-.markdown-body h1,
-.markdown-body h2,
-.markdown-body h3,
-.markdown-body h4 {
+.markdown-body::v-deep h1,
+.markdown-body::v-deep h2,
+.markdown-body::v-deep h3,
+.markdown-body::v-deep h4 {
   margin: 12px 0 6px;
   font-weight: 600;
   line-height: 1.4;
 }
-.markdown-body h1 { font-size: 18px; }
-.markdown-body h2 { font-size: 16px; }
-.markdown-body h3 { font-size: 15px; }
-.markdown-body h4 { font-size: 14px; }
-.markdown-body p {
+.markdown-body::v-deep h1 { font-size: 18px; }
+.markdown-body::v-deep h2 { font-size: 16px; }
+.markdown-body::v-deep h3 { font-size: 15px; }
+.markdown-body::v-deep h4 { font-size: 14px; }
+.markdown-body::v-deep p {
   margin: 6px 0;
 }
 .markdown-body::v-deep ul,
@@ -1489,58 +1497,77 @@ h1 {
   margin: 3px 0;
   padding-left: 4px;
 }
-.markdown-body code {
+.markdown-body::v-deep code {
   background: #f1f5f9;
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 13px;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   color: #d6336c;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
-.markdown-body pre {
+.markdown-body::v-deep pre {
   background: #1e293b;
   color: #e2e8f0;
   padding: 12px;
   border-radius: 6px;
   overflow-x: auto;
+  max-width: 100%;
   margin: 8px 0;
   font-size: 13px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  white-space: pre;
 }
-.markdown-body pre code {
+.markdown-body::v-deep pre code {
   background: transparent;
   color: inherit;
   padding: 0;
+  white-space: inherit;
 }
-.markdown-body blockquote {
+.markdown-body::v-deep blockquote {
   border-left: 3px solid #cbd5e1;
   padding-left: 12px;
   margin: 8px 0;
   color: #64748b;
 }
-.markdown-body table {
+.markdown-body::v-deep hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 12px 0;
+}
+.markdown-body::v-deep table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
   border-collapse: collapse;
   margin: 8px 0;
-  width: 100%;
 }
-.markdown-body th,
-.markdown-body td {
+.markdown-body::v-deep th,
+.markdown-body::v-deep td {
   border: 1px solid #e2e8f0;
   padding: 6px 10px;
   text-align: left;
+  overflow-wrap: break-word;
 }
-.markdown-body th {
+.markdown-body::v-deep th {
   background: #f8fafc;
   font-weight: 600;
 }
-.markdown-body strong {
+.markdown-body::v-deep img {
+  max-width: 100%;
+}
+.markdown-body::v-deep strong {
   font-weight: 600;
   color: #0f172a;
 }
-.markdown-body a {
+.markdown-body::v-deep a {
   color: #3b82f6;
   text-decoration: none;
 }
-.markdown-body a:hover {
+.markdown-body::v-deep a:hover {
   text-decoration: underline;
 }
 

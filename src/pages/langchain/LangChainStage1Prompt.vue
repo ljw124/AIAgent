@@ -2,7 +2,7 @@
  * @Author: lujinwei lujinwei@hikvision.com.cn
  * @Date: 2026-08-27 18:30:00
  * @LastEditors: lujinwei lujinwei@hikvision.com.cn
- * @LastEditTime: 2026-10-12 18:20:43
+ * @LastEditTime: 2026-11-17 17:02:07
  * @Description: 阶段一：Prompt Template — 提示词模板
  *   学习目标：用 ChatPromptTemplate 替代硬编码 System Prompt
  *   核心 API：ChatPromptTemplate.fromMessages()、MessagesPlaceholder
@@ -134,7 +134,7 @@ export default {
         // ============================================================
 
         // 1. 将历史消息转换为 LangChain 消息类型
-        //    #3 修复：slice(0, -2) 防御 — 确保 messages 至少有 2 条才切片
+        //    slice(0, -2) 防御 — 确保 messages 至少有 2 条才切片
         const sliceEnd = this.messages.length >= 2 ? -2 : this.messages.length
         const historyMessages = this.messages
           .slice(0, sliceEnd)
